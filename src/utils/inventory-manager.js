@@ -263,7 +263,8 @@ export function InventoryManager() {
         'rubicund_key',
         'cyan_key',
         'imperial_key',
-        'dimensional_key'
+        'dimensional_key',
+        'master_key'
     ]
     this.weapons_names = axes.concat([
         'flail',
@@ -453,6 +454,13 @@ export function InventoryManager() {
             icon: 'dimensional_key',
             name: 'dimensional key',
             description: 'Dimensional keys unlock portals between planes of existence'
+        },
+        master_key: {
+            effect: 'key',
+            type: 'key',
+            icon: 'master_key',
+            name: 'master key',
+            description: 'Master keys can open almost any mundane lock'
         },
     }
     this.weapons = {
@@ -2525,6 +2533,12 @@ export function InventoryManager() {
             icon: 'dimensional_key',
             type: 'key',
             name: 'dimensional key',
+            equippedBy: null,
+        },
+        master_key: {
+            icon: 'master_key',
+            type: 'key',
+            name: 'master key',
             equippedBy: null,
         },
         crown: {

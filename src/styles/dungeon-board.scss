@@ -1804,6 +1804,45 @@
     align-content: flex-end !important;
     box-sizing: content-box;
 }
+
+.dungeon-board-container {
+    transform-origin: center center;
+    will-change: transform, filter, opacity;
+}
+
+@keyframes portalSpiralOut {
+    0% {
+        transform: rotate(0deg) scale(1);
+        filter: blur(0px);
+        opacity: 1;
+    }
+    100% {
+        transform: rotate(720deg) scale(0);
+        filter: blur(12px);
+        opacity: 0;
+    }
+}
+
+@keyframes portalSpiralIn {
+    0% {
+        transform: rotate(-720deg) scale(0);
+        filter: blur(12px);
+        opacity: 0;
+    }
+    100% {
+        transform: rotate(0deg) scale(1);
+        filter: blur(0px);
+        opacity: 1;
+    }
+}
+
+.portal-transition-out {
+    animation: portalSpiralOut 0.8s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+}
+
+.portal-transition-in {
+    animation: portalSpiralIn 0.8s cubic-bezier(0.215, 0.61, 0.355, 1) forwards;
+}
 // .monster-battle-board{
 //     border: 3px solid rgb(185, 15, 15);
 //     width: 66%;
@@ -2066,4 +2105,198 @@
     opacity: 0;
     transform: scale(0.3) translateY(-30px);
     transition: transform 0.35s ease-in, opacity 0.35s ease-in;
+}
+
+/* Ambush Popup Redesign */
+.ambush-popup-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.ambush-popup-card {
+    background: linear-gradient(135deg, #120e0e 0%, #1c0909 100%);
+    border: 2px solid #ff3b30;
+    box-shadow: 0 0 30px rgba(255, 59, 48, 0.35), inset 0 0 15px rgba(255, 59, 48, 0.15);
+    padding: 35px;
+    color: white;
+    text-align: center;
+    border-radius: 16px;
+    width: 380px;
+    max-width: 90%;
+    animation: scaleIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #ff3b30, #ff9500, #ff3b30);
+    }
+}
+
+.ambush-title {
+    font-size: 2rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: #ff3b30;
+    text-shadow: 0 0 10px rgba(255, 59, 48, 0.6);
+    margin-bottom: 5px;
+    margin-top: 5px;
+    animation: pulseGlow 1.5s infinite alternate;
+}
+
+.ambush-subtitle {
+    font-size: 1.15rem;
+    color: #eaeaea;
+    margin-bottom: 20px;
+    
+    .monster-highlight {
+        color: #ff9500;
+        font-weight: bold;
+        text-shadow: 0 0 5px rgba(255, 149, 0, 0.4);
+    }
+}
+
+.ambush-portrait-frame {
+    width: 140px;
+    height: 140px;
+    margin: 0 auto 20px;
+    border-radius: 12px;
+    padding: 6px;
+    background: #111;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+
+    .ambush-portrait {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+}
+
+.ambush-badge {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #111;
+    border-width: 1px;
+    border-style: solid;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    white-space: nowrap;
+}
+
+.ambush-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 25px;
+    text-align: left;
+}
+
+.ambush-stat-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: #cccccc;
+
+    .stat-icon {
+        font-size: 1.1rem;
+        width: 20px;
+        text-align: center;
+    }
+
+    .stat-label {
+        font-weight: 500;
+    }
+
+    .stat-value {
+        margin-left: auto;
+        font-weight: 700;
+        color: #ffffff;
+    }
+}
+
+.ambush-fight-btn {
+    background: linear-gradient(185deg, #d32f2f 0%, #b71c1c 100%);
+    border: 1px solid #ff5252;
+    box-shadow: 0 4px 15px rgba(183, 28, 28, 0.4);
+    color: white;
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 1.5px;
+    padding: 12px 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: inline-block;
+    transition: all 0.2s ease;
+    text-transform: uppercase;
+
+    &:hover {
+        transform: translateY(-2px) scale(1.03);
+        box-shadow: 0 6px 20px rgba(183, 28, 28, 0.6);
+        background: linear-gradient(185deg, #e53935 0%, #c62828 100%);
+    }
+
+    &:active {
+        transform: translateY(1px);
+    }
+}
+
+.ambush-shortcut-hint {
+    margin-top: 10px;
+    font-size: 0.75rem;
+    color: #777777;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Animations */
+@keyframes pulseGlow {
+    from {
+        text-shadow: 0 0 10px rgba(255, 59, 48, 0.5), 0 0 2px rgba(255, 59, 48, 0.3);
+    }
+    to {
+        text-shadow: 0 0 20px rgba(255, 59, 48, 0.8), 0 0 5px rgba(255, 59, 48, 0.5);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+    from { transform: scale(0.9); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
 }

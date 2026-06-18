@@ -1,3 +1,5 @@
+import unlock from '../assets/icons/global skills/Wizard/unlock.png';
+import master_key from '../assets/icons/misc/keys/master key.png';
 import hand_1 from '../assets/icons/items/weapons/hands/hands_numbered/hand_1.png';
 import hand_2 from '../assets/icons/items/weapons/hands/hands_numbered/hand_2.png';
 import hand_3 from '../assets/icons/items/weapons/hands/hands_numbered/hand_3.png';
@@ -438,8 +440,18 @@ import banner from '../assets/icons/misc/loot/banner.png'
 // import res_78 from '../assets/icons/misc/loot/Res_78.png'
 
 
-// import green_opal from '../assets/icons/misc/loot/green opal.png'
-
+import green_opal from '../assets/icons/misc/loot/green opal.png'
+import blue_opal from '../assets/icons/misc/loot/blue_opal.png'
+import red_opal from '../assets/icons/misc/loot/red_opal.png'
+import amber_opal from '../assets/icons/misc/loot/amber_opal.png'
+import blue_crystal from '../assets/icons/misc/loot/blue_crystal.png'
+import purple_crystal from '../assets/icons/misc/loot/purple_crystal.png'
+import pink_crystal from '../assets/icons/misc/loot/pink_crystal.png'
+import green_crystal from '../assets/icons/misc/loot/green_crystal.png'
+import ruddy_crystal from '../assets/icons/misc/loot/ruddy_crystal.png'
+import saphite_crystal from '../assets/icons/misc/loot/saphite_crystal.png'
+import magentite_crystal from '../assets/icons/misc/loot/magentite_crystal.png'
+import moxite_crystal from '../assets/icons/misc/loot/moxite_crystal.png'
 import amber from '../assets/icons/misc/loot/amber.png'
 import sapphire from '../assets/icons/misc/loot/sapphire.png'
 import ruby from '../assets/icons/misc/loot/ruby.png'
@@ -998,6 +1010,12 @@ import folio_of_coincidence from '../assets/icons/items/weapons/books/Folio of c
 import folio_of_paradox from '../assets/icons/items/weapons/books/Folio of paradox.png';
 import septemons_grimoire from '../assets/icons/items/weapons/books/Septemons grimoire.png';
 
+// ── Dust & Nugget loot items ─────────────────────────────────────────────────
+import rubedo_dust from '../assets/icons/loot/rubedo_dust.png';
+import spectral_dust from '../assets/icons/loot/spectral_dust.png';
+import monadic_dust from '../assets/icons/loot/monadic_dust.png';
+import monadic_nugget from '../assets/icons/loot/monadic_nugget.png';
+
 const _terrainBase = [terrain_1, terrain_2, terrain_3, terrain_4, terrain_5, terrain_6, terrain_7, terrain_8, terrain_9, terrain_10, terrain_11, terrain_12, terrain_13, terrain_14, terrain_15, terrain_16];
 const _terrainLight = [terrain_1_light, terrain_2_light, terrain_3_light, terrain_4_light, terrain_5_light, terrain_6_light, terrain_7_light, terrain_8_light, terrain_9_light, terrain_10_light, terrain_11_light, terrain_12_light, terrain_13_light, terrain_14_light, terrain_15_light, terrain_16_light];
 const _terrainDark = [terrain_1_dark, terrain_2_dark, terrain_3_dark, terrain_4_dark, terrain_5_dark, terrain_6_dark, terrain_7_dark, terrain_8_dark, terrain_9_dark, terrain_10_dark, terrain_11_dark, terrain_12_dark, terrain_13_dark, terrain_14_dark, terrain_15_dark, terrain_16_dark];
@@ -1013,6 +1031,7 @@ const getTerrainSetForLevel = (level) => {
     if (level <= -1) return _terrainDark;
     return _terrainBase;
 };
+
 
 export {
     hand_1,
@@ -1457,6 +1476,18 @@ export {
     // res_76_crystal_red,
     // res_77,
     // res_78,
+    green_opal,
+    blue_opal,
+    red_opal,
+    amber_opal,
+    blue_crystal,
+    purple_crystal,
+    pink_crystal,
+    green_crystal,
+    ruddy_crystal,
+    saphite_crystal,
+    magentite_crystal,
+    moxite_crystal,
     amber,
     sapphire,
     ruby,
@@ -1918,4 +1949,14 @@ export {
     brew_beer,
     brew_pepper,
     brew_berries,
+
+    // ── Dust & Nugget loot items ─────────────────────────────────────────────
+    rubedo_dust,
+    spectral_dust,
+    monadic_dust,
+    monadic_nugget,
+
+    // unlock spell & indicator
+    unlock,
+    master_key,
 };

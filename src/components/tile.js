@@ -226,7 +226,9 @@ function Tile(props) {
     const portraitZIndex = foregroundPortalImages.includes(props.image) ? 12 : 3;
 
     return (
-        <div style={{
+        <div 
+            data-portal-id={props['data-portal-id']}
+            style={{
             pointerEvents: props.passThrough ? 'none' : 'inherit',
             boxSizing: 'border-box',
             transition: 'background-color 0.25s',
@@ -475,6 +477,24 @@ function Tile(props) {
                     {props.delayedHoverLabel}
                 </div>
            )}
+
+            {/* Active Unlock spell indicator for crew-tile */}
+            {props.type === 'crew-tile' && props.data && props.data.unlockSpellActive && (
+                <div className="unlock-active-indicator" style={{
+                    position: 'absolute',
+                    top: '4px',
+                    right: '4px',
+                    width: '24px',
+                    height: '24px',
+                    backgroundImage: toCssUrl(images.master_key),
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    zIndex: 10,
+                    filter: 'drop-shadow(0px 2px 4px rgba(0,0,0,0.8))',
+                    pointerEvents: 'none'
+                }} title="Unlock spell active" />
+            )}
         </div>
     )
 }

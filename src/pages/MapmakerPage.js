@@ -146,6 +146,9 @@ class MapMakerPage extends React.Component {
       inscriptionWallPicker: null,       // { tileId } — shows compass picker on that tile
       inscriptionTextInput: '',
       toastMessage: '',
+      // Portal configuration state
+      showPortalModal: false,
+      portalModalTile: null,
       // mapView: true,
       selectedView: viewStateFromPrefs ? viewStateFromPrefs : 'plane',
       hoveredSection: null,
@@ -931,6 +934,293 @@ class MapMakerPage extends React.Component {
       inscriptionTextInput: ''
     });
   }
+
+  closePortalModal = () => {
+    this.setState({
+      showPortalModal: false,
+      portalModalTile: null
+    });
+  }
+
+  breakPortalLink = (tile, currentLvlId, currentOrientation, currentMiniboardIdx) => {
+    const portal = tile.contains;
+    if (!portal || !portal.targetPortalId) return;
+    
+    const dungeon = this.state.loadedDungeon ? clone(this.state.loadedDungeon) : null;
+    const loadedBoard = this.state.loadedBoard ? clone(this.state.loadedBoard) : null;
+    let targetTile = null;
+    
+    if (dungeon && Array.isArray(dungeon.levels)) {
+      dungeon.levels.forEach((level) => {
+        ['front', 'back'].forEach((orientation) => {
+          const plane = level[orientation];
+          if (plane && Array.isArray(plane.miniboards)) {
+            plane.miniboards.forEach((mb) => {
+              if (mb && Array.isArray(mb.tiles)) {
+                mb.tiles.forEach((t) => {
+                  if (t.contains && t.contains.portalId === portal.targetPortalId) {
+                    targetTile = t;
+                    t.contains = {
+                      ...t.contains,
+                      targetPortalId: null,
+                      targetLevelId: null,
+                      targetOrientation: null,
+                      targetMiniboardIndex: null,
+                      targetCoordinates: null
+                    };
+                  }
+                });
+              }
+            });
+          }
+        });
+      });
+
+      // ALSO UPDATE PORTAL A INSIDE DUNGEON LEVELS
+      if (currentLvlId !== null && currentOrientation !== null && currentMiniboardIdx !== null) {
+        const currentLvl = dungeon.levels.find(l => l.id === currentLvlId);
+        const currentPlane = currentLvl && currentLvl[currentOrientation];
+        const currentMb = currentPlane && currentPlane.miniboards[currentMiniboardIdx];
+        const currentTileObj = currentMb && currentMb.tiles[tile.id];
+        if (currentTileObj) {
+          currentTileObj.contains = {
+            ...currentTileObj.contains,
+            targetPortalId: null,
+            targetLevelId: null,
+            targetOrientation: null,
+            targetMiniboardIndex: null,
+            targetCoordinates: null
+          };
+        }
+      }
+    } else {
+      this.state.tiles.forEach((t) => {
+        if (t.contains && t.contains.portalId === portal.targetPortalId) {
+          targetTile = t;
+          t.contains = {
+            ...t.contains,
+            targetPortalId: null,
+            targetLevelId: null,
+            targetOrientation: null,
+            targetMiniboardIndex: null,
+            targetCoordinates: null
+          };
+        }
+      });
+    }
+    
+    const nextTiles = [...this.state.tiles];
+    const updatedPortalContains = {
+      ...portal,
+      targetPortalId: null,
+      targetLevelId: null,
+      targetOrientation: null,
+      targetMiniboardIndex: null,
+      targetCoordinates: null
+    };
+    nextTiles[tile.id] = {
+      ...nextTiles[tile.id],
+      contains: updatedPortalContains
+    };
+    
+    if (targetTile && (!dungeon || (targetTile.level === currentLvlId && targetTile.orientation === currentOrientation && targetTile.miniboardIndex === currentMiniboardIdx))) {
+      nextTiles[targetTile.id] = {
+        ...nextTiles[targetTile.id],
+        contains: targetTile.contains
+      };
+    }
+    
+    if (dungeon && loadedBoard) {
+      const currentMbTile = loadedBoard.tiles[tile.id];
+      if (currentMbTile) {
+        currentMbTile.contains = updatedPortalContains;
+      }
+    }
+    
+    this.setState({
+      loadedDungeon: dungeon,
+      loadedBoard: loadedBoard,
+      tiles: nextTiles,
+      dungeonHasUnsavedChanges: true,
+      boardHasUnsavedChanges: true,
+      portalModalTile: nextTiles[tile.id]
+    });
+    this.toast('Link broken successfully.');
+  }
+
+  linkPortals = (tile, currentLvlId, currentOrientation, currentMiniboardIdx, target) => {
+    const portalA = tile.contains;
+    const portalAId = portalA.portalId || `portal_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+    const portalBId = target.portalId || `portal_${Date.now()}_${Math.floor(Math.random() * 10001)}`;
+    
+    const dungeon = this.state.loadedDungeon ? clone(this.state.loadedDungeon) : null;
+    const loadedBoard = this.state.loadedBoard ? clone(this.state.loadedBoard) : null;
+    let targetTileObj = null;
+    
+    if (target.targetPortalId) {
+      if (dungeon && Array.isArray(dungeon.levels)) {
+        dungeon.levels.forEach((level) => {
+          ['front', 'back'].forEach((orientation) => {
+            const plane = level[orientation];
+            if (plane && Array.isArray(plane.miniboards)) {
+              plane.miniboards.forEach((mb) => {
+                if (mb && Array.isArray(mb.tiles)) {
+                  mb.tiles.forEach((t) => {
+                    if (t.contains && t.contains.portalId === target.targetPortalId) {
+                      t.contains = {
+                        ...t.contains,
+                        targetPortalId: null,
+                        targetLevelId: null,
+                        targetOrientation: null,
+                        targetMiniboardIndex: null,
+                        targetCoordinates: null
+                      };
+                    }
+                  });
+                }
+              });
+            }
+          });
+        });
+      } else {
+        this.state.tiles.forEach((t) => {
+          if (t.contains && t.contains.portalId === target.targetPortalId) {
+            t.contains = {
+              ...t.contains,
+              targetPortalId: null,
+              targetLevelId: null,
+              targetOrientation: null,
+              targetMiniboardIndex: null,
+              targetCoordinates: null
+            };
+          }
+        });
+      }
+    }
+    
+    if (portalA.targetPortalId) {
+      if (dungeon && Array.isArray(dungeon.levels)) {
+        dungeon.levels.forEach((level) => {
+          ['front', 'back'].forEach((orientation) => {
+            const plane = level[orientation];
+            if (plane && Array.isArray(plane.miniboards)) {
+              plane.miniboards.forEach((mb) => {
+                if (mb && Array.isArray(mb.tiles)) {
+                  mb.tiles.forEach((t) => {
+                    if (t.contains && t.contains.portalId === portalA.targetPortalId) {
+                      t.contains = {
+                        ...t.contains,
+                        targetPortalId: null,
+                        targetLevelId: null,
+                        targetOrientation: null,
+                        targetMiniboardIndex: null,
+                        targetCoordinates: null
+                      };
+                    }
+                  });
+                }
+              });
+            }
+          });
+        });
+      } else {
+        this.state.tiles.forEach((t) => {
+          if (t.contains && t.contains.portalId === portalA.targetPortalId) {
+            t.contains = {
+              ...t.contains,
+              targetPortalId: null,
+              targetLevelId: null,
+              targetOrientation: null,
+              targetMiniboardIndex: null,
+              targetCoordinates: null
+            };
+          }
+        });
+      }
+    }
+    
+    const updatedPortalAContains = {
+      ...portalA,
+      portalId: portalAId,
+      targetPortalId: portalBId,
+      targetLevelId: target.levelId,
+      targetOrientation: target.orientation,
+      targetMiniboardIndex: target.miniboardIndex,
+      targetCoordinates: target.coordinates
+    };
+    
+    if (dungeon && Array.isArray(dungeon.levels)) {
+      const targetLvl = dungeon.levels.find(l => l.id === target.levelId);
+      const targetPlane = targetLvl && targetLvl[target.orientation];
+      const targetMb = targetPlane && targetPlane.miniboards[target.miniboardIndex];
+      targetTileObj = targetMb && targetMb.tiles[target.tileId];
+      if (targetTileObj) {
+        targetTileObj.contains = {
+          ...targetTileObj.contains,
+          portalId: portalBId,
+          targetPortalId: portalAId,
+          targetLevelId: currentLvlId,
+          targetOrientation: currentOrientation,
+          targetMiniboardIndex: currentMiniboardIdx,
+          targetCoordinates: tile.coordinates
+        };
+      }
+
+      // ALSO UPDATE PORTAL A INSIDE DUNGEON LEVELS
+      if (currentLvlId !== null && currentOrientation !== null && currentMiniboardIdx !== null) {
+        const currentLvl = dungeon.levels.find(l => l.id === currentLvlId);
+        const currentPlane = currentLvl && currentLvl[currentOrientation];
+        const currentMb = currentPlane && currentPlane.miniboards[currentMiniboardIdx];
+        const currentTileObj = currentMb && currentMb.tiles[tile.id];
+        if (currentTileObj) {
+          currentTileObj.contains = updatedPortalAContains;
+        }
+      }
+    } else {
+      targetTileObj = this.state.tiles[target.tileId];
+      if (targetTileObj) {
+        targetTileObj.contains = {
+          ...targetTileObj.contains,
+          portalId: portalBId,
+          targetPortalId: portalAId,
+          targetLevelId: null,
+          targetOrientation: null,
+          targetMiniboardIndex: null,
+          targetCoordinates: tile.coordinates
+        };
+      }
+    }
+    
+    const nextTiles = [...this.state.tiles];
+    nextTiles[tile.id] = {
+      ...nextTiles[tile.id],
+      contains: updatedPortalAContains
+    };
+    
+    if (targetTileObj && (!dungeon || (target.levelId === currentLvlId && target.orientation === currentOrientation && target.miniboardIndex === currentMiniboardIdx))) {
+      nextTiles[target.tileId] = {
+        ...nextTiles[target.tileId],
+        contains: targetTileObj.contains
+      };
+    }
+    
+    if (dungeon && loadedBoard) {
+      const currentMbTile = loadedBoard.tiles[tile.id];
+      if (currentMbTile) {
+        currentMbTile.contains = updatedPortalAContains;
+      }
+    }
+    
+    this.setState({
+      loadedDungeon: dungeon,
+      loadedBoard: loadedBoard,
+      tiles: nextTiles,
+      dungeonHasUnsavedChanges: true,
+      boardHasUnsavedChanges: true,
+      portalModalTile: nextTiles[tile.id]
+    });
+    this.toast('Portals linked successfully!');
+  }
   
   handleResize() {
     const h = Math.floor((window.innerHeight/17));
@@ -979,6 +1269,45 @@ class MapMakerPage extends React.Component {
         pinnedOption: tile
       })
     } else if(tile.type === 'board-tile'){
+      if (tile.contains && (tile.contains.type === 'dungeon_portal' || tile.contains.type === 'dungeon portal')) {
+        const pinnedOption = this.state.pinnedOption;
+        const pinnedPaletteTile = pinnedOption && this.props.mapMaker.paletteTiles[pinnedOption.id];
+        if (pinnedPaletteTile && pinnedPaletteTile.optionType === 'delete') {
+          // Allow delete to fall through
+        } else {
+          // Ensure portal has a unique portalId
+          if (!tile.contains.portalId) {
+            tile.contains.portalId = `portal_${Date.now()}_${Math.floor(Math.random() * 10000)}`;
+            const nextTiles = [...this.state.tiles];
+            nextTiles[tile.id] = {
+              ...nextTiles[tile.id],
+              contains: {
+                ...nextTiles[tile.id].contains,
+                portalId: tile.contains.portalId
+              }
+            };
+            if (this.state.loadedDungeon && this.state.loadedBoard) {
+              const currentMbTile = this.state.loadedBoard.tiles[tile.id];
+              if (currentMbTile) {
+                currentMbTile.contains = nextTiles[tile.id].contains;
+              }
+            }
+            this.setState({
+              tiles: nextTiles,
+              dungeonHasUnsavedChanges: true,
+              boardHasUnsavedChanges: true,
+              showPortalModal: true,
+              portalModalTile: nextTiles[tile.id]
+            });
+          } else {
+            this.setState({
+              showPortalModal: true,
+              portalModalTile: tile
+            });
+          }
+          return;
+        }
+      }
       let pinned = null, monster, gate, key, tierOption, jewelOption, runeOption, treasureOption, vendorOption, passageToolOption;
       if(this.state.pinnedOption && this.state.pinnedOption.type === 'monster-tile'){
         monster = Object.values(this.props.monsterManager.monsters)[this.state.pinnedOption.id];
@@ -1435,6 +1764,9 @@ class MapMakerPage extends React.Component {
       // Fetch all dungeons fresh from DB so we don't rely on potentially stale state
       const allDungeonsRes = await loadAllDungeonsRequest();
       const freshDungeons = (allDungeonsRes.data || []).map(e => {
+        if (this.state.loadedDungeon && e._id === this.state.loadedDungeon.id) {
+          return clone(this.state.loadedDungeon);
+        }
         const d = JSON.parse(e.content);
         d.id = e._id;
         return d;
@@ -1542,7 +1874,7 @@ class MapMakerPage extends React.Component {
     }
   }
 
-  updateDungeonWithPlane = (plane) => {
+updateDungeonWithPlane = (plane) => {
 
   }
 
@@ -1550,8 +1882,8 @@ class MapMakerPage extends React.Component {
     console.log('updating board with id: ', boardId);
   }
 
-  loadBoard = (board) => {
-    console.log('load board: ', board);
+  loadBoard = (board, usePassedTiles = false) => {
+    console.log('load board: ', board, 'usePassedTiles:', usePassedTiles);
     if(!board || !board.id){
       if(this.state.selectedView !== 'board'){
         this.setViewState('board')
@@ -1574,8 +1906,8 @@ class MapMakerPage extends React.Component {
       this.setViewState('board')
     } 
     this.setState({
-      loadedBoard: boardRef,
-      tiles: boardRef.tiles,
+      loadedBoard: usePassedTiles ? clone(board) : boardRef,
+      tiles: usePassedTiles ? clone(board.tiles) : boardRef.tiles,
       selectedThingTitle: `Board: ${board.name}`
     })
 
@@ -1592,7 +1924,7 @@ class MapMakerPage extends React.Component {
     const miniboard = frontOrBack === 'front' ? level.front.miniboards[miniboardIndex] : level.back.miniboards[miniboardIndex]
     console.log('level:', level, 'miniboard:', miniboard);
     if(level && miniboard){
-      this.loadBoard(miniboard)
+      this.loadBoard(miniboard, true)
       // console.log('setting videw state');
       // this.setViewState('board')
       // // this.set
@@ -3352,6 +3684,167 @@ class MapMakerPage extends React.Component {
             <CModalFooter>
               <CButton color="secondary" onClick={this.cancelInscription}>Cancel</CButton>
               <CButton color="warning" onClick={this.confirmInscription}>Carve Inscription</CButton>
+            </CModalFooter>
+          </CModal>
+        )}
+
+        {this.state.showPortalModal && (
+          <CModal alignment="center" backdrop="static" size="lg" visible={this.state.showPortalModal} onClose={this.closePortalModal}>
+            <CModalHeader>
+              <CModalTitle>🌀 Dungeon Portal Configurator</CModalTitle>
+            </CModalHeader>
+            <CModalBody>
+              {(() => {
+                const tile = this.state.portalModalTile;
+                if (!tile) return null;
+                const portal = tile.contains || {};
+                
+                let currentLvlId = null;
+                let currentOrientation = null;
+                let currentMiniboardIdx = null;
+                if (this.state.loadedDungeon && this.state.loadedBoard) {
+                  this.state.loadedDungeon.levels.forEach((level) => {
+                    ['front', 'back'].forEach((orientation) => {
+                      const plane = level[orientation];
+                      if (plane && Array.isArray(plane.miniboards)) {
+                        plane.miniboards.forEach((mb, mbIndex) => {
+                          if (mb === this.state.loadedBoard || (mb && this.state.loadedBoard && mb.id && this.state.loadedBoard.id && String(mb.id) === String(this.state.loadedBoard.id))) {
+                            currentLvlId = level.id;
+                            currentOrientation = orientation;
+                            currentMiniboardIdx = mbIndex;
+                          }
+                        });
+                      }
+                    });
+                  });
+                }
+                
+                const locStr = currentLvlId !== null
+                  ? `Lvl ${currentLvlId} (${currentOrientation === 'front' ? 'Front' : 'Back'}) Board ${currentMiniboardIdx + 1} at [${tile.coordinates}]`
+                  : `Board Tile at [${tile.coordinates}]`;
+                  
+                const isLinked = !!portal.targetPortalId;
+                const linkLocStr = portal.targetCoordinates
+                  ? (portal.targetLevelId !== null && portal.targetLevelId !== undefined
+                    ? `Lvl ${portal.targetLevelId} (${portal.targetOrientation === 'front' ? 'Front' : 'Back'}) Board ${portal.targetMiniboardIndex + 1} at [${portal.targetCoordinates}]`
+                    : `Board Tile at [${portal.targetCoordinates}]`)
+                  : 'N/A';
+                  
+                let allPortals = [];
+                if (this.state.loadedDungeon) {
+                  allPortals = this.props.mapMaker.getAllPortalsInDungeon(this.state.loadedDungeon);
+                } else {
+                  allPortals = this.state.tiles
+                    .filter(t => t.contains && (t.contains.type === 'dungeon_portal' || t.contains.type === 'dungeon portal'))
+                    .map(t => ({
+                      tileId: t.id,
+                      coordinates: t.coordinates,
+                      miniboardIndex: null,
+                      orientation: null,
+                      levelId: null,
+                      portalId: t.contains.portalId || null,
+                      targetPortalId: t.contains.targetPortalId || null,
+                      portalName: t.contains.portalName || `Board Tile at [${t.coordinates}]`
+                    }));
+                }
+                
+                const otherPortals = allPortals.filter(p => {
+                  if (p.portalId && portal.portalId && p.portalId === portal.portalId) {
+                    return false;
+                  }
+                  const isSameBoard = (currentLvlId !== null)
+                    ? (p.levelId === currentLvlId && p.orientation === currentOrientation && p.miniboardIndex === currentMiniboardIdx)
+                    : (p.levelId === null && p.orientation === null && p.miniboardIndex === null);
+                  const isSameTile = p.tileId === tile.id;
+                  return !(isSameBoard && isSameTile);
+                });
+                
+                return (
+                  <div>
+                    <div className="mb-3">
+                      <strong>Current Portal:</strong> <span className="badge bg-secondary" style={{color: '#495057', backgroundColor: '#e9ecef', padding: '6px 10px', marginLeft: '5px'}}>{locStr}</span>
+                    </div>
+                    
+                    <div className="mb-4 p-3 border rounded bg-light" style={{padding: '15px', border: '1px solid #dee2e6', borderRadius: '4px', backgroundColor: '#f8f9fa', marginBottom: '20px'}}>
+                      <strong>Status:</strong>{' '}
+                      {isLinked ? (
+                        <span>
+                          <span className="text-success font-weight-bold" style={{color: '#198754', fontWeight: 'bold'}}>🟢 Linked</span> to portal at:{' '}
+                          <span className="badge bg-success" style={{color: '#fff', backgroundColor: '#198754', padding: '6px 10px', marginLeft: '5px'}}>{linkLocStr}</span>
+                          <CButton color="danger" size="sm" className="ms-3" style={{marginLeft: '15px'}} onClick={() => this.breakPortalLink(tile, currentLvlId, currentOrientation, currentMiniboardIdx)}>
+                            Break Link
+                          </CButton>
+                        </span>
+                      ) : (
+                        <span className="text-danger font-weight-bold" style={{color: '#dc3545', fontWeight: 'bold'}}>🔴 Unlinked</span>
+                      )}
+                    </div>
+                    
+                    <h5>Available Portals for Linking:</h5>
+                    {otherPortals.length === 0 ? (
+                      <div className="text-muted italic" style={{fontStyle: 'italic', color: '#6c757d'}}>No other dungeon portals found. Add more portals to the map first!</div>
+                    ) : (
+                      <div className="table-responsive" style={{ maxHeight: '300px', overflowY: 'auto', border: '1px solid #dee2e6', borderRadius: '4px' }}>
+                        <table className="table table-striped table-hover align-middle" style={{width: '100%', marginBottom: 0}}>
+                          <thead style={{backgroundColor: '#f8f9fa'}}>
+                            <tr>
+                              <th style={{padding: '10px'}}>Location</th>
+                              <th style={{padding: '10px'}}>Status</th>
+                              <th style={{padding: '10px'}}>Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {otherPortals.map((p, idx) => {
+                              const pLoc = p.levelId !== null
+                                ? `Lvl ${p.levelId} (${p.orientation === 'front' ? 'Front' : 'Back'}) Board ${p.miniboardIndex + 1} at [${p.coordinates}]`
+                                : `Board Tile at [${p.coordinates}]`;
+                              const pLinked = !!p.targetPortalId;
+                              let linkedToPortalName = '';
+                              if (pLinked) {
+                                const targetPortal = allPortals.find(x => x.portalId === p.targetPortalId);
+                                if (targetPortal) {
+                                  linkedToPortalName = targetPortal.levelId !== null
+                                    ? `Lvl ${targetPortal.levelId} (${targetPortal.orientation === 'front' ? 'Front' : 'Back'}) Board ${targetPortal.miniboardIndex + 1} at [${targetPortal.coordinates}]`
+                                    : `Board Tile at [${targetPortal.coordinates}]`;
+                                } else {
+                                  linkedToPortalName = 'Unknown Portal';
+                                }
+                              }
+                              return (
+                                <tr key={idx}>
+                                  <td style={{padding: '10px'}}>{pLoc}</td>
+                                  <td style={{padding: '10px'}}>
+                                    {pLinked ? (
+                                      <span>
+                                        <span className="text-warning" style={{color: '#ffc107', fontWeight: 'bold'}}>⚠️ Linked</span>
+                                        <div style={{fontSize: '0.82em', color: '#6c757d', marginTop: '2px'}}>
+                                          to {linkedToPortalName}
+                                        </div>
+                                      </span>
+                                    ) : (
+                                      <span className="text-success" style={{color: '#198754'}}>Unlinked</span>
+                                    )}
+                                  </td>
+                                  <td style={{padding: '10px'}}>
+                                    <CButton color="primary" size="sm" onClick={() => this.linkPortals(tile, currentLvlId, currentOrientation, currentMiniboardIdx, p)}>
+                                      Link to This
+                                    </CButton>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </CModalBody>
+            <CModalFooter>
+              <CButton color="secondary" onClick={this.closePortalModal}>
+                Close
+              </CButton>
             </CModalFooter>
           </CModal>
         )}

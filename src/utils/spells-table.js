@@ -79,6 +79,14 @@ export const RITUALS = {
     description: 'Opens a momentary tear between planes and anchors it to the caster\'s will. On use, teleports the entire party past the next locked gate or sealed passage.',
     flavorText: '"Space is merely a suggestion to those who know how to argue."',
   },
+  unlock: {
+    key: 'unlock',
+    name: 'Unlock',
+    icon: 'unlock',
+    prepareTime: 5 * 60 * 1000,             // 5 minutes
+    description: 'Bypasses the next locked door, gate, or chest.',
+    flavorText: '"Locks are just questions. This is the answer."',
+  },
 };
 
 // Camp cooking recipes — each has a stable key, display name, description, cooking time,

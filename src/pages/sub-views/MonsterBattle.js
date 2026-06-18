@@ -2,9 +2,13 @@
 import React from 'react'
 // Show/hide tile coordinates overlay
 import '../../styles/monster-battle.scss'
+import '../../styles/level-up-screen.scss'
 import * as images from '../../utils/images'
 import { CModal } from '@coreui/react';
 import '../../styles/inventory-modal.scss';
+import DUST_TYPES from '../../utils/dusts';
+import LevelUpScreen from '../../components/LevelUpScreen';
+import skillsMatrix from '../../utils/skills-matrix';
 import { Redirect } from "react-router-dom";
 import {storeMeta, getMeta, getUserId} from '../../utils/session-handler';
 import {
@@ -171,6 +175,8 @@ class MonsterBattle extends React.Component {
             foodGained: 0,
             stolenItems: [],
             levelTransitions: {},
+            showLevelUpScreen: false,
+            levelUpQueue: [],
             battleResult: null,
             monsterPortrait: '',
             navToDeathScene: false,
@@ -944,7 +950,23 @@ class MonsterBattle extends React.Component {
         })
     }
     confirmClicked = () => {
-        this.props.battleOver(this.state.battleResult)
+        const hasLevelUps = Object.keys(this.state.levelTransitions || {}).length > 0;
+        if (hasLevelUps && this.state.battleResult === 'win') {
+            const queue = Object.entries(this.state.levelTransitions).map(([id, trans]) => {
+                const crewMember = (this.props.crew || []).find(c => c && c.id === id);
+                return crewMember ? { crewMember, fromLevel: trans.from, toLevel: trans.to } : null;
+            }).filter(Boolean);
+            if (queue.length > 0) {
+                this.setState({ showLevelUpScreen: true, levelUpQueue: queue });
+                return;
+            }
+        }
+        this.props.battleOver(this.state.battleResult);
+    }
+    handleLevelUpComplete = () => {
+        this.setState({ showLevelUpScreen: false, levelUpQueue: [] }, () => {
+            this.props.battleOver(this.state.battleResult);
+        });
     }
     combatBegins = () => {
         this.setState({
@@ -1105,6 +1127,32 @@ class MonsterBattle extends React.Component {
                     }
                 }
             } catch(e) { console.warn('brew ingredient loot drop failed', e); }
+
+            // ── Dust loot drop: 10% chance per combat victory ─────────────
+            try {
+                if (Math.random() < 0.10) {
+                    const dustRoll = Math.random();
+                    let pickedKey = 'rubedo_dust';
+                    if (dustRoll < 0.05) {
+                        pickedKey = 'monadic_nugget';
+                    } else if (dustRoll < 0.20) {
+                        pickedKey = 'monadic_dust';
+                    } else if (dustRoll < 0.60) {
+                        pickedKey = 'spectral_dust';
+                    } else {
+                        pickedKey = 'rubedo_dust';
+                    }
+                    const dustDef = DUST_TYPES[pickedKey];
+                    if (dustDef && this.props.inventoryManager) {
+                        this.props.inventoryManager.addItem({ ...dustDef });
+                        try {
+                            if (typeof this.props.onTriggerLootArc === 'function') {
+                                this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[dustDef.icon], name: dustDef.name });
+                            }
+                        } catch(e) {}
+                    }
+                }
+            } catch(e) { console.warn('dust loot drop failed', e); }
 
             this._setTimeout(()=>{
                 // Snapshot levels before awarding XP so we can show before→after
@@ -3394,7 +3442,16 @@ class MonsterBattle extends React.Component {
                     )}
                 </div>}
 
-
+                {this.state.showLevelUpScreen && this.state.levelUpQueue.length > 0 && (
+                    <LevelUpScreen
+                        queue={this.state.levelUpQueue}
+                        crewManager={this.props.crewManager}
+                        inventoryManager={this.props.inventoryManager}
+                        skillsMatrix={skillsMatrix}
+                        onComplete={this.handleLevelUpComplete}
+                        onSave={() => { try { this.props.saveUserData && this.props.saveUserData(); } catch(e) {} }}
+                    />
+                )}
             </div>
         );
     }

@@ -155,6 +155,9 @@ export function BoardManager(){
     this.establishGetCrewCallback = (callback) => {
         this.getCrew = callback
     }
+    this.establishSaveCrewCallback = (callback) => {
+        this.saveCrew = callback;
+    }
     this.establishUpdateDungeonCallback = (callback) => {
         this.updateDungeon = callback;
     }
@@ -315,6 +318,25 @@ export function BoardManager(){
         );
 
         return !hasKey;
+    }
+
+    this.hasActiveUnlockSpell = () => {
+        const crew = typeof this.getCrew === 'function' ? this.getCrew() : [];
+        return Array.isArray(crew) && crew.some(member => 
+            (member.type === 'wizard' || member.image === 'wizard') && member.unlockSpellActive
+        );
+    }
+
+    this.consumeActiveUnlockSpell = () => {
+        const crew = typeof this.getCrew === 'function' ? this.getCrew() : [];
+        if (Array.isArray(crew)) {
+            const wizard = crew.find(member => 
+                (member.type === 'wizard' || member.image === 'wizard') && member.unlockSpellActive
+            );
+            if (wizard) {
+                wizard.unlockSpellActive = false;
+            }
+        }
     }
 
     this.hasSolidBorder = (tileData, side) => {
@@ -1398,6 +1420,34 @@ export function BoardManager(){
         
         // Check if this is a closed gate that requires a key
         if (gateType) {
+            if (this.hasActiveUnlockSpell() && this.isLockedGateTile(destinationTile)) {
+                const config = GATE_CONFIG[gateType];
+                const openedVersion = config ? config.opened : 'archway';
+                
+                this.messaging('The unlock spell shatters the lock!');
+                destinationTile.contains = openedVersion;
+                destinationTile.image = openedVersion;
+                this.activeInteractionTile = destinationTile;
+                this.refreshTiles();
+                this.tiles[destinationTile.id] = destinationTile;
+                
+                if (this.currentOrientation === 'F') {
+                    this.dungeon.levels.find(e => e.id === this.currentLevel.id).front.miniboards.find(b => b.id === this.currentBoard.id).tiles[destinationTile.id].contains = destinationTile.contains;
+                    this.dungeon.levels.find(e => e.id === this.currentLevel.id).front.miniboards.find(b => b.id === this.currentBoard.id).tiles[destinationTile.id].image = destinationTile.image;
+                } else {
+                    this.dungeon.levels.find(e => e.id === this.currentLevel.id).back.miniboards.find(b => b.id === this.currentBoard.id).tiles[destinationTile.id].contains = destinationTile.contains;
+                    this.dungeon.levels.find(e => e.id === this.currentLevel.id).back.miniboards.find(b => b.id === this.currentBoard.id).tiles[destinationTile.id].image = destinationTile.image;
+                }
+                this.updateDungeon(this.dungeon);
+                
+                this.consumeActiveUnlockSpell();
+                if (this.saveCrew) this.saveCrew();
+                
+                this.pending = null;
+                if (this.setPending) this.setPending(null);
+                
+                return null;
+            }
             this.handleGate(destinationTile, gateType);
             return 'impassable';
         }
@@ -1424,6 +1474,11 @@ export function BoardManager(){
             case 'item':
                 console.log('picked up item');
                 if (subtype === 'silver_chest' || subtype === 'gold_chest' || subtype === 'ornate_chest') {
+                    if (this.hasActiveUnlockSpell()) {
+                        this.messaging('The unlock spell shatters the chest lock!');
+                        this.consumeActiveUnlockSpell();
+                        if (this.saveCrew) this.saveCrew();
+                    }
                     this.chestPickupInProgress = true;
                     const chestResult = this.handleChestPickup(subtype, destinationTile);
                     this.chestPickupInProgress = false;
@@ -1848,7 +1903,12 @@ export function BoardManager(){
             if (destTile.blockedByLargeMonster) return true;
             
             // Check for closed gates that require keys
-            if (gateType && this.isLockedGateTile(destTile)) return true;
+            if (gateType && this.isLockedGateTile(destTile)) {
+                if (this.hasActiveUnlockSpell()) {
+                    return false;
+                }
+                return true;
+            }
             
             return false; // Movement allowed
         } catch (e) {

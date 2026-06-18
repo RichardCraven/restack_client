@@ -74,6 +74,16 @@ export function CrewManager(){
                 member.skills.push('barbarian_whirlwind');
             }
 
+            // Wizard auto-learns the unlock global spell
+            if ((member.type || member.image) === 'wizard') {
+                if (!Array.isArray(member.knownRituals)) {
+                    member.knownRituals = [];
+                }
+                if (!member.knownRituals.includes('unlock')) {
+                    member.knownRituals.push('unlock');
+                }
+            }
+
             member.specialActions.forEach(a=>{
                 let end = new Date(a.endDate),
                 now = new Date();
@@ -342,7 +352,47 @@ export function CrewManager(){
             console.warn('clearAllLevelFlags failed', err);
         }
     }
+
+    /**
+     * applyLevelUpChoices — called by LevelUpScreen when player confirms picks.
+     * choices = { attrBoost: { stat, amount }, skillKey: string|null, dustBonus: {...}|null }
+     */
+    this.applyLevelUpChoices = (crewMember, choices) => {
+        try {
+            if (!crewMember || !crewMember.stats) return;
+            if (choices && choices.attrBoost) {
+                const { stat, amount } = choices.attrBoost;
+                if (stat && typeof amount === 'number') crewMember.stats[stat] = (crewMember.stats[stat] || 0) + amount;
+            }
+            if (choices && choices.skillKey) {
+                if (!Array.isArray(crewMember.skills)) crewMember.skills = [];
+                if (!crewMember.skills.includes(choices.skillKey)) crewMember.skills.push(choices.skillKey);
+            }
+            if (choices && choices.dustBonus) {
+                const dust = choices.dustBonus;
+                if ((dust.type === 'physical' || dust.type === 'arcane') && dust.stat) {
+                    crewMember.stats[dust.stat] = (crewMember.stats[dust.stat] || 0) + (dust.amount || 2);
+                }
+                if ((dust.type === 'skill' || dust.type === 'supreme') && dust.skillKey) {
+                    if (!Array.isArray(crewMember.skills)) crewMember.skills = [];
+                    if (!crewMember.skills.includes(dust.skillKey)) crewMember.skills.push(dust.skillKey);
+                }
+                if (dust.type === 'supreme') {
+                    ['str', 'int', 'dex', 'fort'].forEach(s => {
+                        crewMember.stats[s] = (crewMember.stats[s] || 0) + 1;
+                    });
+                }
+            }
+            try { this.computeDerivedStats(crewMember); } catch (e) {
+                console.warn('applyLevelUpChoices: computeDerivedStats failed', e);
+            }
+        } catch (err) {
+            console.warn('applyLevelUpChoices failed', err);
+        }
+    }
+
     this.calculateExpPercentage = (crewMember) => {
+
         try {
             if(!crewMember) return 0;
             let foundMember = this.crew.find(e => e && (e.name === crewMember.name || e.id === crewMember.id));

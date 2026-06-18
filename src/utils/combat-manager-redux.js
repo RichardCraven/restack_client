@@ -530,8 +530,9 @@ export function CombatManagerRedux() {
             }
         } catch(e) { console.warn('[Combat] Battle Tactics buff application failed', e); }
 
-        const m = this.data.monster;
+        const m = { ...this.data.monster };
         m.isMonster = true; // Mark as monster early so isLarge/isHuge sizing evaluates correctly for VCT occupied lanes
+        this.data.monster = m;
         const isHuge = (
             (typeof m.huge === 'boolean' && m.huge === true)
             || (m.type === 'dragon')
@@ -549,6 +550,18 @@ export function CombatManagerRedux() {
                 || (m.isMonster === true && m.isMinion !== true)
             )
         );
+
+        if (isLarge && m.tier === 1) {
+            if (m.stats && typeof m.stats.hp === 'number') {
+                m.stats = { ...m.stats, hp: m.stats.hp * 2 };
+            }
+            if (typeof m.hp === 'number') {
+                m.hp = m.hp * 2;
+            }
+            if (typeof m.starting_hp === 'number') {
+                m.starting_hp = m.starting_hp * 2;
+            }
+        }
 
         let monsterY = 2;
         const minionCount = this.data.minions ? this.data.minions.length : 0;

@@ -123,6 +123,8 @@ $bot-level-zIndex: 2; // doubletall containers
     }
     .micro-board{
         border: 1px solid black;
+        position: relative;
+        z-index: 1;
     }
     background-color: white;
 }
@@ -773,11 +775,10 @@ ul.dropdown-menu.show{
             .plane-board-displays-wrapper{
                 display: flex;
                 position: relative;
-                // horizontal-connecting-canvas-wrapper
                 .horizontal-connecting-canvas-wrapper{
                     position: absolute;
                     top: 0;
-                    z-index: $mid-level-zIndex;
+                    z-index: 11;
                     pointer-events: none;
                 }
                 .plane-board-display{
@@ -789,6 +790,7 @@ ul.dropdown-menu.show{
                     align-items: center;
                     justify-content: center;
                     position: relative;
+                    z-index: 1;
                     .canvas-overlay-container{
                         position: absolute;
                         top: 0;
@@ -850,7 +852,7 @@ ul.dropdown-menu.show{
     height: 200%;
     width: 50%;
     top: -100%;
-    z-index: $bot-level-zIndex;
+    z-index: 10;
     pointer-events: none;
 }
 .back-upwards-connecting-canvas-wrapper{
@@ -860,6 +862,6 @@ ul.dropdown-menu.show{
     width: 50%;
     top: -100%;
     left: 50%;
-    z-index: $bot-level-zIndex;
+    z-index: 10;
     pointer-events: none;
 }

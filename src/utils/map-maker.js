@@ -751,4 +751,36 @@ export function MapMaker(props){
 
         // numberOfFolders
     }
+
+    this.getAllPortalsInDungeon = (dungeon) => {
+        const portals = [];
+        if (!dungeon || !Array.isArray(dungeon.levels)) return portals;
+        dungeon.levels.forEach((level) => {
+            ['front', 'back'].forEach((orientation) => {
+                const plane = level[orientation];
+                if (plane && Array.isArray(plane.miniboards)) {
+                    plane.miniboards.forEach((mb, mbIndex) => {
+                        if (mb && Array.isArray(mb.tiles)) {
+                            mb.tiles.forEach((tile) => {
+                                const type = tile.contains && (tile.contains.type || tile.contains);
+                                if (type === 'dungeon_portal' || type === 'dungeon portal') {
+                                    portals.push({
+                                        tileId: tile.id,
+                                        coordinates: tile.coordinates,
+                                        miniboardIndex: mbIndex,
+                                        orientation: orientation,
+                                        levelId: level.id,
+                                        portalId: tile.contains.portalId || null,
+                                        targetPortalId: tile.contains.targetPortalId || null,
+                                        portalName: tile.contains.portalName || `Lvl ${level.id} (${orientation === 'front' ? 'Front' : 'Back'}) Board ${mbIndex + 1} at [${tile.coordinates}]`
+                                    });
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        });
+        return portals;
+    }
 }

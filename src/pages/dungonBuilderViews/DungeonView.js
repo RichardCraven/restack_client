@@ -162,6 +162,69 @@ class DungeonView extends React.Component {
         });
     }
 
+    drawPortalConnections = (ctx, frameCount) => {
+        ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+        if (!this.props.loadedDungeon || !this.props.overlayData) return;
+
+        const allPortals = this.props.mapMaker.getAllPortalsInDungeon(this.props.loadedDungeon);
+        const canvasRect = ctx.canvas.getBoundingClientRect();
+
+        ctx.save();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#a855f7'; // vibrant purple
+        ctx.shadowColor = '#ec4899'; // glowing pink
+        ctx.shadowBlur = 8;
+        ctx.lineJoin = 'round';
+        ctx.setLineDash([6, 6]);
+        ctx.lineDashOffset = -frameCount * 0.5;
+
+        const drawnPairs = new Set();
+
+        allPortals.forEach((p) => {
+            if (!p.portalId || !p.targetPortalId) return;
+
+            const pairKey = [p.portalId, p.targetPortalId].sort().join('-');
+            if (drawnPairs.has(pairKey)) return;
+
+            const elA = document.querySelector(`[data-portal-id="${p.portalId}"]`);
+            const elB = document.querySelector(`[data-portal-id="${p.targetPortalId}"]`);
+
+            if (elA && elB) {
+                const rectA = elA.getBoundingClientRect();
+                const rectB = elB.getBoundingClientRect();
+
+                const x1 = rectA.left - canvasRect.left + rectA.width / 2;
+                const y1 = rectA.top - canvasRect.top + rectA.height / 2;
+                const x2 = rectB.left - canvasRect.left + rectB.width / 2;
+                const y2 = rectB.top - canvasRect.top + rectB.height / 2;
+
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+
+                const mx = (x1 + x2) / 2;
+                const my = (y1 + y2) / 2;
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const offset = Math.min(60, dist * 0.25);
+                const px = -dy / (dist || 1);
+                const py = dx / (dist || 1);
+
+                const cx = mx + px * offset;
+                const cy = my + py * offset;
+
+                ctx.quadraticCurveTo(cx, cy, x2, y2);
+                ctx.stroke();
+
+                drawnPairs.add(pairKey);
+            }
+        });
+
+        ctx.restore();
+    }
+
     draw = (ctx, frameCount, data) => {
         // Throttle: only repaint every ~3rd frame (~20fps) to reduce GPU work.
         // Static canvases (no passages) bail out immediately after the first clear anyway.
@@ -399,7 +462,8 @@ class DungeonView extends React.Component {
                                 justifyContent: this.props.loadedDungeon.levels.length > 2 ? 'flex-start' : 'center'
                             }}
                             >
-                                { this.props.loadedDungeon.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>{
+                                <div className="dungeon-levels-container" style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                                    { this.props.loadedDungeon.levels.sort((a,b) => b.id - a.id).map((level,levelIndex)=>{
                                      return <div key={levelIndex} className="level-wrapper">
                                         <div className="level-info">
                                             <div className={`level-valid-indicator ${level.valid ? 'valid' : ''} ${level.valid === false ? 'invalid' : ''}`}></div>
@@ -461,21 +525,6 @@ class DungeonView extends React.Component {
                                                                 ></div>
                                                         })}
                                                     </div>
-                                                    <div 
-                                                    className="canvas-overlay-container mini-boards-container"
-                                                    style={{
-                                                        height: this.props.tileSize*6,
-                                                        width: this.props.tileSize*6
-                                                    }}
-                                                    >
-                                                        {/* Fix 1+2: single full-plane canvas, only rendered when overlayData is active */}
-                                                        {this.props.overlayData && <Canvas
-                                                            width={this.props.tileSize*6}
-                                                            height={this.props.tileSize*6}
-                                                            draw={this.drawPlane}
-                                                            data={{levelId: level.id, orientation: 'front'}}
-                                                        />}
-                                                    </div>
                                                     {level.front.miniboards.map((board, i) => {
                                                     return    <div 
                                                             className="micro-board board" 
@@ -486,9 +535,13 @@ class DungeonView extends React.Component {
                                                             }}
                                                             > 
                                                                 {board.tiles && board.tiles.map((tile, i) => {
+                                                                const isPortal = tile.contains && (tile.contains.type === 'dungeon_portal' || tile.contains.type === 'dungeon portal');
                                                                 return <Tile
                                                                 key={i}
                                                                 id={tile.id}
+                                                                data-portal-id={isPortal ? tile.contains.portalId : null}
+                                                                className={isPortal ? 'dungeon-preview-portal-tile' : ''}
+                                                                delayedHoverLabel={isPortal ? (tile.contains.targetPortalId ? `Linked Portal (Target: ${tile.contains.targetCoordinates})` : 'Unlinked Portal') : null}
                                                                 tileSize={((this.props.tileSize*6)/3-2)/15}
                                                                 contains={tile.contains}
                                                                 boardTiles={board.tiles}
@@ -507,6 +560,21 @@ class DungeonView extends React.Component {
                                                                 })}
                                                             </div>
                                                     })}
+                                                    <div 
+                                                    className="canvas-overlay-container mini-boards-container"
+                                                    style={{
+                                                        height: this.props.tileSize*6,
+                                                        width: this.props.tileSize*6
+                                                    }}
+                                                    >
+                                                        {/* Fix 1+2: single full-plane canvas, only rendered when overlayData is active */}
+                                                        {this.props.overlayData && <Canvas
+                                                            width={this.props.tileSize*6}
+                                                            height={this.props.tileSize*6}
+                                                            draw={this.drawPlane}
+                                                            data={{levelId: level.id, orientation: 'front'}}
+                                                        />}
+                                                    </div>
                                                 </div>
                                             </div>}
 
@@ -548,6 +616,41 @@ class DungeonView extends React.Component {
                                                                 ></div>
                                                         })}
                                                     </div>
+                                                    {level.back.miniboards.map((board, i) => {
+                                                    return    <div 
+                                                            className="micro-board board" 
+                                                            key={i}
+                                                            style={{
+                                                                height: (this.props.tileSize*6)/3-2+'px',
+                                                                width: (this.props.tileSize*6)/3-2+'px'
+                                                            }}
+                                                            > 
+                                                                {board.tiles && board.tiles.map((tile, i) => {
+                                                                const isPortal = tile.contains && (tile.contains.type === 'dungeon_portal' || tile.contains.type === 'dungeon portal');
+                                                                return <Tile
+                                                                key={i}
+                                                                id={tile.id}
+                                                                data-portal-id={isPortal ? tile.contains.portalId : null}
+                                                                className={isPortal ? 'dungeon-preview-portal-tile' : ''}
+                                                                delayedHoverLabel={isPortal ? (tile.contains.targetPortalId ? `Linked Portal (Target: ${tile.contains.targetCoordinates})` : 'Unlinked Portal') : null}
+                                                                tileSize={((this.props.tileSize*6)/3-2)/15}
+                                                                contains={tile.contains}
+                                                                boardTiles={board.tiles}
+                                                                image={tile.image ? tile.image : null}
+                                                                imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
+                                                                color={tile.color ? tile.color : 'white'} borders={tile.borders}
+                                                                coordinates={tile.coordinates}
+                                                                index={tile.id}
+                                                                showCoordinates={false}
+                                                                editMode={true}
+                                                                handleHover={null}
+                                                                handleClick={null}
+                                                                type={tile.type}
+                                                                hovered={false}
+                                                                />
+                                                                })}
+                                                            </div>
+                                                    })}
                                                     <div 
                                                     className="canvas-overlay-container mini-boards-container"
                                                     style={{
@@ -564,39 +667,6 @@ class DungeonView extends React.Component {
                                                             data={{levelId: level.id, orientation: 'back'}}
                                                         />}
                                                     </div>
-                                                    {level.back.miniboards.map((board, i) => {
-                                                    return    <div 
-                                                            className="micro-board board" 
-                                                            key={i}
-                                                            style={{
-                                                                height: (this.props.tileSize*6)/3-2+'px',
-                                                                width: (this.props.tileSize*6)/3-2+'px'
-                                                            }}
-                                                            > 
-                                                                {board.tiles && board.tiles.map((tile, i) => {
-                                                                return <Tile
-                                                                key={i}
-                                                                id={tile.id}
-                                                                tileSize={((this.props.tileSize*6)/3-2)/15}
-                                                                contains={tile.contains}
-                                                                boardTiles={board.tiles}
-                                                                image={tile.image ? tile.image : null}
-                                                                imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
-                                                                color={tile.color ? tile.color : 'white'} borders={tile.borders}
-                                                                coordinates={tile.coordinates}
-                                                                index={tile.id}
-                                                                showCoordinates={false}
-                                                                editMode={true}
-                                                                handleHover={null}
-                                                                handleClick={null}
-                                                                type={tile.type}
-                                                                hovered={
-                                                                    false
-                                                                }
-                                                                />
-                                                                })}
-                                                            </div>
-                                                    })}
                                                 </div>
                                             </div>}
                                             
@@ -614,7 +684,30 @@ class DungeonView extends React.Component {
                                         </div>
                                     </div>
                                 })}
-                            </div>}
+                                 {/* Portal Connections Overlay Canvas */}
+                                 {this.props.overlayData && (() => {
+                                     const containerWidth = 80 + this.props.tileSize * 12;
+                                     const containerHeight = (this.props.tileSize * 6) * this.props.loadedDungeon.levels.length;
+                                     return (
+                                         <Canvas
+                                             className="portal-connections-canvas"
+                                             width={containerWidth}
+                                             height={containerHeight}
+                                             style={{
+                                                 position: 'absolute',
+                                                 top: 0,
+                                                 left: 0,
+                                                 width: containerWidth + 'px',
+                                                 height: containerHeight + 'px',
+                                                 zIndex: 12,
+                                                 pointerEvents: 'none'
+                                             }}
+                                             draw={this.drawPortalConnections}
+                                         />
+                                     );
+                                 })()}
+                                </div>
+                             </div>}
                             {!this.props.loadedDungeon && !this.props.loadingData && <div className="empty-dungeons-container">
                                 Select a dungeon, or create a new one
                             </div>}
