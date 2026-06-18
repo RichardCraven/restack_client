@@ -679,6 +679,7 @@ import soldier_fist_of_honor from '../assets/icons/combat-icons/specials/soldier
 import soldier_imbued_strike from '../assets/icons/combat-icons/specials/soldier/imbued_strike.png'
 import soldier_one_man_army from '../assets/icons/combat-icons/specials/soldier/one_man_army.png'
 import soldier_battlecry from '../assets/icons/combat-icons/specials/soldier/battlecry.png'
+import battle_tactics from '../assets/icons/combat-icons/specials/soldier/battle_tactics.png'
 import axe_swing from '../assets/icons/combat-icons/basic attacks/axe swing.png'
 import axe_throw from '../assets/icons/combat-icons/basic attacks/axe throw.png'
 import heal from '../assets/icons/combat-icons/basic attacks/heal.png'
@@ -1874,6 +1875,7 @@ export {
 
     malevolent_presence,
     gore_horns,
+    battle_tactics,
     demon_mark,
     new_moon,
     rake,

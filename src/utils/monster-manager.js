@@ -233,7 +233,7 @@ export function MonsterManager() {
             portrait: images['shade'],
             greetings: ['*chilling whispers*', 'the shadows consume you'],
             deathCries: ['*shrieks and fades*'],
-            skills: ['claw_strike', 'despair', 'induce_fear'],
+            skills: ['undead_grasp', 'despair', 'induce_fear'],
             weaknesses: ['fire', 'holy'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -262,7 +262,7 @@ export function MonsterManager() {
             portrait: images['troll_portrait'],
             greetings: ['you stink of fresh meat'],
             deathCries: ['*gurgle*'],
-            skills: ['crush', 'tackle', 'bite', 'regeneration'],
+            skills: ['claw_strike', 'bite', 'regenerate', 'gore'],
             weaknesses: ['fire'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
@@ -337,7 +337,7 @@ export function MonsterManager() {
             image_names: ['wraith'],
             monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
             stats: {
-                hp: 1282,
+                hp: 128,
                 atk: 9,
                 def: 8,
                 speed: 12, // ghostly, nearly untouchable
@@ -367,7 +367,7 @@ export function MonsterManager() {
             image_names: ['ogre'],
             monster_names: ['Uggo', 'Tubodu', 'Gumluk'],
             stats: {
-                hp: 1192,
+                hp: 192,
                 atk: 9,
                 def: 11,
                 speed: 5, // massive but slow

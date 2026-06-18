@@ -1,6 +1,6 @@
 
 import * as images from '../utils/images'
-import { SPELLS, RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime } from './spells-table'
+import { SPELLS, RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime, BATTLE_TACTICS } from './spells-table'
 
 // eslint-disable-next-line no-extend-native
 Date.prototype.addHours= function(h){
@@ -468,6 +468,24 @@ export function CrewManager(){
                     startDate,
                     endDate,
                     notified: false
+                });
+            }
+            break;
+            case 'tactics': {
+                const tacticDef = BATTLE_TACTICS[actionSubtype.tacticKey];
+                if (!tacticDef) break;
+                const prepTime = tacticDef.prepTime || (20 * 60 * 1000);
+                endDate = new Date(Date.now() + prepTime);
+                member.specialActions.push({
+                    type: 'tactics',
+                    tacticKey: actionSubtype.tacticKey,
+                    name: tacticDef.name,
+                    iconUrl: images['battle_tactics'] || '',
+                    combatsRemaining: tacticDef.combatDuration,
+                    available: false,
+                    startDate,
+                    endDate,
+                    notified: false,
                 });
             }
             break;

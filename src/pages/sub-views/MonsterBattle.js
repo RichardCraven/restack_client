@@ -20,6 +20,7 @@ import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
 import REAGENTS, { REAGENT_KEYS } from '../../utils/reagents';
 import BREW_INGREDIENTS, { BREW_INGREDIENT_KEYS } from '../../utils/brew-ingredients';
+import { BATTLE_TACTICS } from '../../utils/spells-table';
 
 // const MAX_DEPTH = 7;
 const NUM_COLUMNS = 8;
@@ -1021,6 +1022,23 @@ class MonsterBattle extends React.Component {
                 this.props.inventoryManager.addItemsByName(itemsGained)
             }
             experienceGained = this.props.monster.level * 10;
+            // ── Battle Tactics: apply XP multiplier if an active tactic is in effect ──
+            try {
+                const soldierMember = (this.props.crew || []).find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
+                if (soldierMember) {
+                    const activeTactic = (soldierMember.specialActions || []).find(
+                        a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
+                    );
+                    if (activeTactic) {
+                        const tacticDef = BATTLE_TACTICS[activeTactic.tacticKey];
+                        if (tacticDef && tacticDef.xpMultiplier && tacticDef.xpMultiplier > 1) {
+                            const rawXp = experienceGained;
+                            experienceGained = Math.round(experienceGained * tacticDef.xpMultiplier);
+                            console.log(`[Battle Tactics] XP boosted by ${tacticDef.name}: ${rawXp} → ${experienceGained} (×${tacticDef.xpMultiplier})`);
+                        }
+                    }
+                }
+            } catch(e) { console.warn('[Battle Tactics] XP multiplier failed', e); }
             goldGained = Math.floor(Math.random() * experienceGained);
             // Defensive: log inventory/gold state before adding to help trace duplicate updates
             try { /* inventory snapshot suppressed */ } catch(e){}
@@ -1098,6 +1116,34 @@ class MonsterBattle extends React.Component {
                 } catch(e) {}
                 // Use latest liveCrew snapshot when awarding experience
                 try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch(e) { console.warn('addExperience failed', e); }
+                // ── Battle Tactics: decrement combatsRemaining after this victory ──
+                try {
+                    const meta = getMeta() || {};
+                    const metaCrew = Array.isArray(meta.crew) ? meta.crew : (this.props.crewManager.crew || []);
+                    const soldierInMeta = metaCrew.find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
+                    if (soldierInMeta) {
+                        const tacticAction = (soldierInMeta.specialActions || []).find(
+                            a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
+                        );
+                        if (tacticAction) {
+                            tacticAction.combatsRemaining = Math.max(0, (tacticAction.combatsRemaining || 1) - 1);
+                            if (tacticAction.combatsRemaining === 0) {
+                                // Tactic fully consumed — clear it
+                                soldierInMeta.specialActions = (soldierInMeta.specialActions || []).filter(a => a !== tacticAction);
+                                console.log(`[Battle Tactics] "${tacticAction.name}" fully consumed after this combat.`);
+                            } else {
+                                console.log(`[Battle Tactics] "${tacticAction.name}" — ${tacticAction.combatsRemaining} combat(s) remaining.`);
+                            }
+                            // Sync back to live crewManager
+                            const liveSoldier = (this.props.crewManager.crew || []).find(m => m && m.id === soldierInMeta.id);
+                            if (liveSoldier) {
+                                liveSoldier.specialActions = soldierInMeta.specialActions;
+                            }
+                            meta.crew = metaCrew;
+                            try { storeMeta(meta); } catch(e) {}
+                        }
+                    }
+                } catch(e) { console.warn('[Battle Tactics] combatsRemaining decrement failed', e); }
                 // Build level transitions map for display
                 const levelTransitions = {};
                 try {
@@ -1244,12 +1290,32 @@ class MonsterBattle extends React.Component {
                         try { storeMeta(meta); } catch (e) {}
                         try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
                         try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+
+                        // ── Battle Tactics: soldier death wipes stored tactics ──
+                        try {
+                            meta.crew.forEach(member => {
+                                if (!member) return;
+                                const isSoldier = member.type === 'soldier' || member.image === 'soldier';
+                                if (isSoldier && member.dead) {
+                                    const hadTactics = (member.specialActions || []).some(a => a && a.type === 'tactics');
+                                    if (hadTactics) {
+                                        member.specialActions = (member.specialActions || []).filter(a => !a || a.type !== 'tactics');
+                                        // Sync to live crewManager
+                                        const liveSoldier = (this.props.crewManager?.crew || []).find(m => m && m.id === member.id);
+                                        if (liveSoldier) liveSoldier.specialActions = member.specialActions;
+                                        console.log('[Battle Tactics] Soldier died — tactics cleared.');
+                                        try { storeMeta(meta); } catch(e) {}
+                                    }
+                                }
+                            });
+                        } catch(e) { console.warn('[Battle Tactics] soldier-death clear failed', e); }
                     }
                 }
             }
         } catch (err) {
             console.warn('Failed to persist final battle HP to meta', err);
         }
+
 
         // Ensure suppressSummaryPortraits is only true for the special group-death flow
         // (that flow sets this._suppressPersistFinalHP and this.state.suppressSummaryPortraits
@@ -2558,6 +2624,34 @@ class MonsterBattle extends React.Component {
                             {/* LEFT COLUMN: stat bars + current target */}
                             <div className="redux-stats-col">
                                 <div className="interaction-header">Status</div>
+
+                                {/* ── Active Battle Tactic badge ──────────────── */}
+                                {(() => {
+                                    const soldier = (this.props.crew || []).find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
+                                    if (!soldier) return null;
+                                    const activeTactic = (soldier.specialActions || []).find(
+                                        a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
+                                    );
+                                    if (!activeTactic) return null;
+                                    const tacticIconUrl = images['battle_tactics'];
+                                    return (
+                                        <div className="tactic-active-badge">
+                                            {tacticIconUrl && (
+                                                <div
+                                                    className="tactic-active-badge-icon"
+                                                    style={{ backgroundImage: `url(${tacticIconUrl})` }}
+                                                />
+                                            )}
+                                            <div className="tactic-active-badge-text">
+                                                <span className="tactic-active-name">{activeTactic.name}</span>
+                                                <span className="tactic-active-meta">
+                                                    ⚔ {activeTactic.combatsRemaining} left
+                                                </span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
                                 {liveSelectedFighter ? (
                                     <div className="redux-stat-block">
                                         {/* HP Bar */}

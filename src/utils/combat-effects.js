@@ -598,6 +598,13 @@ export function applyAttackEffect(target, effect, broadcastDataUpdate, isCrit, c
             applied = applyEnergyDrainEffect(target, resolvedDur, broadcastDataUpdate);
             appliedLabel = 'drains energy';
             break;
+        case 'regenerate':
+            target.regenerating = true;
+            target.trollRegenRoundsLeft = 10;
+            if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate();
+            applied = true;
+            appliedLabel = 'grants regeneration';
+            break;
         case 'regeneration':
         case 'greater regeneration':
         case 'greater_regeneration':

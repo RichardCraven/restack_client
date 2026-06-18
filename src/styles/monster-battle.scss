@@ -3938,6 +3938,57 @@
     gap: 4px;
 }
 
+// ── Active Battle Tactic badge ────────────────────────────────────────────
+.tactic-active-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 7px;
+    background: linear-gradient(135deg, rgba(160, 50, 30, 0.25), rgba(200, 140, 40, 0.15));
+    border: 1px solid rgba(220, 150, 50, 0.55);
+    border-radius: 5px;
+    animation: tactic-badge-pulse 2.8s ease-in-out infinite;
+    flex-shrink: 0;
+
+    @keyframes tactic-badge-pulse {
+        0%, 100% { box-shadow: 0 0 4px rgba(220, 140, 40, 0.2); }
+        50%       { box-shadow: 0 0 10px rgba(220, 140, 40, 0.55); }
+    }
+
+    .tactic-active-badge-icon {
+        width: 24px;
+        height: 24px;
+        background-size: cover;
+        background-position: center;
+        border-radius: 3px;
+        flex-shrink: 0;
+        opacity: 0.9;
+    }
+
+    .tactic-active-badge-text {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        min-width: 0;
+
+        .tactic-active-name {
+            font-size: 9.5px;
+            font-weight: 700;
+            color: rgba(255, 215, 120, 1);
+            letter-spacing: 0.04em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .tactic-active-meta {
+            font-size: 8.5px;
+            color: rgba(220, 170, 80, 0.75);
+            font-weight: 600;
+        }
+    }
+}
+
 .redux-stat-block {
     display: flex;
     flex-direction: column;

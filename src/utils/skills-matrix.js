@@ -1401,6 +1401,31 @@ const skillsMatrix = {
         type: 'damage',
         effect: { type: 'bleed', chance: 40, duration: 'short' }
     },
+    regenerate: {
+        id: 'regenerate',
+        tier: 2,
+        name: 'Regenerate',
+        desc: 'Heal 5 HP per round for 10 rounds.',
+        icon: images.regenerate,
+        cooldown: 20,
+        duration: '10-rounds',
+        range: 'self',
+        type: 'heal',
+        effect: ['heal_self']
+    },
+    gore: {
+        id: 'gore',
+        tier: 2,
+        name: 'Gore',
+        desc: 'Savage strike dealing 200% ATK damage with a 70% chance to cause bleeding.',
+        icon: images.gore,
+        cooldown: 4,
+        duration: 'short',
+        range: 'close',
+        atkPercentage: 200,
+        type: 'damage',
+        effect: { type: 'bleed', chance: 70, duration: 'short' }
+    },
     despair: {
         id: 'despair',
         tier: 2,

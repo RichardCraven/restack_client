@@ -112,3 +112,65 @@ export const RECIPES = {
     description: 'A legendary camp meal. Takes all day, feeds the crew like kings.',
   },
 };
+
+// ── Battle Tactics — Soldier dungeon prep actions ──────────────────────────
+// The Soldier can commit to a tactic during downtime. After the prep timer
+// completes the tactic is "active" and applies crew-wide buffs for a fixed
+// number of combat encounters before it is consumed.
+export const BATTLE_TACTICS = {
+  vanguard_formation: {
+    key: 'vanguard_formation',
+    name: 'Vanguard Formation',
+    icon: 'battle_tactics',
+    prepTime: 20 * 60 * 1000,        // 20 minutes
+    combatDuration: 3,               // lasts 3 combat encounters
+    description: 'Sardonis drills the crew in tight-shield formation. All crew gain +15% ATK and DEF for three combat encounters.',
+    flavorText: '"Shoulder to shoulder — we are the wall."',
+    bonuses: {
+      increase_stats: {
+        stats: [
+          { stat: 'atk', amount: 15, isPercent: true },
+          { stat: 'def', amount: 15, isPercent: true },
+        ],
+      },
+    },
+    xpMultiplier: 1.25,             // +25% XP per combat while active
+  },
+  iron_discipline: {
+    key: 'iron_discipline',
+    name: 'Iron Discipline',
+    icon: 'battle_tactics',
+    prepTime: 45 * 60 * 1000,        // 45 minutes
+    combatDuration: 5,               // lasts 5 combat encounters
+    description: 'Rigorous conditioning hardens the crew. All crew gain +25% DEF and +10 max endurance for five combat encounters.',
+    flavorText: '"Pain is a teacher. Learn its lesson."',
+    bonuses: {
+      increase_stats: {
+        stats: [
+          { stat: 'def', amount: 25, isPercent: true },
+          { stat: 'vitality', amount: 10, isPercent: false },
+        ],
+      },
+    },
+    xpMultiplier: 1.15,             // +15% XP per combat while active
+  },
+  blitz_protocol: {
+    key: 'blitz_protocol',
+    name: 'Blitz Protocol',
+    icon: 'battle_tactics',
+    prepTime: 60 * 60 * 1000,        // 60 minutes
+    combatDuration: 2,               // lasts 2 combat encounters
+    description: 'An all-out assault doctrine. All crew gain +30% ATK and +15% speed for two devastating combat encounters.',
+    flavorText: '"Hit fast, hit hard, hit once."',
+    bonuses: {
+      increase_stats: {
+        stats: [
+          { stat: 'atk', amount: 30, isPercent: true },
+          { stat: 'speed', amount: 15, isPercent: true },
+        ],
+      },
+    },
+    xpMultiplier: 1.40,             // +40% XP per combat while active
+  },
+};
+

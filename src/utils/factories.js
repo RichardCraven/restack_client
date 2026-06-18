@@ -69,7 +69,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         'barbarian_slash', 'sword_swing', 'axe_throw', 'summon_skeleton', 
         'claw_strike', 'claws', 'rake', 'gore_horns', 'snake_strike', 
         'grasp', 'void_lance', 'crush', 'tackle', 'major_magic_missile', 'greater_magic_missile', 
-        'vampiric_bite', 'induce_madness', 'lightning', 'bite'
+        'vampiric_bite', 'induce_madness', 'lightning', 'bite', 'gore'
     ];
 
     if (Array.isArray(fighter.skills)) {
@@ -711,6 +711,27 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                         if (this.regenerating_eras <= 0) {
                             this.regenerating = false;
                             this.regenerating_eras = 0;
+                        }
+                        if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
+                    }
+
+                    // -- Troll custom regenerate effect --
+                    if (this.regenerating && typeof this.trollRegenRoundsLeft === 'number' && this.trollRegenRoundsLeft > 0 && !this.dead) {
+                        const healAmount = 5;
+                        this.hp = Math.min(this.starting_hp, this.hp + healAmount);
+                        const indicatorId = Date.now() + Math.random();
+                        const indicatorRecipient = getIndicatorRecipient(this);
+                        indicatorRecipient.damageIndicators.push({ 
+                            id: indicatorId, 
+                            value: `+${healAmount}`, 
+                            source: 'Regen', 
+                            type: 'heal',
+                            timestamp: Date.now()
+                        });
+                        this.trollRegenRoundsLeft--;
+                        if (this.trollRegenRoundsLeft <= 0) {
+                            this.regenerating = false;
+                            this.trollRegenRoundsLeft = 0;
                         }
                         if (typeof broadcastDataUpdate === 'function' && !isCombatOver()) broadcastDataUpdate(this);
                     }

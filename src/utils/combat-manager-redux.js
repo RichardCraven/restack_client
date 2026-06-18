@@ -5,6 +5,7 @@ import { activeShieldWalls, crossesShieldWall } from './shared-ai-methods/moveme
 import { INTERVALS, getDurationRounds } from './shared-constants';
 import * as images from './images';
 import { getMeta, storeMeta, applyResolvePenalty } from './session-handler';
+import { BATTLE_TACTICS } from './spells-table';
 
 const MAX_DEPTH = 7;
 const MAX_LANES = 6;
@@ -491,6 +492,43 @@ export function CombatManagerRedux() {
             this._initializeInitialCooldowns(fighter);
             this._setCombatantOccupiedCoords(fighter);
         });
+
+        // ── Battle Tactics: apply crew-wide buffs if the Soldier has an active tactic ──
+        try {
+            const soldierData = (this.data.crew || []).find(e => e && (e.type === 'soldier' || e.image === 'soldier'));
+            if (soldierData) {
+                const activeTactic = (soldierData.specialActions || []).find(
+                    a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
+                );
+                if (activeTactic) {
+                    const tacticDef = BATTLE_TACTICS[activeTactic.tacticKey];
+                    if (tacticDef && tacticDef.bonuses) {
+                        const TACTIC_BUFF_ROUNDS = 9999; // effectively unlimited for this combat
+                        Object.values(this.combatants).forEach(combatant => {
+                            if (!combatant || combatant.isMonster) return;
+                            const statsToApply = (tacticDef.bonuses.increase_stats?.stats || []).map(entry => {
+                                if (entry.isPercent) {
+                                    // Convert percent to flat: e.g. 15% of current atk
+                                    const base = combatant.stats[entry.stat] || 0;
+                                    const amount = Math.round(base * entry.amount / 100);
+                                    return { stat: entry.stat, amount };
+                                }
+                                return { stat: entry.stat, amount: entry.amount };
+                            });
+                            this._applyBuff(
+                                combatant,
+                                { increase_stats: { stats: statsToApply } },
+                                `Battle Tactic: ${activeTactic.name}`,
+                                TACTIC_BUFF_ROUNDS
+                            );
+                            combatant.tacticBuffActive = activeTactic.tacticKey;
+                        });
+                        this.activeTacticKey = activeTactic.tacticKey;
+                        console.log(`[Combat] Battle Tactic "${activeTactic.name}" applied to crew.`);
+                    }
+                }
+            }
+        } catch(e) { console.warn('[Combat] Battle Tactics buff application failed', e); }
 
         const m = this.data.monster;
         m.isMonster = true; // Mark as monster early so isLarge/isHuge sizing evaluates correctly for VCT occupied lanes
@@ -1047,19 +1085,34 @@ export function CombatManagerRedux() {
     // ── Target Acquisition ────────────────────────────────────────────────────
     // Acquire an attack target using threat-weighted scoring.
     // Prioritizes: lowest HP% target, then healer/support classes, then closest.
-    this.acquireTarget = (caller, preferWeakest = true) => {
+    this.acquireTarget = (caller, preferWeakest = true, excludeTargetIds = []) => {
         let bestTarget = null;
         let bestScore = -Infinity;
 
         // Healers are high-value targets for enemies
         const HEALER_TYPES = new Set(['sage', 'summoner', 'wizard']);
 
-        const candidateTargets = Object.values(this.combatants).filter(c => {
+        let candidateTargets = Object.values(this.combatants).filter(c => {
             if (!c || c.dead || c.isVCT || typeof c.inTrial === 'number') return false;
+            if (excludeTargetIds && excludeTargetIds.includes(c.id)) return false;
             const callerIsEnemy = !!caller.isMonster;
             const cIsEnemy = !!c.isMonster;
             return callerIsEnemy !== cIsEnemy;
         });
+
+        // Fallback if excludeTargetIds filtered out all possible targets
+        if (candidateTargets.length === 0 && excludeTargetIds && excludeTargetIds.length > 0) {
+            candidateTargets = Object.values(this.combatants).filter(c => {
+                if (!c || c.dead || c.isVCT || typeof c.inTrial === 'number') return false;
+                const callerIsEnemy = !!caller.isMonster;
+                const cIsEnemy = !!c.isMonster;
+                return callerIsEnemy !== cIsEnemy;
+            });
+            if (caller) {
+                caller._excludedTargetIds = [];
+            }
+        }
+
         const callerIsEnemy = !!caller.isMonster;
         const awakeTargetsExist = !callerIsEnemy && candidateTargets.some(c => !c.asleep);
 
@@ -1084,6 +1137,8 @@ export function CombatManagerRedux() {
         });
         if (bestTarget) {
             caller.targetId = bestTarget.id;
+        } else {
+            caller.targetId = null;
         }
         return bestTarget;
     };
@@ -1611,6 +1666,25 @@ export function CombatManagerRedux() {
             buff.roundsLeft--;
             return true;
         });
+
+        if (unit.regenerating && typeof unit.trollRegenRoundsLeft === 'number' && unit.trollRegenRoundsLeft > 0) {
+            unit.trollRegenRoundsLeft--;
+            const healAmt = 5;
+            unit.hp = Math.min(unit.starting_hp || unit.hp, unit.hp + healAmt);
+            unit.damageIndicators = unit.damageIndicators || [];
+            unit.damageIndicators.push({
+                id: Date.now() + Math.random(),
+                value: `+${healAmt}`,
+                source: 'Regenerate',
+                type: 'heal'
+            });
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} regenerates 5 HP.`);
+            if (unit.trollRegenRoundsLeft <= 0) {
+                unit.regenerating = false;
+                unit.trollRegenRoundsLeft = 0;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s regeneration has ended.`);
+            }
+        }
     };
 
     this._tickUnitDebuffs = (unit) => {
@@ -2001,6 +2075,7 @@ export function CombatManagerRedux() {
             const key = this._resolveAbilityKey(s);
             if (!key || !this._abilityReady(unit, key)) return;
             if (key === 'barbarian_leap_attack' && target && this.targetInRange(unit, target, 'close')) return;
+            if (key === 'regenerate' && (selfHpPct >= 0.50 || unit.regenerating)) return;
             const resolved = this.resolveSpecial(unit, key);
             if (!resolved || resolved.type === 'passive' || resolved.isPassive) return;
 
@@ -2008,10 +2083,14 @@ export function CombatManagerRedux() {
             const effects = Array.isArray(resolved.effect) ? resolved.effect : (resolved.effect ? [resolved.effect] : []);
 
             // Healing
-            if (resolved.type === 'heal' || key === 'heal' || key === 'monk_meditate') {
-                const woundedPct = woundedAlly ? (woundedAlly.hp / woundedAlly.starting_hp) : 1;
-                score += (1 - woundedPct) * 30;
-                if (woundedPct < 0.4) score += 20; // urgent heal bonus
+            if (resolved.type === 'heal' || key === 'heal' || key === 'monk_meditate' || key === 'regenerate') {
+                if (key === 'regenerate') {
+                    score += 50; // high priority self-regen
+                } else {
+                    const woundedPct = woundedAlly ? (woundedAlly.hp / woundedAlly.starting_hp) : 1;
+                    score += (1 - woundedPct) * 30;
+                    if (woundedPct < 0.4) score += 20; // urgent heal bonus
+                }
             }
 
             // Self-buffs / Buffs
@@ -3704,9 +3783,31 @@ export function CombatManagerRedux() {
 
     // GENERIC: Used for monsters and unrecognized unit types
     this._aiGeneric = (unit) => {
-        this.acquireTarget(unit, true);
+        const getMinDistance = (u, t) => {
+            if (!u || !t) return Infinity;
+            const uTiles = (Array.isArray(u.occupiedCoords) && u.occupiedCoords.length > 0) ? u.occupiedCoords : [u.coordinates];
+            const tTiles = (Array.isArray(t.occupiedCoords) && t.occupiedCoords.length > 0) ? t.occupiedCoords : [t.coordinates];
+            let minDist = Infinity;
+            for (let uc of uTiles) {
+                for (let tc of tTiles) {
+                    if (uc && tc) {
+                        const dist = Math.abs(uc.x - tc.x) + Math.abs(uc.y - tc.y);
+                        if (dist < minDist) minDist = dist;
+                    }
+                }
+            }
+            return minDist;
+        };
+
+        this.acquireTarget(unit, true, unit._excludedTargetIds || []);
         const target = this.combatants[unit.targetId];
         if (!target) return;
+
+        if (unit._lastTargetId !== target.id) {
+            unit._lastTargetId = target.id;
+            unit._minTargetDistance = getMinDistance(unit, target);
+            unit._failedPathfindCount = 0;
+        }
 
         const scored = this._scoredAbilityPick(unit, target);
         let rangeType = 'close';
@@ -3728,10 +3829,32 @@ export function CombatManagerRedux() {
         const inRange = this.targetInRange(unit, target, rangeType);
 
         if (inRange) {
+            unit._failedPathfindCount = 0;
+            unit._excludedTargetIds = [];
             if (scored) this.useAbility(unit, scored.resolved, target);
             else this._basicAttack(unit, target);
         } else {
             this.moveCloser(unit, target);
+            
+            const newDist = getMinDistance(unit, target);
+            if (newDist < unit._minTargetDistance) {
+                unit._minTargetDistance = newDist;
+                unit._failedPathfindCount = 0;
+                unit._excludedTargetIds = [];
+            } else if (!unit.ensnared && !unit.shieldWallActive) {
+                unit._failedPathfindCount = (unit._failedPathfindCount || 0) + 1;
+                if (unit._failedPathfindCount > 2) {
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} is blocked and searches for a new target.`);
+                    unit._excludedTargetIds = unit._excludedTargetIds || [];
+                    if (!unit._excludedTargetIds.includes(target.id)) {
+                        unit._excludedTargetIds.push(target.id);
+                    }
+                    unit._failedPathfindCount = 0;
+                    unit._lastTargetId = null; // force target reset/re-initialization of distance tracker
+                    this.acquireTarget(unit, true, unit._excludedTargetIds);
+                }
+            }
+
             if (this.targetInRange(unit, target, rangeType)) {
                 if (scored) this.useAbility(unit, scored.resolved, target);
                 else this._basicAttack(unit, target);
@@ -4524,6 +4647,17 @@ export function CombatManagerRedux() {
         }
         const finalCooldown = Math.round(baseCooldown * cooldownPenalty);
         unit.cooldowns[abilityId] = finalCooldown;
+
+        if (abilityId === 'regenerate') {
+            unit.regenerating = true;
+            unit.trollRegenRoundsLeft = 10;
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} starts regenerating! (5 HP per round for 10 rounds)`);
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'regenerate', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
 
         if (abilityId === 'dragon_dispell' || abilityId === 'dispell') {
             const count = this.dispelTarget(target);
@@ -5981,6 +6115,9 @@ export function CombatManagerRedux() {
                                 target.sleepTotalDurationMs = 0;
                                 target.sleepEndTimeMs = 0;
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is terrified and cannot act.`);
+                                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                                    this.animManagerRedux.triggerAbility(target.coordinates, target.coordinates, 'induce_fear', false, null, target.id);
+                                }
                             } else if (eff.type === 'stun') {
                                 target.stunned = true;
                                 target.stunnedRounds = dur;

@@ -32,17 +32,18 @@ export function Troll(data, utilMethods, animationManager, overlayManager){
 
     this.onEraTransition = (caller, combatants) => {
         // --- Tactical Logic: Regeneration ---
-        // If HP drops below 60% (for testing), try to activate regeneration independently across eras
-        if (caller.hp < caller.starting_hp * 0.6 && !caller.regenerating && !caller.dead) {
+        // If HP drops below 50%, try to activate regeneration independently across eras
+        if (caller.hp < caller.starting_hp * 0.5 && !caller.regenerating && !caller.dead) {
             const specials = Array.isArray(caller.specials) ? caller.specials : [];
-            const regenSpecials = specials.filter(s => 
-                (s.name === 'regeneration' || s.name === 'greater_regeneration' || s.name === 'greater regeneration') && 
-                s.cooldown_position === 100 && 
-                caller.energy >= (s.energy_cost || 0)
-            );
+            const regenSpecials = specials.filter(s => {
+                const sName = (s.name || '').toLowerCase();
+                return (sName === 'regenerate' || sName === 'regeneration' || sName === 'greater_regeneration' || sName === 'greater regeneration') && 
+                       s.cooldown_position === 100 && 
+                       caller.energy >= (s.energy_cost || 0);
+            });
 
             if (regenSpecials.length > 0) {
-                const chosenRegen = regenSpecials.find(s => s.name.includes('greater')) || regenSpecials[0];
+                const chosenRegen = regenSpecials.find(s => (s.name || '').toLowerCase().includes('greater')) || regenSpecials[0];
                 
                 // Route directly to the application layer!
                 applyAttackEffect(caller, chosenRegen, this.broadcastDataUpdate);

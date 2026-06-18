@@ -135,6 +135,7 @@ export class AnimationManagerRedux {
         this._headButt(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'bite':
+      case 'gore':
         this._bite(sourceCoords, targetCoords);
         break;
       case 'energy_drain':
@@ -260,6 +261,7 @@ export class AnimationManagerRedux {
         break;
       case 'heal':
       case 'healing_hymn':
+      case 'regenerate':
         this._heal(sourceCoords, targetCoords);
         break;
       case 'vampiric_bite':
@@ -480,10 +482,11 @@ export class AnimationManagerRedux {
     });
   }
 
-  _induceFear(src, _tgt) {
+  _induceFear(src, tgt) {
     this._emit({
       type: 'induce_fear_overlay',
       srcPx: this._px(src),
+      tgtPx: tgt ? this._px(tgt) : null,
       icon: induce_fear,
       duration: 1500,
     });
@@ -579,6 +582,8 @@ export class AnimationManagerRedux {
       fireMissile(300, 0, 2);
       fireMissile(450, 10, 3);
       fireMissile(600, 20, 4);
+    } else if (abilityName === 'nether_bolt') {
+      fireMissile(0, 0, 0);
     } else {
       fireMissile(0, -15, 0);
       fireMissile(200, 0, 1);
@@ -748,23 +753,28 @@ export class AnimationManagerRedux {
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const activeArrow = arrowType || 'force';
     this._emit({
       type: 'generic_projectile',
       subtype: name,
       srcPx,
       tgtPx,
       angle,
-      arrowType,
+      arrowType: activeArrow,
       duration: 700,
       spherePx,
     });
-    if (arrowType === 'ice') {
+    if (activeArrow === 'ice') {
       setTimeout(() => {
         this._emit({ type: 'ice_burst', tgtPx, duration: 500 });
       }, 600);
-    } else if (arrowType === 'poison') {
+    } else if (activeArrow === 'poison') {
       setTimeout(() => {
         this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
+      }, 600);
+    } else if (activeArrow === 'force') {
+      setTimeout(() => {
+        this._emit({ type: 'force_burst', tgtPx, duration: 500 });
       }, 600);
     }
   }
@@ -793,6 +803,7 @@ export class AnimationManagerRedux {
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const activeArrow = arrowType || 'force';
 
     const fireArrow = () => {
       this._emit({
@@ -801,17 +812,21 @@ export class AnimationManagerRedux {
         srcPx,
         tgtPx,
         angle,
-        arrowType,
+        arrowType: activeArrow,
         duration: 700,
         spherePx,
       });
-      if (arrowType === 'ice') {
+      if (activeArrow === 'ice') {
         setTimeout(() => {
           this._emit({ type: 'ice_burst', tgtPx, duration: 500 });
         }, 600);
-      } else if (arrowType === 'poison') {
+      } else if (activeArrow === 'poison') {
         setTimeout(() => {
           this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
+        }, 600);
+      } else if (activeArrow === 'force') {
+        setTimeout(() => {
+          this._emit({ type: 'force_burst', tgtPx, duration: 500 });
         }, 600);
       }
     };

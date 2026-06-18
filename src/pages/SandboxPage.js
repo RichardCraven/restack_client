@@ -403,7 +403,7 @@ const monstersData = [
   },
   {
     id: 'shade', name: 'Shade', portrait: shade, abilities: [
-      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'undead_grasp', name: 'Undead Grasp', desc: 'Savage close-range claw strike dealing 100% ATK damage with a 20% chance to stun.', icon: undead_grasp, type: 'undead_grasp_type' },
       { id: 'induce_fear', name: 'Induce Fear', desc: 'Scream, filling targets with dread.', icon: induce_fear, type: 'induce_fear' },
       { id: 'despair', name: 'Despair', desc: "Unleash a wave of darkness that drains 30 stamina (endurance) from all enemies, and reduces the crew's resolve by 20 points.", icon: shadow_presence, type: 'despair' }
     ]
@@ -709,6 +709,7 @@ const SandboxPage = () => {
 
   // Mummy - Induce Fear states
   const [induceFearActive, setInduceFearActive] = useState(false);
+  const [targetFearOverlay, setTargetFearOverlay] = useState(null); // { row, col }
   const [despairActive, setDespairActive] = useState(false);
   const [targetFeared, setTargetFeared] = useState(false);
   const [fearEndTime, setFearEndTime] = useState(null);
@@ -789,7 +790,6 @@ const SandboxPage = () => {
 
   // --- Troll & Dragon States ---
   const [trollHpPct, setTrollHpPct] = useState(30);
-  const [trollRegenActive, setTrollRegenActive] = useState(false);
   const [trollRegenEndTime, setTrollRegenEndTime] = useState(null);
   const trollRegenIntervalRef = useRef(null);
 
@@ -950,7 +950,7 @@ const SandboxPage = () => {
     if (trollRegenEndTime) {
       const remaining = trollRegenEndTime - currentTime;
       if (remaining <= 0) {
-        setTrollRegenActive(false);
+
         setTrollRegenEndTime(null);
         if (trollRegenIntervalRef.current) {
           clearInterval(trollRegenIntervalRef.current);
@@ -1671,31 +1671,17 @@ const SandboxPage = () => {
       const now = Date.now();
       return (prev && prev > now) ? prev + duration : now + duration;
     });
-    setTrollRegenActive(true);
+
 
     if (trollRegenIntervalRef.current) clearInterval(trollRegenIntervalRef.current);
     trollRegenIntervalRef.current = setInterval(() => {
-      const healAmt = Math.floor(Math.random() * 6) + 5; // 5 to 10
+      const healAmt = 5;
       addFloatingText(`+${healAmt}`, 'normal', '#2ecc71', fighterPos.row, fighterPos.col);
       setTrollHpPct(prev => Math.min(100, prev + healAmt));
     }, tickInterval);
   };
 
-  const applyBleeding = (duration, tickInterval = 1500, tickDamage = 4) => {
-    setBleedSingleDuration(duration);
-    setBleedDuration(prev => (prev || 0) + duration);
-    setBleedEndTime(prev => {
-      const now = Date.now();
-      return (prev && prev > now) ? prev + duration : now + duration;
-    });
-    setTargetBleeding(true);
-    setBleedFading(false);
 
-    if (bleedIntervalRef.current) clearInterval(bleedIntervalRef.current);
-    bleedIntervalRef.current = setInterval(() => {
-      addFloatingText(`-${tickDamage}`, 'normal', '#e74c3c', targetPosRef.current.row, targetPosRef.current.col);
-    }, tickInterval);
-  };
 
   const applyPoison = (duration, tickInterval = 1500, tickDamage = 4) => {
     setPoisonSingleDuration(duration);
@@ -1897,7 +1883,7 @@ const SandboxPage = () => {
       }
     }
 
-    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'undead_grasp_type' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite' || ability.type === 'sword_swing' || ability.id === 'sword_swing' || ability.type === 'rake' || ability.id === 'rake') {
+    if (ability.type === 'melee' || ability.type === 'melee_poison' || ability.type === 'melee_slam' || ability.type === 'melee_heavy' || ability.type === 'melee_punches' || ability.type === 'melee_spin' || ability.type === 'barbarian_slash' || ability.type === 'claw_strike' || ability.type === 'undead_grasp_type' || ability.type === 'bite' || ability.type === 'head_butt' || ability.type === 'vampiric_bite' || ability.type === 'sword_swing' || ability.id === 'sword_swing' || ability.type === 'rake' || ability.id === 'rake' || ability.type === 'gore_type' || ability.id === 'gore') {
       setAnimating(true);
 
 
@@ -1905,7 +1891,7 @@ const SandboxPage = () => {
       const isSlam = ability.type === 'melee_slam' || ability.type === 'head_butt';
       const isClawStrike = ability.type === 'claw_strike' || ability.id === 'claw_strike';
       const isUndeadGrasp = ability.type === 'undead_grasp_type' || ability.id === 'undead_grasp';
-      const isBite = ability.type === 'bite' || ability.id === 'bite';
+      const isBite = ability.type === 'bite' || ability.id === 'bite' || ability.type === 'gore_type' || ability.id === 'gore';
       const isVampiricBite = ability.type === 'vampiric_bite' || ability.id === 'vampiric_bite';
       const isRake = ability.type === 'rake' || ability.id === 'rake';
 
@@ -1978,15 +1964,23 @@ const SandboxPage = () => {
           setHitEffect({ type: 'bite_chomping' });
         }, 250);
 
+        const isGore = ability.type === 'gore_type' || ability.id === 'gore';
+        const dealsGoreDmg = isGore;
+        const goreDmg = '-44';
+        const biteDmg = '-22';
+        const shouldBleed = !isGore || (Math.random() < 0.70);
+
         // Impact (at 550ms total, which is 300ms after bite starts closing):
         // Jaws slam shut, target shakes, flashes red, damage text floats, and bleed status is applied.
         setTimeout(() => {
           setTargetShake(true);
           setTargetFlash(true);
-          setTargetBleeding(true);
-          setBleedFading(false);
-          setBleedEndTime(Date.now() + 4000);
-          addFloatingText('-22', 'crit', '#e63946', targetPos.row, targetPos.col);
+          if (shouldBleed) {
+            setTargetBleeding(true);
+            setBleedFading(false);
+            setBleedEndTime(Date.now() + 4000);
+          }
+          addFloatingText(dealsGoreDmg ? goreDmg : biteDmg, 'crit', '#e63946', targetPos.row, targetPos.col);
 
           setTimeout(() => {
             setTargetShake(false);
@@ -2187,6 +2181,20 @@ const SandboxPage = () => {
           setAnimationPhase(null);
         }, totalDuration);
       }
+    }
+
+    // --- TROLL REGENERATE ---
+    else if (ability.type === 'regenerate_type') {
+      if (trollHpPct >= 50) {
+        addFloatingText('HP MUST BE BELOW 50%!', 'normal', '#e74c3c', fighterPos.row, fighterPos.col);
+        return;
+      }
+      setAnimating(true);
+      applyRegen(15000, 1500); // 15s duration (10 ticks)
+      addFloatingText('REGENERATE!', 'normal', '#2ecc71', fighterPos.row, fighterPos.col);
+      setTimeout(() => {
+        setAnimating(false);
+      }, 500);
     }
 
     // --- SOLDIER FIST OF HONOR ---
@@ -4819,6 +4827,19 @@ const SandboxPage = () => {
           setTargetFlash(true);
           setHitEffect({ type: 'shadow' });
           addFloatingText('-16', 'normal', '#a21caf', targetPos.row, targetPos.col);
+
+          const fearApplied = Math.random() < 0.40;
+          if (fearApplied) {
+            setTargetFeared(true);
+            setFearFading(false);
+            setFearEndTime(Date.now() + 8000);
+            addFloatingText('FEARED!', 'normal', '#8e2de2', targetPos.row, targetPos.col);
+
+            setTargetFearOverlay({ row: targetPos.row, col: targetPos.col });
+            setTimeout(() => {
+              setTargetFearOverlay(null);
+            }, 1500);
+          }
 
           setTimeout(() => {
             setTargetShake(false);
@@ -12182,6 +12203,28 @@ const SandboxPage = () => {
                   }}
                 />
               )}
+              {targetFearOverlay && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `${targetFearOverlay.col * TILE_PCT + TILE_PCT / 2}%`,
+                    top: `${targetFearOverlay.row * TILE_PCT + TILE_PCT / 2}%`,
+                    transform: 'translate(-50%, -50%)',
+                    width: '95px',
+                    height: '95px',
+                    backgroundImage: `url("${induce_fear}")`,
+                    backgroundSize: 'contain',
+                    backgroundRepeat: 'no-repeat',
+                    backgroundPosition: 'center',
+                    opacity: 0.5,
+                    pointerEvents: 'none',
+                    zIndex: 90,
+                    maskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    WebkitMaskImage: 'radial-gradient(circle, rgba(0,0,0,1) 35%, rgba(0,0,0,0) 70%)',
+                    animation: 'fearOverlayPulse 1.5s ease-in-out forwards'
+                  }}
+                />
+              )}
 
               {/* --- Despair Board Overlay --- */}
               {despairActive && (
@@ -12317,6 +12360,25 @@ const SandboxPage = () => {
             overflowY: 'auto'
           }}>
             <h3 style={{ margin: '0 0 15px 0', borderBottom: '1px solid rgba(255, 255, 255, 0.1)', paddingBottom: '10px', fontSize: '18px', color: '#ff5400', letterSpacing: '0.05em' }}>ABILITIES</h3>
+            {selectedUnitType === 'monster' && selectedMonsterId === 'troll' && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px', padding: '10px', borderRadius: '8px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <div style={{ fontSize: '12px', color: '#aaa', fontWeight: 'bold', textAlign: 'left' }}>Troll HP: {trollHpPct}%</div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button
+                    onClick={() => setTrollHpPct(30)}
+                    style={{ flex: 1, padding: '6px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #ff4d4d', background: 'rgba(255,77,77,0.1)', color: '#ff4d4d', cursor: 'pointer', outline: 'none' }}
+                  >
+                    Set 30%
+                  </button>
+                  <button
+                    onClick={() => setTrollHpPct(100)}
+                    style={{ flex: 1, padding: '6px 8px', fontSize: '11px', borderRadius: '4px', border: '1px solid #2ecc71', background: 'rgba(46,204,113,0.1)', color: '#2ecc71', cursor: 'pointer', outline: 'none' }}
+                  >
+                    Set 100%
+                  </button>
+                </div>
+              </div>
+            )}
             {selectedFighter.id === 'summoner' ? (
               // Grouped Summoner UI
               (() => {

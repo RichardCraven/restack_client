@@ -2691,14 +2691,19 @@ export default function CombatGrid(props) {
         }
 
         if (anim.type === 'induce_fear_overlay') {
+            const hasTarget = !!anim.tgtPx;
+            const width = hasTarget ? '95px' : '380px';
+            const height = hasTarget ? '95px' : '380px';
+            const left = hasTarget ? `${anim.tgtPx.x}px` : '50%';
+            const top = hasTarget ? `${anim.tgtPx.y}px` : '50%';
             return (
                 <div key={key} style={{
                     position: 'absolute',
-                    left: '50%',
-                    top: '50%',
+                    left: left,
+                    top: top,
                     transform: 'translate(-50%, -50%)',
-                    width: '380px',
-                    height: '380px',
+                    width: width,
+                    height: height,
                     backgroundImage: anim.icon ? `url(${anim.icon})` : `url(${images.induce_fear})`,
                     backgroundSize: 'contain',
                     backgroundRepeat: 'no-repeat',
@@ -3105,6 +3110,61 @@ export default function CombatGrid(props) {
                             strokeLinejoin="round"
                             style={{ filter: 'drop-shadow(0 0 4px #adff2f)' }}
                         />
+                    </svg>
+                </div>
+            );
+        }
+
+        if (anim.type === 'force_burst' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '80px',
+                    height: '80px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4100,
+                    animation: 'explode 0.45s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                }}>
+                    {/* Expanding shockwave ring */}
+                    <div style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        width: '100%',
+                        height: '100%',
+                        borderRadius: '50%',
+                        border: '3px solid #ff9f1c',
+                        boxShadow: '0 0 20px #ff9f1c, inset 0 0 12px #ff9f1c',
+                        background: 'radial-gradient(circle, rgba(255,159,28,0.1) 0%, transparent 70%)',
+                    }} />
+                    {/* Rhombus kinetic shard spinning clockwise */}
+                    <div style={{
+                        position: 'absolute',
+                        left: '20%',
+                        top: '20%',
+                        width: '60%',
+                        height: '60%',
+                        clipPath: 'polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)',
+                        background: 'linear-gradient(135deg, #ffe0b2 0%, #ffb74d 50%, #f57c00 100%)',
+                        boxShadow: '0 0 10px #ffb74d',
+                        animation: 'geomSpinClockwise 2s linear infinite',
+                    }} />
+                    {/* Outer svg kinetic wind spokes */}
+                    <svg style={{
+                        position: 'absolute',
+                        left: '-20%',
+                        top: '-20%',
+                        width: '140%',
+                        height: '140%',
+                        animation: 'geomSpinCounter 4s linear infinite',
+                    }} viewBox="0 0 140 140">
+                        <line x1="70" y1="10" x2="70" y2="35" stroke="#ffe0b2" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
+                        <line x1="70" y1="105" x2="70" y2="130" stroke="#ffe0b2" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
+                        <line x1="10" y1="70" x2="35" y2="70" stroke="#ffe0b2" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
+                        <line x1="105" y1="70" x2="130" y2="70" stroke="#ffe0b2" strokeWidth="4" strokeLinecap="round" opacity="0.9" />
                     </svg>
                 </div>
             );

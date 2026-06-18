@@ -26,7 +26,7 @@ import  CIcon  from '@coreui/icons-react';
 
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody} from '@coreui/react';
 import * as images from '../utils/images'
-import { RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime } from '../utils/spells-table'
+import { RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime, BATTLE_TACTICS } from '../utils/spells-table'
 import { RECIPES } from '../utils/spells-table'
 import skillsMatrix from '../utils/skills-matrix'
 import REAGENTS, { REAGENT_KEYS } from '../utils/reagents'
@@ -639,10 +639,15 @@ const MARKER_TYPES = [
 
 // ── Training Drill Picker ─────────────────────────────────────────────────────
 // Local component for selecting a drill type + risk level per crew member.
-function TrainingDrillPicker({ member, drills, canAfford, onConfirm }) {
+function TrainingDrillPicker({ member, drills, currentFood, onConfirm }) {
     const [selectedDrill, setSelectedDrill] = React.useState(drills[0]?.stat || 'str');
     const [takeRisk, setTakeRisk] = React.useState(false);
     const drill = drills.find(d => d.stat === selectedDrill) || drills[0];
+
+    const progress = member.trainingProgress || { str: 0, dex: 0, fort: 0, int: 0 };
+    const progressVal = progress[selectedDrill] || 0;
+    const cost = Math.max(1, 1 + progressVal);
+    const canAfford = currentFood >= cost;
 
     return (
         <div className="training-drill-picker">
@@ -696,7 +701,7 @@ function TrainingDrillPicker({ member, drills, canAfford, onConfirm }) {
                 disabled={!canAfford}
                 onClick={() => canAfford && onConfirm(selectedDrill, takeRisk)}
             >
-                {canAfford ? `Begin ${drill?.label || 'Drill'} ${takeRisk ? '(Push Hard)' : '(Safe)'}` : 'Not enough food'}
+                {canAfford ? `Begin ${drill?.label || 'Drill'} ${takeRisk ? '(Push Hard)' : '(Safe)'} (Costs ${cost} 🍖)` : `Needs ${cost} food (Have ${currentFood} 🍖)`}
             </button>
         </div>
     );
@@ -801,6 +806,36 @@ class DungeonPage extends React.Component {
                 iconUrl: images['brew_beer'] || images['potion'] || '',
                 noMaxCap: true,
                 subTypes: []
+            });
+        }
+        if (character.type === 'soldier') {
+            // Check if a tactic is already in-progress or active
+            const activeTactic = (character.specialActions || []).find(a => a.type === 'tactics');
+            const tacticSubTypes = Object.values(BATTLE_TACTICS).map(t => ({
+                type: t.name,
+                tacticKey: t.key,
+                iconUrl: images['battle_tactics'] || '',
+                available: true,
+                count: 0,
+                prepMins: Math.round(t.prepTime / 60000),
+                combatDuration: t.combatDuration,
+                xpMultiplier: t.xpMultiplier,
+                description: t.description,
+                flavorText: t.flavorText,
+            }));
+            // If there's an already active (ready) tactic, show combatsRemaining
+            if (activeTactic && activeTactic.available) {
+                tacticSubTypes.forEach(s => {
+                    if (s.tacticKey === activeTactic.tacticKey) s.count = activeTactic.combatsRemaining || 0;
+                });
+            }
+            actions.push({
+                type: 'tactics',
+                name: 'Battle Tactics',
+                iconUrl: images['battle_tactics'] || '',
+                noMaxCap: true,
+                subTypes: tacticSubTypes,
+                activeTactic,
             });
         }
         // Add other class logic here as needed
@@ -1140,6 +1175,44 @@ class DungeonPage extends React.Component {
                         </div>
                         );
                     })()}
+                    {/* ── Battle Tactics picker (Soldier) ───────────────────────────── */}
+                    {action.type === 'tactics' && this.state.tacticsBuilderOpen && (() => {
+                        const selectedTactic = this.state.tacticsBuilderSelected;
+                        const tacticDef = selectedTactic ? BATTLE_TACTICS[selectedTactic] : null;
+                        const activeTactic = (this.state.selectedCrewMember?.specialActions || []).find(a => a.type === 'tactics');
+                        const isBusy = activeTactic && new Date(activeTactic.endDate) > new Date();
+                        return (
+                            <div className="compound-builder-panel tactics-builder-panel">
+                                {/* Tactic details */}
+                                {tacticDef && (
+                                    <div className="tactics-detail">
+                                        <div className="tactics-detail-name">{tacticDef.name}</div>
+                                        <div className="tactics-detail-desc">{tacticDef.description}</div>
+                                        <div className="tactics-detail-meta">
+                                            <span>⏱ {Math.round(tacticDef.prepTime / 60000)} min prep</span>
+                                            <span>⚔ {tacticDef.combatDuration} combat{tacticDef.combatDuration !== 1 ? 's' : ''}</span>
+                                            <span>✦ +{Math.round((tacticDef.xpMultiplier - 1) * 100)}% XP</span>
+                                        </div>
+                                        <div className="tactics-detail-flavor">{tacticDef.flavorText}</div>
+                                    </div>
+                                )}
+                                {!tacticDef && (
+                                    <div className="tactics-placeholder">Select a tactic above to see details.</div>
+                                )}
+                                <button
+                                    className={`compound-brew-btn ${tacticDef && !isBusy ? 'ready' : 'disabled'}`}
+                                    disabled={!tacticDef || isBusy}
+                                    onClick={() => this.handleTacticsCommit(selectedTactic)}
+                                >
+                                    {isBusy
+                                        ? `Preparing: ${activeTactic.name}…`
+                                        : tacticDef
+                                            ? `Commit to ${tacticDef.name}`
+                                            : 'Select a tactic first'}
+                                </button>
+                            </div>
+                        );
+                    })()}
                     </div>
                 </div>
                 )
@@ -1421,6 +1494,7 @@ class DungeonPage extends React.Component {
             selectedCrewMember: {},
             pending: null,
             showInventoryPopup: false,
+            isInventoryExpanded: false,
             activeInventoryItem: null,
             keysLocked: false,
             inMonsterBattle: false,
@@ -3907,6 +3981,35 @@ class DungeonPage extends React.Component {
                 }, this.handleOpenMapOverlay);
                 return;
             }
+            // 'r' — Immediately begin recuperating (setUpCamp)
+            if ((maybeKey === 'r' || maybeKey === 'R') && !this.state.inMonsterBattle && !event.metaKey && !event.ctrlKey) {
+                const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+                if (activeTag !== 'input' && activeTag !== 'textarea') {
+                    event.preventDefault();
+                    this.setUpCamp();
+                    return;
+                }
+            }
+            // 's' — Play a practice card duel
+            if ((maybeKey === 's' || maybeKey === 'S') && !this.state.inMonsterBattle && !event.metaKey && !event.ctrlKey) {
+                const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+                if (activeTag !== 'input' && activeTag !== 'textarea') {
+                    event.preventDefault();
+                    this.setState({ isCardScrimmage: true }, () => {
+                        this.openCardDuel(null);
+                    });
+                    return;
+                }
+            }
+            // 'x' — Open Codex
+            if ((maybeKey === 'x' || maybeKey === 'X') && !this.state.inMonsterBattle && !event.metaKey && !event.ctrlKey) {
+                const activeTag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+                if (activeTag !== 'input' && activeTag !== 'textarea') {
+                    event.preventDefault();
+                    this.setState({ showCodex: true });
+                    return;
+                }
+            }
         } catch (err) {
             // ignore key handling errors
         }
@@ -4166,6 +4269,18 @@ class DungeonPage extends React.Component {
             }
         }
         return null;
+    }
+    getItemCategory = (item) => {
+        if (!item) return 'Keys & Misc';
+        const type = String(item.type || '').toLowerCase();
+        const subtype = String(item.subtype || '').toLowerCase();
+        
+        if (type === 'weapon') return 'Weapons';
+        if (type === 'armor' || subtype === 'shield' || subtype === 'boots' || subtype === 'helm' || subtype === 'mask' || subtype === 'tabard') return 'Armor';
+        if (type === 'consumable' || type === 'potion') return 'Consumables';
+        if (type === 'magical' || subtype === 'charm' || subtype === 'amulet' || subtype === 'wand' || subtype === 'staff') return 'Magical';
+        if (type === 'jewel' || type === 'rune') return 'Materials & Jewels';
+        return 'Keys & Misc';
     }
     handleInventoryTileHover = (tileProps) => {
         // Check if the hovered item has actually changed to prevent flickering from repeated hover events
@@ -4806,6 +4921,33 @@ class DungeonPage extends React.Component {
 
 
         this.props.inventoryManager.initializeItems()
+
+        // ── Sage starting reagents ─────────────────────────────────────────────
+        // If the crew includes a Sage, seed the inventory with one of each
+        // reagent needed for the smallest recipe (healing_salve: grass + leaves).
+        try {
+            const hasSage = (this.props.crewManager?.crew || []).some(
+                m => m && (m.type === 'sage' || m.image === 'sage')
+            );
+            if (hasSage) {
+                ['grass', 'leaves'].forEach(reagentId => {
+                    const def = REAGENTS[reagentId];
+                    if (def) {
+                        this.props.inventoryManager.addItem({
+                            id: def.id,
+                            name: def.name,
+                            icon: def.icon,
+                            type: def.type,
+                            category: def.category,
+                            description: def.description,
+                            equippedBy: null,
+                        });
+                    }
+                });
+            }
+        } catch(e) {
+            console.warn('[Sage] Failed to add starting reagents', e);
+        }
     // spawnpoint selected
         if(spawnPoint){
             // return
@@ -5824,12 +5966,43 @@ class DungeonPage extends React.Component {
             nextState.brewBuilderOpen = !isOpen;
             if (isOpen) nextState.brewBuilderSlots = [];
         }
+        // Toggle tactics builder open/closed when the Battle Tactics action row is clicked
+        if (action.type === 'tactics') {
+            const character = this.state.selectedCrewMember;
+            const activeTactic = (character?.specialActions || []).find(a => a.type === 'tactics');
+            const isBusy = activeTactic && new Date(activeTactic.endDate) > new Date();
+            if (isBusy) {
+                this.displayMessage(`Already preparing: ${activeTactic.name}!`);
+                return;
+            }
+            nextState.tacticsBuilderOpen = !isOpen;
+            if (isOpen) nextState.tacticsBuilderSelected = null;
+        }
         this.setState(nextState);
     }
     getSubtypeClass = (subtype, maxReached) => {
         if(!subtype.available) return 'disabled'
         if(maxReached) return 'max-reached'
-        
+
+        // ── Tactics subtype: in-prep blocks all others; active tactic shows count ──
+        if (subtype.tacticKey) {
+            const specialActions = this.state.selectedCrewMember?.specialActions || [];
+            const tacticInProgress = specialActions.find(a =>
+                a && a.type === 'tactics' && new Date(a.endDate) > new Date()
+            );
+            if (tacticInProgress) {
+                return tacticInProgress.tacticKey === subtype.tacticKey ? 'in-progress' : 'disabled';
+            }
+            // Show active (ready) tactic as distinct from idle ones
+            const readyTactic = specialActions.find(a =>
+                a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
+            );
+            if (readyTactic && readyTactic.tacticKey === subtype.tacticKey) {
+                return 'available'; // active and ready — highlighted
+            }
+            return null; // selectable
+        }
+
         const actionInProgress = this.state.selectedCrewMember.specialActions.find(a => {
             let end = new Date(a.endDate);
             let now = new Date();
@@ -5853,6 +6026,7 @@ class DungeonPage extends React.Component {
             }
         }
     }
+
     // For special-action-icon: Roman numerals as text
     getSubtypeNumeralElement = (subtype) => {
         if (!subtype.count || subtype.count < 1) return null;
@@ -5868,6 +6042,7 @@ class DungeonPage extends React.Component {
         let idx = Math.max(0, Math.min(subtype.count, arr.length - 1));
         return <div className="numeral" style={{backgroundImage: `url(${images[arr[idx]]})`}}></div>;
     }
+
     handleActionSubtypeClick = (action, subType) => {
         // For glyph actions, open the spell-slot builder instead of immediately starting
         if (action.type === 'glyph' && subType.glyphTier) {
@@ -5880,8 +6055,14 @@ class DungeonPage extends React.Component {
             }
             return;
         }
+        // For tactics: select/deselect a tactic in the builder panel
+        if (action.type === 'tactics' && subType.tacticKey) {
+            const current = this.state.tacticsBuilderSelected;
+            this.setState({ tacticsBuilderSelected: current === subType.tacticKey ? null : subType.tacticKey });
+            return;
+        }
         // Original path for rituals, scrimmage, etc.
-        let characterFromCrew = this.props.crewManager.crew.find(e=> e.id === this.state.selectedCrewMember.id)
+        let characterFromCrew = this.props.crewManager.crew.find(e=>e.id === this.state.selectedCrewMember.id)
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType)
         const meta = getMeta();
         meta.crew = this.props.crewManager.crew;
@@ -5894,6 +6075,7 @@ class DungeonPage extends React.Component {
             this.setState({ selectedCrewMember: { ...updatedCrewMember } });
         }
     }
+
 
     // Toggle a spell in the glyph builder. spellKey is the skills-matrix key.
     handleGlyphSpellToggle = (spellKey) => {
@@ -5941,7 +6123,37 @@ class DungeonPage extends React.Component {
         });
     }
 
+    // ── Battle Tactics handler ────────────────────────────────────────────────
+
+    /** Commit to a tactic — starts the preparation timer. */
+    handleTacticsCommit = (tacticKey) => {
+        if (!tacticKey) return;
+        const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        if (!characterFromCrew) return;
+
+        // Remove any previous tactics special action (replace with new one)
+        characterFromCrew.specialActions = (characterFromCrew.specialActions || []).filter(a => a.type !== 'tactics');
+
+        const action = { type: 'tactics' };
+        const subType = { tacticKey };
+        this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+
+        const meta = getMeta();
+        meta.crew = this.props.crewManager.crew;
+        storeMeta(meta);
+        this.props.saveUserData();
+
+        const updatedCrewMember = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        this.displayMessage(`Battle tactic committed: ${this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id)?.specialActions?.slice(-1)[0]?.name || tacticKey}. Preparation underway.`);
+        this.setState({
+            tacticsBuilderOpen: false,
+            tacticsBuilderSelected: null,
+            selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
+        });
+    }
+
     // ── Compound Potions handlers ─────────────────────────────────────────────
+
 
     /** Add a reagent to the next empty slot (max 3). Deselects if already in slots. */
     handleCompoundReagentClick = (reagentId) => {
@@ -7350,7 +7562,6 @@ class DungeonPage extends React.Component {
                 {this.state.showTrainingOverlay && (() => {
                     const meta = getMeta() || {};
                     const currentFood = typeof meta.food === 'number' ? meta.food : 0;
-                    const FOOD_COST = 2;
                     const DRILLS = [
                         { stat: 'str', label: 'Conditioning', emoji: '💪', color: '#c94040', desc: 'Build raw strength through rigorous physical endurance.', safeDesc: '+1 STR progress', riskDesc: '+2 progress — exhausted next combat' },
                         { stat: 'dex', label: 'Footwork',     emoji: '🦶', color: '#d48a30', desc: 'Sprint drills and evasion practice sharpen reflexes.', safeDesc: '+1 DEX progress', riskDesc: '+2 progress — 25% chance: 50% endurance next fight' },
@@ -7366,13 +7577,14 @@ class DungeonPage extends React.Component {
                             <div className="training-header">
                                 <button className="training-back" onClick={this.handleTrainingBack}>← Back</button>
                                 <div className="training-title"><span role="img" aria-label="crossed swords">⚔️</span> Training Grounds</div>
-                                <div className="training-food-badge"><span role="img" aria-label="food">🍖</span> {currentFood} food &nbsp;·&nbsp; <span style={{color: currentFood >= FOOD_COST ? '#aaa' : '#c94040'}}>Each drill costs {FOOD_COST}</span></div>
+                                <div className="training-food-badge"><span role="img" aria-label="food">🍖</span> {currentFood} food &nbsp;·&nbsp; <span style={{color: '#aaa'}}>Drill cost: 1 + current progress (1-10 food)</span></div>
                             </div>
 
                             <div className="training-subtitle">Choose a drill for each crew member. Drills consume food and build toward permanent stat gains.</div>
 
                             <div className="training-crew-cards">
                                 {crew.map((member) => {
+                                    // canAfford is now calculated per drill in TrainingDrillPicker
                                     const progress = member.trainingProgress || { str: 0, dex: 0, fort: 0, int: 0 };
                                     const memberId = member.id || member.name;
                                     const result = (this.state.trainingResults || {})[memberId];
@@ -7383,7 +7595,7 @@ class DungeonPage extends React.Component {
                                     const hasCooldown = remainingMs > 0;
                                     
                                     const alreadyTrained = !!result || hasCooldown || !!member.trainingActive;
-                                    const canAfford = currentFood >= FOOD_COST && !alreadyTrained;
+                                    // canAfford is now calculated inside TrainingDrillPicker
 
                                     return (
                                         <div key={memberId} className={`training-crew-card${alreadyTrained ? ' trained' : ''}`} style={{ position: 'relative', overflow: 'hidden' }}>
@@ -7485,7 +7697,7 @@ class DungeonPage extends React.Component {
                                                 <TrainingDrillPicker
                                                     member={member}
                                                     drills={DRILLS}
-                                                    canAfford={canAfford}
+                                                    currentFood={currentFood}
                                                     onConfirm={(stat, risk) => this.handleConfirmDrill(member, stat, risk)}
                                                 />
                                             )}
@@ -8888,14 +9100,16 @@ class DungeonPage extends React.Component {
                                         onClick={() => this.handleOpenCampPopup()}
                                         title="Go to Camp"
                                     >
-                                        🏕 Go To Camp
+                                        <span>🏕 Go To Camp</span>
+                                        <span className="hotkey-indicator">C</span>
                                     </button>
                                     <button
                                         className="quick-action-btn"
                                         onClick={() => this.setUpCamp()}
                                         title="Immediately begin recuperating"
                                     >
-                                        🛌 Recuperate
+                                        <span>🛌 Recuperate</span>
+                                        <span className="hotkey-indicator">R</span>
                                     </button>
                                     <button
                                         className="quick-action-btn"
@@ -8906,14 +9120,16 @@ class DungeonPage extends React.Component {
                                         }}
                                         title="Play a practice card duel (no penalty)"
                                     >
-                                        🃏 Card Scrimmage
+                                        <span>🃏 Card Scrimmage</span>
+                                        <span className="hotkey-indicator">S</span>
                                     </button>
                                     <button
                                         className="quick-action-btn"
                                         onClick={() => this.setState({ showCodex: true })}
                                         title="Open the Codex"
                                     >
-                                        📖 Codex
+                                        <span>📖 Codex</span>
+                                        <span className="hotkey-indicator">X</span>
                                     </button>
                                     {this.state.campWarningMessage && (
                                         <div style={{paddingLeft: 4, fontSize: 11, color: '#e74c3c', lineHeight: 1.4}}>
@@ -9138,7 +9354,7 @@ class DungeonPage extends React.Component {
                 onTriggerLootArc={this.triggerLootRadialArc}
             ></MonsterBattle>}
 
-            <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
+            <CModal className={`inventory-modal ${this.state.isInventoryExpanded ? 'expanded' : ''}`} alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false, isInventoryExpanded: false })}>
                 <div className='inventory-content'>
                     <div className='inventory-header'>
                         <div className='inventory-title'>Inventory</div>
@@ -9148,434 +9364,564 @@ class DungeonPage extends React.Component {
                             </div>
                         )}
                     </div>
-                    <div className='crew-panels'>
-                        {((this.props.crewManager && this.props.crewManager.crew) || []).map((member, idx) => {
-                            let rawPortrait = member.portrait;
-                            if (rawPortrait && typeof rawPortrait === 'object') {
-                                rawPortrait = rawPortrait.default || rawPortrait;
-                            }
-                            if (rawPortrait && typeof rawPortrait === 'object') {
-                                rawPortrait = rawPortrait.default || '';
-                            }
-                            const portraitUrl = (typeof rawPortrait === 'string' && images && images[rawPortrait])
-                                ? (images[rawPortrait].default || images[rawPortrait])
-                                : rawPortrait;
-                            const isSelected = this.state.selectedCrewMember && this.state.selectedCrewMember.id === member.id;
-                            return (
-                                <div className='crew-panel' key={member.id || idx}>
-                                    <div
-                                        className='crew-portrait'
-                                        style={{
-                                            backgroundImage: `url(${portraitUrl})`,
-                                            border: isSelected ? '3px solid lightgreen' : '3px solid transparent',
-                                            boxSizing: 'border-box'
-                                        }}
-                                    ></div>
-                                    <div className='crew-body' style={{
-                                        pointerEvents: isSelected ? 'auto' : 'none',
-                                        marginTop: '-16px'
-                                    }}>
-                                        <div className='crew-body-image' style={{backgroundImage: `url(${images.body_male})`}} />
-                                        {/* equip slots: chest, right-hand, left-hand, head, and ancillary */}
+                    <div className={`inventory-body-container ${this.state.isInventoryExpanded ? 'expanded' : ''}`}>
+                        <div className="inventory-main-column">
+                            <div className='crew-panels'>
+                                {(() => {
+                                    // In expanded mode show only the selected crew member so the
+                                    // body diagram fills and centres the left column.
+                                    // Tab cycling (cycleSelectedCrewMember) already updates
+                                    // this.state.selectedCrewMember, so the view follows automatically.
+                                    const allCrew = (this.props.crewManager && this.props.crewManager.crew) || [];
+                                    const visibleCrew = this.state.isInventoryExpanded
+                                        ? (() => {
+                                            const sel = allCrew.find(
+                                                m => m && this.state.selectedCrewMember && m.id === this.state.selectedCrewMember.id
+                                            );
+                                            return sel ? [sel] : allCrew.slice(0, 1);
+                                          })()
+                                        : allCrew;
+                                    return visibleCrew;
+                                })().map((member, idx) => {
+                                    let rawPortrait = member.portrait;
+                                    if (rawPortrait && typeof rawPortrait === 'object') {
+                                        rawPortrait = rawPortrait.default || rawPortrait;
+                                    }
+                                    if (rawPortrait && typeof rawPortrait === 'object') {
+                                        rawPortrait = rawPortrait.default || '';
+                                    }
+                                    const portraitUrl = (typeof rawPortrait === 'string' && images && images[rawPortrait])
+                                        ? (images[rawPortrait].default || images[rawPortrait])
+                                        : rawPortrait;
+                                    const isSelected = this.state.selectedCrewMember && this.state.selectedCrewMember.id === member.id;
+                                    return (
+                                        <div className='crew-panel' key={member.id || idx}>
+                                            <div
+                                                className='crew-portrait'
+                                                style={{
+                                                    backgroundImage: `url(${portraitUrl})`,
+                                                    border: isSelected ? '3px solid lightgreen' : '3px solid transparent',
+                                                    boxSizing: 'border-box'
+                                                }}
+                                            ></div>
+                                            <div className='crew-body' style={{
+                                                pointerEvents: isSelected ? 'auto' : 'none',
+                                                marginTop: '-16px'
+                                            }}>
+                                                <div className='crew-body-image' style={{backgroundImage: `url(${images.body_male})`}} />
+                                                {/* equip slots: chest, right-hand, left-hand, head, and ancillary */}
+                                                {(() => {
+                                                    const findEquipped = (m, slot) => {
+                                                        const slotsToCheck = (slot === 'pet' || slot === 'bottom-left') ? ['pet', 'bottom-left'] : [slot];
+                                                        return (m.inventory || []).find(i => slotsToCheck.includes(i.equippedSlot));
+                                                    };
+                                                    const chest = findEquipped(member, 'chest');
+                                                    const right = findEquipped(member, 'right');
+                                                    const left = findEquipped(member, 'left');
+                                                    const head = findEquipped(member, 'head');
+                                                    const boots = findEquipped(member, 'boots');
+                                                    const bottomLeft = findEquipped(member, 'pet');
+                                                    const ancillaryLeft = findEquipped(member, 'ancillary-left');
+                                                    const ancillaryRight = findEquipped(member, 'ancillary-right');
+                                                    const regularSlotBorder = '2px solid rgba(205, 202, 202, 0.68)';
+                                                    const selectedSlotBorder = '2px solid rgba(205, 202, 202, 1)';
+                                                    const selectedEquippedSlotBorder = '2px solid rgb(164 234 199)';
+                                                    const getSlotBorder = (equippedItem) => {
+                                                        if (!isSelected) return regularSlotBorder;
+                                                        return equippedItem ? selectedEquippedSlotBorder : selectedSlotBorder;
+                                                    };
+                                                    return (
+                                                        <>
+                                                            <div 
+                                                                className='equip-slot slot-chest' 
+                                                                style={{border: getSlotBorder(chest)}}
+                                                                title={!chest ? SLOT_INFO['chest'].name : undefined}
+                                                                onMouseEnter={() => !chest && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['chest'].name, description: SLOT_INFO['chest'].desc } }) : null}
+                                                                onMouseLeave={() => !chest && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {chest && (
+                                                                    <Tile
+                                                                        id={chest.id}
+                                                                        data={chest}
+                                                                        tileSize={this.state.tileSize}
+                                                                        image={chest.icon}
+                                                                        contains={chest.name ? chest.name.replace(' ', '_') : null}
+                                                                        color={chest.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => isSelected ? this.handleEquipmentItemClick(chest) : null}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div 
+                                                                className='equip-slot slot-right' 
+                                                                style={{border: getSlotBorder(right)}}
+                                                                title={!right ? SLOT_INFO['right'].name : undefined}
+                                                                onMouseEnter={() => !right && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['right'].name, description: SLOT_INFO['right'].desc } }) : null}
+                                                                onMouseLeave={() => !right && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {right && (
+                                                                    <Tile
+                                                                        id={right.id}
+                                                                        data={right}
+                                                                        tileSize={this.state.tileSize}
+                                                                        image={right.icon}
+                                                                        contains={right.name ? right.name.replace(' ', '_') : null}
+                                                                        color={right.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => isSelected ? this.handleEquipmentItemClick(right) : null}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div 
+                                                                className='equip-slot slot-left' 
+                                                                style={{border: getSlotBorder(left)}}
+                                                                title={!left ? SLOT_INFO['left'].name : undefined}
+                                                                onMouseEnter={() => !left && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['left'].name, description: SLOT_INFO['left'].desc } }) : null}
+                                                                onMouseLeave={() => !left && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {left && (
+                                                                    <Tile
+                                                                        id={left.id}
+                                                                        data={left}
+                                                                        tileSize={this.state.tileSize}
+                                                                        image={left.icon}
+                                                                        contains={left.name ? left.name.replace(' ', '_') : null}
+                                                                        color={left.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => isSelected ? this.handleEquipmentItemClick(left) : null}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div 
+                                                                className='equip-slot slot-head' 
+                                                                style={{border: getSlotBorder(head)}}
+                                                                title={!head ? SLOT_INFO['head'].name : undefined}
+                                                                onMouseEnter={() => !head && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['head'].name, description: SLOT_INFO['head'].desc } }) : null}
+                                                                onMouseLeave={() => !head && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {head && (
+                                                                    <Tile
+                                                                        id={head.id}
+                                                                        data={head}
+                                                                        tileSize={this.state.tileSize}
+                                                                        image={head.icon}
+                                                                        contains={head.name ? head.name.replace(' ', '_') : null}
+                                                                        color={head.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => isSelected ? this.handleEquipmentItemClick(head) : null}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div 
+                                                                className='equip-slot slot-boots' 
+                                                                style={{border: getSlotBorder(boots)}}
+                                                                title={!boots ? SLOT_INFO['boots'].name : undefined}
+                                                                onMouseEnter={() => !boots && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['boots'].name, description: SLOT_INFO['boots'].desc } }) : null}
+                                                                onMouseLeave={() => !boots && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {boots && (
+                                                                    <Tile
+                                                                        id={boots.id}
+                                                                        data={boots}
+                                                                        tileSize={this.state.tileSize}
+                                                                        image={boots.icon}
+                                                                        contains={boots.name ? boots.name.replace(' ', '_') : null}
+                                                                        color={boots.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => isSelected ? this.handleEquipmentItemClick(boots) : null}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div 
+                                                                className='equip-slot slot-ancillary-left' 
+                                                                style={{border: getSlotBorder(ancillaryLeft)}}
+                                                                title={!ancillaryLeft ? SLOT_INFO['ancillary-left'].name : undefined}
+                                                                onMouseEnter={() => !ancillaryLeft && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['ancillary-left'].name, description: SLOT_INFO['ancillary-left'].desc } }) : null}
+                                                                onMouseLeave={() => !ancillaryLeft && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {ancillaryLeft && (
+                                                                    <Tile
+                                                                        id={ancillaryLeft.id}
+                                                                        data={ancillaryLeft}
+                                                                        tileSize={this.state.tileSize}
+                                                                        image={ancillaryLeft.icon}
+                                                                        contains={ancillaryLeft.name ? ancillaryLeft.name.replace(' ', '_') : null}
+                                                                        color={ancillaryLeft.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryLeft) : null}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div 
+                                                                className='equip-slot slot-ancillary-right' 
+                                                                style={{border: getSlotBorder(ancillaryRight)}}
+                                                                title={!ancillaryRight ? SLOT_INFO['ancillary-right'].name : undefined}
+                                                                onMouseEnter={() => !ancillaryRight && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['ancillary-right'].name, description: SLOT_INFO['ancillary-right'].desc } }) : null}
+                                                                onMouseLeave={() => !ancillaryRight && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {ancillaryRight && (
+                                                                    <Tile
+                                                                        id={ancillaryRight.id}
+                                                                        data={ancillaryRight}
+                                                                        tileSize={this.state.tileSize}
+                                                                        image={ancillaryRight.icon}
+                                                                        contains={ancillaryRight.name ? ancillaryRight.name.replace(' ', '_') : null}
+                                                                        color={ancillaryRight.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryRight) : null}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div 
+                                                                className='equip-slot slot-pet' 
+                                                                style={{border: getSlotBorder(bottomLeft)}}
+                                                                title={!bottomLeft ? SLOT_INFO['pet'].name : undefined}
+                                                                onMouseEnter={() => !bottomLeft && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['pet'].name, description: SLOT_INFO['pet'].desc } }) : null}
+                                                                onMouseLeave={() => !bottomLeft && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
+                                                            >
+                                                                {bottomLeft && (
+                                                                    <>
+                                                                        <Tile
+                                                                            id={bottomLeft.id}
+                                                                            data={bottomLeft}
+                                                                            tileSize={this.state.tileSize}
+                                                                            image={bottomLeft.icon}
+                                                                            contains={bottomLeft.name ? bottomLeft.name.replace(' ', '_') : null}
+                                                                            color={bottomLeft.color}
+                                                                            editMode={false}
+                                                                            type={'inventory-tile'}
+                                                                            handleClick={() => isSelected ? this.handleEquipmentItemClick(bottomLeft) : null}
+                                                                            handleHover={this.handleInventoryTileHover}
+                                                                        />
+                                                                        <div className="pet-overlay" aria-hidden="true">🐾</div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </>
+                                                    )
+                                                })()}
+                                            </div>
+                                            <div className="stats-display" style={{width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '8px', boxSizing: 'border-box', marginTop: '-38px', opacity: isSelected ? 1 : 0.5}}>
+                                                {[
+                                                    'attack',
+                                                    'defense',
+                                                    'speed',
+                                                    'luck',
+                                                    'willpower',
+                                                    'hp',
+                                                    'energy max',
+                                                    'energy regeneration'
+                                                ].map((key) => {
+                                                    let value = 0;
+                                                    try {
+                                                        if (key === 'attack') value = (member && member.stats && typeof member.stats.atk === 'number') ? member.stats.atk : 0;
+                                                        else if (key === 'defense') value = (member && member.stats && typeof member.stats.def === 'number') ? member.stats.def : 0;
+                                                        else if (key === 'hp') value = (member && member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : 0;
+                                                    } catch (e) {}
+
+                                                    // compute equipped weapon percent bonus (sum of equipped weapons)
+                                                    let weaponPercent = 0;
+                                                    let magicalWeaponBonus = 0;
+                                                    // compute equipped armor percent bonus (sum of equipped armor pieces)
+                                                    let armorPercent = 0;
+                                                    try {
+                                                        if (member && Array.isArray(member.inventory)) {
+                                                            if (key === 'attack') {
+                                                                const equippedWeapons = member.inventory.filter(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === member.id));
+                                                                if (equippedWeapons.length) {
+                                                                    weaponPercent = equippedWeapons.reduce((acc, w) => acc + (typeof w.damage === 'number' ? w.damage : 0), 0);
+                                                                }
+                                                                // Calculate magical weapon bonus (wands and staves multiply base attack)
+                                                                const equippedMagicalWeapons = member.inventory.filter(i => 
+                                                                    i && i.type === 'magical' && 
+                                                                    (i.subtype === 'wand' || i.subtype === 'staff') && 
+                                                                    (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === member.id)
+                                                                );
+                                                                if (equippedMagicalWeapons.length && value > 0) {
+                                                                    magicalWeaponBonus = equippedMagicalWeapons.reduce((acc, w) => 
+                                                                        acc + (typeof w.power === 'number' ? value * w.power : 0), 0
+                                                                    );
+                                                                }
+                                                            }
+                                                            if (key === 'defense') {
+                                                                const equippedArmor = member.inventory.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === member.id));
+                                                                if (equippedArmor.length) {
+                                                                    armorPercent = equippedArmor.reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
+                                                                }
+                                                            }
+                                                        }
+                                                    } catch (e) { weaponPercent = 0; armorPercent = 0; magicalWeaponBonus = 0; }
+
+                                                    return (
+                                                        <div key={key} className="stat-line" style={{display: 'flex', justifyContent: 'space-between', width: '100%', padding: '2px 0'}}>
+                                                            <span className="stat-name">{key === 'hp' ? 'hp max' : key}</span>
+                                                            {key === 'attack' ? (
+                                                                (() => {
+                                                                    const percent = weaponPercent;
+                                                                    const boosted = percent > 0 ? (value * (1 + percent / 100)) : null;
+                                                                    const totalWithMagic = value + magicalWeaponBonus;
+                                                                    return (
+                                                                        <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                                                                            {percent > 0 && (
+                                                                                <span className="stat-percent">{`+${percent}%`}</span>
+                                                                            )}
+                                                                            <span className="stat-base">{value}</span>
+                                                                            {magicalWeaponBonus > 0 && (
+                                                                                <span className="stat-magical" style={{color: 'skyblue'}}>{`(+${magicalWeaponBonus})`}</span>
+                                                                            )}
+                                                                            {boosted !== null && (
+                                                                                <span className="stat-boosted" style={{color: 'lightgreen'}}>{boosted.toFixed(2)}</span>
+                                                                            )}
+                                                                            {magicalWeaponBonus > 0 && (
+                                                                                <span className="stat-total" style={{color: 'gold', fontWeight: 'bold'}}>{totalWithMagic}</span>
+                                                                            )}
+                                                                        </span>
+                                                                    )
+                                                                })()
+                                                            ) : key === 'defense' ? (
+                                                                (() => {
+                                                                    const percent = armorPercent;
+                                                                    const boosted = percent > 0 ? (value * (1 + percent / 100)) : null;
+                                                                    return (
+                                                                        <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
+                                                                            {percent > 0 && (
+                                                                                <span className="stat-percent">{`+${percent}%`}</span>
+                                                                            )}
+                                                                            <span className="stat-base">{value}</span>
+                                                                            {boosted !== null && (
+                                                                                <span className="stat-boosted" style={{color: 'lightgreen'}}>{boosted.toFixed(2)}</span>
+                                                                            )}
+                                                                        </span>
+                                                                    )
+                                                                })()
+                                                            ) : (
+                                                                <span className="stat-value">{value}</span>
+                                                            )}
+                                                        </div>
+                                                    )
+                                                })}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                            <div className="inventory-descriptor-panel">
+                                {(() => {
+                                    const item = this.state.hoveredInventoryItem;
+                                    const slotInfo = this.state.hoveredSlotInfo;
+                                    const iconImg = (() => {
+                                        if (!item) return null;
+                                        const raw = item.icon || item.iconUrl || item.image;
+                                        if (!raw) return null;
+                                        if (typeof raw === 'string' && (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:'))) {
+                                            return raw;
+                                        }
+                                        return images[raw] || null;
+                                    })();
+                                    return (
+                                        <div className="idp-content">
+                                            {item && (
+                                                <div className="idp-icon">
+                                                    {iconImg && <img src={iconImg} alt={item.name || ''} />}
+                                                </div>
+                                            )}
+                                            <div className="idp-details">
+                                                {!item && !slotInfo
+                                                    ? <span className="idp-placeholder">Hover over an item to see details</span>
+                                                    : slotInfo
+                                                        ? <>
+                                                            <div className="idp-name">{slotInfo.name}</div>
+                                                            <div className="idp-description">{slotInfo.description}</div>
+                                                          </>
+                                                        : <>
+                                                            <div className="idp-name">{item.name || '—'}</div>
+                                                            <div className="idp-meta">
+                                                                {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
+                                                                {item.range && <span className="idp-tag idp-range">{item.range}</span>}
+                                                            </div>
+                                                            {this.buildItemSummaryDescription(item) && <div className="idp-description">{this.buildItemSummaryDescription(item)}</div>}
+                                                        </>
+                                                }
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </div>
+                            {!this.state.isInventoryExpanded && (
+                                <div className='inventory-strip-wrapper'>
+                                    <div className='inventory-strip'>
                                         {(() => {
-                                            const findEquipped = (m, slot) => {
-                                                const slotsToCheck = (slot === 'pet' || slot === 'bottom-left') ? ['pet', 'bottom-left'] : [slot];
-                                                return (m.inventory || []).find(i => slotsToCheck.includes(i.equippedSlot));
-                                            };
-                                            const chest = findEquipped(member, 'chest');
-                                            const right = findEquipped(member, 'right');
-                                            const left = findEquipped(member, 'left');
-                                            const head = findEquipped(member, 'head');
-                                            const boots = findEquipped(member, 'boots');
-                                            const bottomLeft = findEquipped(member, 'pet');
-                                            const ancillaryLeft = findEquipped(member, 'ancillary-left');
-                                            const ancillaryRight = findEquipped(member, 'ancillary-right');
-                                            const regularSlotBorder = '2px solid rgba(205, 202, 202, 0.68)';
-                                            const selectedSlotBorder = '2px solid rgba(205, 202, 202, 1)';
-                                            const selectedEquippedSlotBorder = '2px solid rgb(164 234 199)';
-                                            const getSlotBorder = (equippedItem) => {
-                                                if (!isSelected) return regularSlotBorder;
-                                                return equippedItem ? selectedEquippedSlotBorder : selectedSlotBorder;
-                                            };
-                                            return (
-                                                <>
-                                                    <div 
-                                                        className='equip-slot slot-chest' 
-                                                        style={{border: getSlotBorder(chest)}}
-                                                        title={!chest ? SLOT_INFO['chest'].name : undefined}
-                                                        onMouseEnter={() => !chest && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['chest'].name, description: SLOT_INFO['chest'].desc } }) : null}
-                                                        onMouseLeave={() => !chest && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                    >
-                                                        {chest && (
-                                                            <Tile
-                                                                id={chest.id}
-                                                                data={chest}
-                                                                tileSize={this.state.tileSize}
-                                                                image={chest.icon}
-                                                                contains={chest.name ? chest.name.replace(' ', '_') : null}
-                                                                color={chest.color}
-                                                                editMode={false}
-                                                                type={'inventory-tile'}
-                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(chest) : null}
-                                                                handleHover={this.handleInventoryTileHover}
-                                                            />
+                                            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+                                            const grouped = {};
+                                            inv.forEach((item, idx) => {
+                                                const key = item.name || item.type || `item_${idx}`;
+                                                if (!grouped[key]) grouped[key] = { items: [], firstIndex: idx };
+                                                grouped[key].items.push(item);
+                                            });
+
+                                            return Object.keys(grouped).map((key, gIdx) => {
+                                                const group = grouped[key];
+                                                const count = group.items.length;
+                                                const item = group.items[0];
+                                                const isShardStack = item && item.shard === true && (item.type === 'jewel' || item.type === 'rune');
+                                                const firstIndex = group.firstIndex;
+                                                const stripKey = `${key}__${firstIndex}__${item?.icon || 'no_icon'}`;
+                                                return (
+                                                    <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={stripKey} style={{position: 'relative'}}>
+                                                        <div className="hover-message-container">
+                                                            <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex] ? this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ') : '\u00A0'}</div>
+                                                        </div>
+                                                        <Tile
+                                                            key={stripKey}
+                                                            id={firstIndex}
+                                                            data={item}
+                                                            tileSize={this.state.tileSize}
+                                                            image={item.icon && typeof item.icon === 'string' && !item.icon.includes('/') && !item.icon.startsWith('http') && !item.icon.startsWith('data:') ? item.icon : null}
+                                                            imageOverride={item.icon && typeof item.icon === 'string' && (item.icon.includes('/') || item.icon.startsWith('http') || item.icon.startsWith('data:')) ? item.icon : null}
+                                                            contains={item.name ? item.name.replace(' ', '_') : null}
+                                                            color={item.color}
+                                                            editMode={false}
+                                                            type={'inventory-tile'}
+                                                            handleClick={() => this.handleItemClick(item, firstIndex)}
+                                                            handleHover={this.handleInventoryTileHover}
+                                                            className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
+                                                            isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
+                                                        />
+                                                        {(count > 1 || isShardStack) && (
+                                                            <div className='stack-count-badge'>
+                                                                {count}
+                                                            </div>
                                                         )}
                                                     </div>
-                                                    <div 
-                                                        className='equip-slot slot-right' 
-                                                        style={{border: getSlotBorder(right)}}
-                                                        title={!right ? SLOT_INFO['right'].name : undefined}
-                                                        onMouseEnter={() => !right && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['right'].name, description: SLOT_INFO['right'].desc } }) : null}
-                                                        onMouseLeave={() => !right && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                        onContextMenu={(e) => isSelected ? this.handleSlotContextMenu(e, 'right') : null}
-                                                    >
-                                                        {right && (
-                                                            <Tile
-                                                                id={right.id}
-                                                                data={right}
-                                                                tileSize={this.state.tileSize}
-                                                                image={right.icon}
-                                                                contains={right.name ? right.name.replace(' ', '_') : null}
-                                                                color={right.color}
-                                                                editMode={false}
-                                                                type={'inventory-tile'}
-                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(right) : null}
-                                                                handleHover={this.handleInventoryTileHover}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div 
-                                                        className='equip-slot slot-left' 
-                                                        style={{border: getSlotBorder(left)}}
-                                                        title={!left ? SLOT_INFO['left'].name : undefined}
-                                                        onMouseEnter={() => !left && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['left'].name, description: SLOT_INFO['left'].desc } }) : null}
-                                                        onMouseLeave={() => !left && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                        onContextMenu={(e) => isSelected ? this.handleSlotContextMenu(e, 'left') : null}
-                                                    >
-                                                        {left && (
-                                                            <Tile
-                                                                id={left.id}
-                                                                data={left}
-                                                                tileSize={this.state.tileSize}
-                                                                image={left.icon}
-                                                                contains={left.name ? left.name.replace(' ', '_') : null}
-                                                                color={left.color}
-                                                                editMode={false}
-                                                                type={'inventory-tile'}
-                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(left) : null}
-                                                                handleHover={this.handleInventoryTileHover}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div 
-                                                        className='equip-slot slot-head' 
-                                                        style={{border: getSlotBorder(head)}}
-                                                        title={!head ? SLOT_INFO['head'].name : undefined}
-                                                        onMouseEnter={() => !head && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['head'].name, description: SLOT_INFO['head'].desc } }) : null}
-                                                        onMouseLeave={() => !head && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                    >
-                                                        {head && (
-                                                            <Tile
-                                                                id={head.id}
-                                                                data={head}
-                                                                tileSize={this.state.tileSize}
-                                                                image={head.icon}
-                                                                contains={head.name ? head.name.replace(' ', '_') : null}
-                                                                color={head.color}
-                                                                editMode={false}
-                                                                type={'inventory-tile'}
-                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(head) : null}
-                                                                handleHover={this.handleInventoryTileHover}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div 
-                                                        className='equip-slot slot-boots' 
-                                                        style={{border: getSlotBorder(boots)}}
-                                                        title={!boots ? SLOT_INFO['boots'].name : undefined}
-                                                        onMouseEnter={() => !boots && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['boots'].name, description: SLOT_INFO['boots'].desc } }) : null}
-                                                        onMouseLeave={() => !boots && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                    >
-                                                        {boots && (
-                                                            <Tile
-                                                                id={boots.id}
-                                                                data={boots}
-                                                                tileSize={this.state.tileSize}
-                                                                image={boots.icon}
-                                                                contains={boots.name ? boots.name.replace(' ', '_') : null}
-                                                                color={boots.color}
-                                                                editMode={false}
-                                                                type={'inventory-tile'}
-                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(boots) : null}
-                                                                handleHover={this.handleInventoryTileHover}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div 
-                                                        className='equip-slot slot-ancillary-left' 
-                                                        style={{border: getSlotBorder(ancillaryLeft)}}
-                                                        title={!ancillaryLeft ? SLOT_INFO['ancillary-left'].name : undefined}
-                                                        onMouseEnter={() => !ancillaryLeft && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['ancillary-left'].name, description: SLOT_INFO['ancillary-left'].desc } }) : null}
-                                                        onMouseLeave={() => !ancillaryLeft && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                    >
-                                                        {ancillaryLeft && (
-                                                            <Tile
-                                                                id={ancillaryLeft.id}
-                                                                data={ancillaryLeft}
-                                                                tileSize={this.state.tileSize}
-                                                                image={ancillaryLeft.icon}
-                                                                contains={ancillaryLeft.name ? ancillaryLeft.name.replace(' ', '_') : null}
-                                                                color={ancillaryLeft.color}
-                                                                editMode={false}
-                                                                type={'inventory-tile'}
-                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryLeft) : null}
-                                                                handleHover={this.handleInventoryTileHover}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div 
-                                                        className='equip-slot slot-ancillary-right' 
-                                                        style={{border: getSlotBorder(ancillaryRight)}}
-                                                        title={!ancillaryRight ? SLOT_INFO['ancillary-right'].name : undefined}
-                                                        onMouseEnter={() => !ancillaryRight && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['ancillary-right'].name, description: SLOT_INFO['ancillary-right'].desc } }) : null}
-                                                        onMouseLeave={() => !ancillaryRight && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                    >
-                                                        {ancillaryRight && (
-                                                            <Tile
-                                                                id={ancillaryRight.id}
-                                                                data={ancillaryRight}
-                                                                tileSize={this.state.tileSize}
-                                                                image={ancillaryRight.icon}
-                                                                contains={ancillaryRight.name ? ancillaryRight.name.replace(' ', '_') : null}
-                                                                color={ancillaryRight.color}
-                                                                editMode={false}
-                                                                type={'inventory-tile'}
-                                                                handleClick={() => isSelected ? this.handleEquipmentItemClick(ancillaryRight) : null}
-                                                                handleHover={this.handleInventoryTileHover}
-                                                            />
-                                                        )}
-                                                    </div>
-                                                    <div 
-                                                        className='equip-slot slot-pet' 
-                                                        style={{border: getSlotBorder(bottomLeft)}}
-                                                        title={!bottomLeft ? SLOT_INFO['pet'].name : undefined}
-                                                        onMouseEnter={() => !bottomLeft && isSelected ? this.setState({ hoveredSlotInfo: { name: SLOT_INFO['pet'].name, description: SLOT_INFO['pet'].desc } }) : null}
-                                                        onMouseLeave={() => !bottomLeft && isSelected ? this.setState({ hoveredSlotInfo: null }) : null}
-                                                    >
-                                                        {bottomLeft && (
-                                                            <>
-                                                                <Tile
-                                                                    id={bottomLeft.id}
-                                                                    data={bottomLeft}
-                                                                    tileSize={this.state.tileSize}
-                                                                    image={bottomLeft.icon}
-                                                                    contains={bottomLeft.name ? bottomLeft.name.replace(' ', '_') : null}
-                                                                    color={bottomLeft.color}
-                                                                    editMode={false}
-                                                                    type={'inventory-tile'}
-                                                                    handleClick={() => isSelected ? this.handleEquipmentItemClick(bottomLeft) : null}
-                                                                    handleHover={this.handleInventoryTileHover}
-                                                                />
-                                                                <div className="pet-overlay" aria-hidden="true">🐾</div>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </>
-                                            )
+                                                )
+                                            })
                                         })()}
                                     </div>
-                                    <div className="stats-display" style={{width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', padding: '8px', boxSizing: 'border-box', marginTop: '-38px', opacity: isSelected ? 1 : 0.5}}>
-                                        {[
-                                            'attack',
-                                            'defense',
-                                            'speed',
-                                            'luck',
-                                            'willpower',
-                                            'hp',
-                                            'energy max',
-                                            'energy regeneration'
-                                        ].map((key) => {
-                                            let value = 0;
-                                            try {
-                                                if (key === 'attack') value = (member && member.stats && typeof member.stats.atk === 'number') ? member.stats.atk : 0;
-                                                else if (key === 'defense') value = (member && member.stats && typeof member.stats.def === 'number') ? member.stats.def : 0;
-                                                else if (key === 'hp') value = (member && member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : 0;
-                                            } catch (e) {}
+                                    <button 
+                                        className="inventory-toggle-expand-btn" 
+                                        onClick={() => this.setState({ isInventoryExpanded: true })}
+                                        title="Expand Inventory"
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/>
+                                        </svg>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
 
-                                            // compute equipped weapon percent bonus (sum of equipped weapons)
-                                            let weaponPercent = 0;
-                                            let magicalWeaponBonus = 0;
-                                            // compute equipped armor percent bonus (sum of equipped armor pieces)
-                                            let armorPercent = 0;
-                                            try {
-                                                if (member && Array.isArray(member.inventory)) {
-                                                    if (key === 'attack') {
-                                                        const equippedWeapons = member.inventory.filter(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === member.id));
-                                                        if (equippedWeapons.length) {
-                                                            weaponPercent = equippedWeapons.reduce((acc, w) => acc + (typeof w.damage === 'number' ? w.damage : 0), 0);
-                                                        }
-                                                        // Calculate magical weapon bonus (wands and staves multiply base attack)
-                                                        const equippedMagicalWeapons = member.inventory.filter(i => 
-                                                            i && i.type === 'magical' && 
-                                                            (i.subtype === 'wand' || i.subtype === 'staff') && 
-                                                            (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === member.id)
-                                                        );
-                                                        if (equippedMagicalWeapons.length && value > 0) {
-                                                            magicalWeaponBonus = equippedMagicalWeapons.reduce((acc, w) => 
-                                                                acc + (typeof w.power === 'number' ? value * w.power : 0), 0
-                                                            );
-                                                        }
-                                                    }
-                                                    if (key === 'defense') {
-                                                        const equippedArmor = member.inventory.filter(i => i && i.type === 'armor' && (i.equippedSlot || i.equippedBy === member.id));
-                                                        if (equippedArmor.length) {
-                                                            armorPercent = equippedArmor.reduce((acc, a) => acc + (typeof a.armor === 'number' ? a.armor : 0), 0);
-                                                        }
-                                                    }
+                        {this.state.isInventoryExpanded && (() => {
+                            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+                            const categorized = {
+                                'Weapons': {},
+                                'Armor': {},
+                                'Consumables': {},
+                                'Magical': {},
+                                'Materials & Jewels': {},
+                                'Keys & Misc': {}
+                            };
+
+                            inv.forEach((item, idx) => {
+                                if (!item) return;
+                                const cat = this.getItemCategory(item);
+                                const key = item.name || item.type || `item_${idx}`;
+                                if (!categorized[cat][key]) {
+                                    categorized[cat][key] = { items: [], firstIndex: idx };
+                                }
+                                categorized[cat][key].items.push(item);
+                            });
+
+                            return (
+                                <div className="inventory-expanded-panel">
+                                    <div className="expanded-panel-header">
+                                        <div className="expanded-panel-title">All Items</div>
+                                        <button 
+                                            className="inventory-toggle-expand-btn" 
+                                            onClick={() => this.setState({ isInventoryExpanded: false })}
+                                            title="Collapse Inventory"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                <path d="M4 14h6v6M20 10h-6V4M14 10l7-7M10 14l-7 7"/>
+                                            </svg>
+                                        </button>
+                                    </div>
+                                    <div className="expanded-categories-container">
+                                        {Object.keys(categorized).map(category => {
+                                            const categoryStacks = Object.values(categorized[category]);
+                                            
+                                            const minSlots = 8;
+                                            const totalSlots = Math.max(minSlots, Math.ceil(categoryStacks.length / 8) * 8);
+                                            const slots = [];
+                                            for (let i = 0; i < totalSlots; i++) {
+                                                if (i < categoryStacks.length) {
+                                                    slots.push(categoryStacks[i]);
+                                                } else {
+                                                    slots.push(null);
                                                 }
-                                            } catch (e) { weaponPercent = 0; armorPercent = 0; magicalWeaponBonus = 0; }
+                                            }
 
                                             return (
-                                                <div key={key} className="stat-line" style={{display: 'flex', justifyContent: 'space-between', width: '100%', padding: '2px 0'}}>
-                                                    <span className="stat-name">{key === 'hp' ? 'hp max' : key}</span>
-                                                    {key === 'attack' ? (
-                                                        (() => {
-                                                            const percent = weaponPercent;
-                                                            const boosted = percent > 0 ? (value * (1 + percent / 100)) : null;
-                                                            const totalWithMagic = value + magicalWeaponBonus;
+                                                <div key={category} className="expanded-category-section">
+                                                    <div className="category-header">{category}</div>
+                                                    <div className="category-grid">
+                                                        {slots.map((slotData, sIdx) => {
+                                                            if (!slotData) {
+                                                                return (
+                                                                    <div key={`empty_${category}_${sIdx}`} className="empty-inventory-slot" />
+                                                                );
+                                                            }
+                                                            const { items, firstIndex } = slotData;
+                                                            const count = items.length;
+                                                            const item = items[0];
+                                                            const isShardStack = item && item.shard === true && (item.type === 'jewel' || item.type === 'rune');
+                                                            const itemKey = `${item.name || item.type || 'item'}_${firstIndex}_${sIdx}`;
+                                                            
                                                             return (
-                                                                <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                                                                    {percent > 0 && (
-                                                                        <span className="stat-percent">{`+${percent}%`}</span>
+                                                                <div key={itemKey} className="expanded-item-slot-wrapper">
+                                                                    <Tile
+                                                                        id={firstIndex}
+                                                                        data={item}
+                                                                        tileSize={55}
+                                                                        image={item.icon && typeof item.icon === 'string' && !item.icon.includes('/') && !item.icon.startsWith('http') && !item.icon.startsWith('data:') ? item.icon : null}
+                                                                        imageOverride={item.icon && typeof item.icon === 'string' && (item.icon.includes('/') || item.icon.startsWith('http') || item.icon.startsWith('data:')) ? item.icon : null}
+                                                                        contains={item.name ? item.name.replace(' ', '_') : null}
+                                                                        color={item.color}
+                                                                        editMode={false}
+                                                                        type={'inventory-tile'}
+                                                                        handleClick={() => this.handleItemClick(item, firstIndex)}
+                                                                        handleHover={this.handleInventoryTileHover}
+                                                                        className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
+                                                                        isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
+                                                                    />
+                                                                    {(count > 1 || isShardStack) && (
+                                                                        <div className='stack-count-badge'>
+                                                                            {count}
+                                                                        </div>
                                                                     )}
-                                                                    <span className="stat-base">{value}</span>
-                                                                    {magicalWeaponBonus > 0 && (
-                                                                        <span className="stat-magical" style={{color: 'skyblue'}}>{`(+${magicalWeaponBonus})`}</span>
-                                                                    )}
-                                                                    {boosted !== null && (
-                                                                        <span className="stat-boosted" style={{color: 'lightgreen'}}>{boosted.toFixed(2)}</span>
-                                                                    )}
-                                                                    {magicalWeaponBonus > 0 && (
-                                                                        <span className="stat-total" style={{color: 'gold', fontWeight: 'bold'}}>{totalWithMagic}</span>
-                                                                    )}
-                                                                </span>
-                                                            )
-                                                        })()
-                                                    ) : key === 'defense' ? (
-                                                        (() => {
-                                                            const percent = armorPercent;
-                                                            const boosted = percent > 0 ? (value * (1 + percent / 100)) : null;
-                                                            return (
-                                                                <span className="stat-value" style={{display: 'flex', alignItems: 'center', gap: 6}}>
-                                                                    {percent > 0 && (
-                                                                        <span className="stat-percent">{`+${percent}%`}</span>
-                                                                    )}
-                                                                    <span className="stat-base">{value}</span>
-                                                                    {boosted !== null && (
-                                                                        <span className="stat-boosted" style={{color: 'lightgreen'}}>{boosted.toFixed(2)}</span>
-                                                                    )}
-                                                                </span>
-                                                            )
-                                                        })()
-                                                    ) : (
-                                                        <span className="stat-value">{value}</span>
-                                                    )}
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
                                                 </div>
-                                            )
+                                            );
                                         })}
                                     </div>
                                 </div>
-                            )
-                        })}
-                    </div>
-                    <div className="inventory-descriptor-panel">
-                        {(() => {
-                            const item = this.state.hoveredInventoryItem;
-                            const slotInfo = this.state.hoveredSlotInfo;
-                            const iconImg = (() => {
-                                if (!item) return null;
-                                const raw = item.icon || item.iconUrl || item.image;
-                                if (!raw) return null;
-                                if (typeof raw === 'string' && (raw.startsWith('/') || raw.startsWith('http') || raw.startsWith('data:'))) {
-                                    return raw;
-                                }
-                                return images[raw] || null;
-                            })();
-                            return (
-                                <div className="idp-content">
-                                    {item && (
-                                        <div className="idp-icon">
-                                            {iconImg && <img src={iconImg} alt={item.name || ''} />}
-                                        </div>
-                                    )}
-                                    <div className="idp-details">
-                                        {!item && !slotInfo
-                                            ? <span className="idp-placeholder">Hover over an item to see details</span>
-                                            : slotInfo
-                                                ? <>
-                                                    <div className="idp-name">{slotInfo.name}</div>
-                                                    <div className="idp-description">{slotInfo.description}</div>
-                                                  </>
-                                                : <>
-                                                    <div className="idp-name">{item.name || '—'}</div>
-                                                    <div className="idp-meta">
-                                                        {item.subtype && <span className="idp-tag idp-subtype">{item.subtype}</span>}
-                                                        {item.range && <span className="idp-tag idp-range">{item.range}</span>}
-                                                    </div>
-                                                    {this.buildItemSummaryDescription(item) && <div className="idp-description">{this.buildItemSummaryDescription(item)}</div>}
-                                                </>
-                                        }
-                                    </div>
-                                </div>
                             );
-                        })()}
-                    </div>
-                    <div className='inventory-strip'>
-                        {(() => {
-                            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
-                            const grouped = {};
-                            inv.forEach((item, idx) => {
-                                const key = item.name || item.type || `item_${idx}`;
-                                if (!grouped[key]) grouped[key] = { items: [], firstIndex: idx };
-                                grouped[key].items.push(item);
-                            });
-
-                            return Object.keys(grouped).map((key, gIdx) => {
-                                const group = grouped[key];
-                                const count = group.items.length;
-                                const item = group.items[0];
-                                const isShardStack = item && item.shard === true && (item.type === 'jewel' || item.type === 'rune');
-                                const firstIndex = group.firstIndex;
-                                const stripKey = `${key}__${firstIndex}__${item?.icon || 'no_icon'}`;
-                                return (
-                                    <div className={`strip-item sub-container ${item.animation === 'consumed' ? 'consumed' : ''}`} key={stripKey} style={{position: 'relative'}}>
-                                        <div className="hover-message-container">
-                                            <div className="hover-message">{this.state.inventoryHoverMatrix[firstIndex] ? this.state.inventoryHoverMatrix[firstIndex].replaceAll('_', ' ') : '\u00A0'}</div>
-                                        </div>
-                                        <Tile
-                                            key={stripKey}
-                                            id={firstIndex}
-                                            data={item}
-                                            tileSize={this.state.tileSize}
-                                            image={item.icon && typeof item.icon === 'string' && !item.icon.includes('/') && !item.icon.startsWith('http') && !item.icon.startsWith('data:') ? item.icon : null}
-                                            imageOverride={item.icon && typeof item.icon === 'string' && (item.icon.includes('/') || item.icon.startsWith('http') || item.icon.startsWith('data:')) ? item.icon : null}
-                                            contains={item.name ? item.name.replace(' ', '_') : null}
-                                            color={item.color}
-                                            editMode={false}
-                                            type={'inventory-tile'}
-                                            handleClick={() => this.handleItemClick(item, firstIndex)}
-                                            handleHover={this.handleInventoryTileHover}
-                                            className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
-                                            isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
-                                        />
-                                        {(count > 1 || isShardStack) && (
-                                            <div className='stack-count-badge'>
-                                                {count}
-                                            </div>
-                                        )}
-                                    </div>
-                                )
-                            })
                         })()}
                     </div>
                 </div>
