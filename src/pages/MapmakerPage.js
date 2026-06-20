@@ -37,8 +37,10 @@ import {
 } from '../utils/api-handler';
 import * as images from '../utils/images'
 import BoardsPalette from './dungonBuilderViews/BoardsPalette'
+import { generateRandomDungeon } from '../utils/dungeon-generator'
 
 const CLEAR_UNIQUE_DUNGEON_INSTANCES_VALUE = '__clear_unique_dungeon_instances__';
+const GENERATE_DUNGEON_VALUE = '__generate_dungeon__';
 const UNIQUE_DUNGEON_INSTANCE_NAME_REGEX = /.+_.+_[^_]{4}$/i;
 
 const GATES = [
@@ -201,6 +203,7 @@ class MapMakerPage extends React.Component {
       planeSyncInProgress: false,
       dungeonHasUnsavedChanges: false,
       planeHasUnsavedChanges: false,
+      generatingDungeon: false,
       imagesMatrix: {},
       selectedThingTitle: '',
       leftReadoutFlashMessage: null,
@@ -414,6 +417,40 @@ class MapMakerPage extends React.Component {
       modalType: 'name dungeon',
       loadedDungeon: dungeon
     })
+  }
+  generateDungeon = () => {
+    // Reset the dropdown to default while generating
+    this.setLoadedDungeonDropdownValue('Dungeon Selector');
+    this.setState({
+      generatingDungeon: true,
+      loadedDungeon: null,
+      dungeonOverlayOn: false,
+      overlayData: null,
+    });
+
+    // Defer generation to allow the spinner to render
+    setTimeout(() => {
+      try {
+        const rawDungeon = generateRandomDungeon();
+        const formatted = this.props.mapMaker.formatDungeon(rawDungeon);
+        console.log('[DungeonGenerator] Generated dungeon:', formatted);
+
+        this.setState({
+          loadedDungeon: formatted,
+          generatingDungeon: false,
+          dungeonHasUnsavedChanges: true,
+          selectedThingTitle: this.state.selectedView === 'dungeon'
+            ? `Dungeon: ${formatted.name}`
+            : this.state.selectedThingTitle,
+        });
+        this.setLoadedDungeonDropdownValue(formatted.name);
+        this.flashLeftReadout('Dungeon Generated');
+      } catch (err) {
+        console.error('[DungeonGenerator] Error generating dungeon:', err);
+        this.setState({ generatingDungeon: false });
+        this.flashLeftReadout('Error generating dungeon');
+      }
+    }, 80);
   }
   deleteDungeon = async () => {
     // deleteActiveDungeon
@@ -1892,6 +1929,21 @@ updateDungeonWithPlane = (plane) => {
       this.setState({ selectedThingTitle: 'Board' });
       return;
     }
+
+    // When usePassedTiles is true (e.g. zooming into a generated/in-memory board),
+    // skip the saved-boards lookup and use the board data we already have.
+    if (usePassedTiles) {
+      if(this.state.selectedView !== 'board'){
+        this.setViewState('board')
+      }
+      this.setState({
+        loadedBoard: clone(board),
+        tiles: clone(board.tiles),
+        selectedThingTitle: `Board: ${board.name}`
+      })
+      return;
+    }
+
     const boardRef = this.findBoardRefInFolders(board.id)
     console.log('found board ref: ', boardRef);
     if(!boardRef){
@@ -1906,8 +1958,8 @@ updateDungeonWithPlane = (plane) => {
       this.setViewState('board')
     } 
     this.setState({
-      loadedBoard: usePassedTiles ? clone(board) : boardRef,
-      tiles: usePassedTiles ? clone(board.tiles) : boardRef.tiles,
+      loadedBoard: boardRef,
+      tiles: boardRef.tiles,
       selectedThingTitle: `Board: ${board.name}`
     })
 
@@ -3359,6 +3411,14 @@ updateDungeonWithPlane = (plane) => {
   }
 
   saveDungeonLevel = () => {
+    if (this.state.loadedDungeon && !this.state.loadedDungeon.id) {
+      // Unsaved generated dungeon — prompt for a name before saving
+      this.setState({
+        showModal: true,
+        modalType: 'name dungeon',
+      });
+      return;
+    }
     this.writeDungeon()
   }
   clearDungeonLevel = (levelId) => {
@@ -3546,6 +3606,10 @@ updateDungeonWithPlane = (plane) => {
     const userId = sessionStorage.getItem('userId')
     if(e.target && e.target.value === CLEAR_UNIQUE_DUNGEON_INSTANCES_VALUE){
       this.openClearUniqueDungeonInstancesModal();
+      return;
+    }
+    if(e.target && e.target.value === GENERATE_DUNGEON_VALUE){
+      this.generateDungeon();
       return;
     }
     if(e.target && e.target.value && e.target.value !== 'Dungeon Selector'){
@@ -4223,6 +4287,7 @@ updateDungeonWithPlane = (plane) => {
               planeSyncInProgress={this.state.planeSyncInProgress}
               dungeonSelectOnChange={this.dungeonSelectOnChange}
               dungeonSelectVal={this.state.dungeonSelectVal}
+              generatingDungeon={this.state.generatingDungeon}
 
               downloadDungeon={this.downloadDungeon}
               renameDungeon={this.renameDungeon}

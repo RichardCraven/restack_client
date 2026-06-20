@@ -32,6 +32,7 @@ class DungeonView extends React.Component {
             nextProps.dungeons !== this.props.dungeons ||
             nextProps.loadingData !== this.props.loadingData ||
             nextProps.planeSyncInProgress !== this.props.planeSyncInProgress ||
+            nextProps.generatingDungeon !== this.props.generatingDungeon ||
             nextProps.tileSize !== this.props.tileSize ||
             nextProps.boardSize !== this.props.boardSize ||
             nextProps.imagesMatrix !== this.props.imagesMatrix ||
@@ -450,7 +451,8 @@ class DungeonView extends React.Component {
                                         ...((Array.isArray(this.props.dungeons) ? this.props.dungeons : []).map((e) => {
                                             return { label: e.name, value: e.name };
                                         })),
-                                        { label: 'Clear All Unique Instances', value: '__clear_unique_dungeon_instances__' }
+                                        { label: 'Clear All Unique Instances', value: '__clear_unique_dungeon_instances__' },
+                                        { label: '✦ Generate Dungeon', value: '__generate_dungeon__' }
                                     ]}
                                 onChange={this.props.dungeonSelectOnChange}
                                 />
@@ -715,6 +717,10 @@ class DungeonView extends React.Component {
                             {(this.props.loadingData || this.props.planeSyncInProgress) && <div className="empty-dungeons-container">
                                 <CSpinner/>
                                 {this.props.planeSyncInProgress && <div style={{ marginTop: '8px' }}>Updating dungeon planes...</div>}
+                            </div>}
+                            {this.props.generatingDungeon && <div className="empty-dungeons-container generating-dungeon-overlay">
+                                <CSpinner color="warning" />
+                                <div style={{ marginTop: '12px', color: '#d4a844', fontWeight: 600, fontSize: '14px' }}>Generating dungeon...</div>
                             </div>}
                         </div>
                     </div>

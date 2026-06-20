@@ -1,9 +1,32 @@
 import React from 'react';
+import * as images from '../utils/images';
 
 export default function Overlay(props) {
     // {id: combatant.id, animationType: animationType, data: combatant}
     let content = null;
     switch(props.animationType){
+        case 'transform_transition_overlay':
+            const overlayImg = images.transform_transition_overlay?.default || images.transform_transition_overlay;
+            content = (
+                <div 
+                    className="overlay-content overlay-transform-transition"
+                    style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        backgroundImage: `url(${overlayImg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        zIndex: 10,
+                        animation: 'transformTransitionOverlay 1.5s ease-in-out forwards',
+                        pointerEvents: 'none'
+                    }}
+                />
+            );
+            break;
         case 'targetted':
             // Only render the reticle if the combatant is not dead
             if (props.data?.dead) return null;

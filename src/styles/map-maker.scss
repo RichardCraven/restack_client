@@ -731,6 +731,16 @@ ul.dropdown-menu.show{
         width: 100%;
         height: 100%;
     }
+    .generating-dungeon-overlay{
+        flex-direction: column;
+        background: rgba(30, 25, 15, 0.85);
+        border-radius: 8px;
+        animation: generatePulse 1.5s ease-in-out infinite;
+    }
+    @keyframes generatePulse {
+        0%, 100% { opacity: 0.85; }
+        50% { opacity: 1; }
+    }
     
     .loaded-dungeon-wrapper{
         height: 100%;

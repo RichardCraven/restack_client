@@ -869,12 +869,14 @@ export function BoardManager(){
         }
     }
     this.getBoardIndexFromBoard = (board) => {
-        let v;
-        if(this.currentLevel && this.currentOrientation){
-            if(this.currentOrientation === 'F'){
-                v = this.currentLevel.front.miniboards.findIndex(e=>e.id === board.id)
-            } else {
-                v = this.currentLevel.back.miniboards.findIndex(e=>e.id === board.id)
+        let v = -1;
+        if(this.currentLevel && this.currentOrientation && board){
+            let plane = this.currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back;
+            if (!plane) {
+                plane = this.currentLevel.front || this.currentLevel.back || this.currentLevel;
+            }
+            if (plane && plane.miniboards) {
+                v = plane.miniboards.findIndex(e=>e.id === board.id);
             }
         }
         return v;
@@ -1188,10 +1190,18 @@ export function BoardManager(){
             return item;
         }
         let spawnCoords = this.getCoordinatesFromIndex(spawnTileIndex);
-    let board = this.currentOrientation === 'F' ? this.currentLevel.front.miniboards[boardIndex] : this.currentLevel.back.miniboards[boardIndex]
+        let plane = this.currentOrientation === 'F' ? this.currentLevel.front : this.currentLevel.back;
+        if (!plane) {
+            plane = this.currentLevel.front || this.currentLevel.back || this.currentLevel;
+        }
+        let board = plane && plane.miniboards ? plane.miniboards[boardIndex] : null;
+        if (!board) {
+            console.error("initializeTilesFromMap: No board found at index", boardIndex, "on level/plane", this.currentLevel, this.currentOrientation);
+            return;
+        }
 
         // Normalize the board tiles in-place (backwards-compatibility)
-    try { this.normalizeBoardTiles(board); } catch (e) {}
+        try { this.normalizeBoardTiles(board); } catch (e) {}
 
         // Cleanup malformed monster tile shapes that may have been saved in
         // older formats. Ensure every monster tile has the canonical object

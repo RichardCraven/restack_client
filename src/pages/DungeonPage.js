@@ -28,7 +28,7 @@ import  CIcon  from '@coreui/icons-react';
 
 import { CButton, CFormSelect, CFormInput, CModal, CModalHeader, CModalTitle, CModalBody} from '@coreui/react';
 import * as images from '../utils/images'
-import { RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime, BATTLE_TACTICS } from '../utils/spells-table'
+import { RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime, BATTLE_TACTICS, INNER_DISCIPLINES, DISCIPLINE_CATEGORIES } from '../utils/spells-table'
 import { RECIPES } from '../utils/spells-table'
 import skillsMatrix from '../utils/skills-matrix'
 import REAGENTS, { REAGENT_KEYS } from '../utils/reagents'
@@ -843,6 +843,76 @@ class DungeonPage extends React.Component {
                 activeTactic,
             });
         }
+        // ── Monk: Inner Discipline ──────────────────────────────────────────
+        if (character.type === 'monk') {
+            const specialActions = character.specialActions || [];
+            const chiCharges = specialActions.filter(a => a.type === 'inner_discipline' && a.category === 'chi' && a.available).length;
+            const activeStance = specialActions.find(a => a.type === 'inner_discipline' && a.category === 'stance' && a.available && (a.combatsRemaining || 0) > 0);
+
+            // Build a child subtype for a single discipline definition
+            const buildChild = (d) => {
+                const cat = d.category;
+                let count = 0;
+                if (cat === 'chi' && d.key === 'meditative_focus') count = chiCharges;
+                if (cat === 'stance' && activeStance && activeStance.disciplineKey === d.key) count = activeStance.combatsRemaining;
+                return {
+                    type: d.name,
+                    disciplineKey: d.key,
+                    category: cat,
+                    iconUrl: images[d.icon] || '',
+                    available: true,
+                    count,
+                    prepMins: Math.round(d.prepTime / 60000),
+                    combatDuration: d.combatDuration || null,
+                    revealScope: d.revealScope || null,
+                    description: d.description,
+                    flavorText: d.flavorText,
+                };
+            };
+
+            const chiDef = INNER_DISCIPLINES.meditative_focus;
+            const stanceKeys = DISCIPLINE_CATEGORIES.stance;
+            const spiritKeys = DISCIPLINE_CATEGORIES.spirit;
+
+            const disciplineSubTypes = [
+                // Meditative Focus — direct (no submenu)
+                {
+                    ...buildChild(chiDef),
+                    isCategory: false,
+                },
+                // Body Conditioning — submenu
+                {
+                    type: 'Body Conditioning',
+                    disciplineKey: null,
+                    category: 'stance',
+                    iconUrl: images['monk_inner_fire'] || '',
+                    available: true,
+                    count: activeStance ? activeStance.combatsRemaining : 0,
+                    isCategory: true,
+                    categoryKey: 'stance',
+                    children: stanceKeys.map(k => buildChild(INNER_DISCIPLINES[k])),
+                },
+                // Spirit Walk — submenu
+                {
+                    type: 'Spirit Walk',
+                    disciplineKey: null,
+                    category: 'spirit',
+                    iconUrl: images['monk_third_eye'] || '',
+                    available: true,
+                    count: 0,
+                    isCategory: true,
+                    categoryKey: 'spirit',
+                    children: spiritKeys.map(k => buildChild(INNER_DISCIPLINES[k])),
+                },
+            ];
+            actions.push({
+                type: 'inner_discipline',
+                name: 'Inner Discipline',
+                iconUrl: images['monk_meditate'] || '',
+                noMaxCap: true,
+                subTypes: disciplineSubTypes,
+            });
+        }
         // Add other class logic here as needed
         // Compute per-action maximum: only count subtypes belonging to that action type.
         // Glyph actions have no cap (multiple glyphs of same tier are allowed).
@@ -910,9 +980,22 @@ class DungeonPage extends React.Component {
                         {action.subTypes && action.subTypes.map((subType, j) => (
                             <React.Fragment key={j}>
                                 <div onClick={() => this.handleActionSubtypeClick(action, subType)}
-                                    className={`action-subtype ${this.getSubtypeClass(subType, maximumReached)} ${action.type === 'glyph' && this.state.glyphBuilderOpen === subType.glyphTier ? 'active-tier' : ''}`}>
+                                    className={`action-subtype ${this.getSubtypeClass(subType, maximumReached)} ${action.type === 'glyph' && this.state.glyphBuilderOpen === subType.glyphTier ? 'active-tier' : ''} ${subType.isCategory && this.state.innerDisciplineCategoryOpen === subType.categoryKey ? 'active-tier' : ''} ${!subType.isCategory && subType.disciplineKey && this.state.innerDisciplineSelected === subType.disciplineKey ? 'active-tier' : ''}`}>
                                     {subType.type} {subType.count !== 0 && this.getSubtypeImageCountElement(subType)}
+                                    {subType.isCategory && <span className="category-arrow">{this.state.innerDisciplineCategoryOpen === subType.categoryKey ? ' ▾' : ' ▸'}</span>}
                                 </div>
+                                {/* Nested children for inner discipline categories */}
+                                {subType.isCategory && this.state.innerDisciplineCategoryOpen === subType.categoryKey && subType.children && (
+                                    <div className="discipline-children">
+                                        {subType.children.map((child, k) => (
+                                            <div key={k}
+                                                onClick={() => this.handleActionSubtypeClick(action, child)}
+                                                className={`action-subtype discipline-child ${this.getSubtypeClass(child, false)} ${this.state.innerDisciplineSelected === child.disciplineKey ? 'active-tier' : ''}`}>
+                                                {child.type} {child.count !== 0 && this.getSubtypeImageCountElement(child)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                                 {/* Builder panel renders immediately below the tier that is open */}
                                 {action.type === 'glyph' && this.state.glyphBuilderOpen === subType.glyphTier && (() => {
                                     const tier = this.state.glyphBuilderOpen;
@@ -1218,6 +1301,64 @@ class DungeonPage extends React.Component {
                             </div>
                         );
                     })()}
+                    {/* ── Inner Discipline picker (Monk) ─────────────────────────── */}
+                    {action.type === 'inner_discipline' && this.state.innerDisciplineBuilderOpen && (() => {
+                        const selectedDisc = this.state.innerDisciplineSelected;
+                        const discDef = selectedDisc ? INNER_DISCIPLINES[selectedDisc] : null;
+                        const activeDisc = (this.state.selectedCrewMember?.specialActions || []).find(a =>
+                            a && a.type === 'inner_discipline' && new Date(a.endDate) > new Date()
+                        );
+                        const isBusy = !!activeDisc;
+                        // Chi max check
+                        let isMaxChi = false;
+                        if (discDef && discDef.category === 'chi') {
+                            const charges = (this.state.selectedCrewMember?.specialActions || []).filter(
+                                a => a.type === 'inner_discipline' && a.category === 'chi' && a.available
+                            ).length;
+                            isMaxChi = charges >= (discDef.maxCharges || 3);
+                        }
+                        const canCommit = discDef && !isBusy && !isMaxChi;
+                        return (
+                            <div className="compound-builder-panel tactics-builder-panel inner-discipline-builder-panel">
+                                {/* Discipline details */}
+                                {discDef && (
+                                    <div className="tactics-detail">
+                                        <div className="tactics-detail-name">{discDef.name}</div>
+                                        <div className="tactics-detail-desc">{discDef.description}</div>
+                                        <div className="tactics-detail-meta">
+                                            <span>⏱ {Math.round(discDef.prepTime / 60000)} min prep</span>
+                                            {discDef.combatDuration && (
+                                                <span>⚔ {discDef.combatDuration} combat{discDef.combatDuration !== 1 ? 's' : ''}</span>
+                                            )}
+                                            {discDef.category === 'chi' && (
+                                                <span>🧘 Up to {discDef.maxCharges || 3} charges</span>
+                                            )}
+                                            {discDef.revealScope && (
+                                                <span>👁 {discDef.revealScope === 'current_board' ? 'Current board' : discDef.revealScope === 'adjacent_boards' ? 'Adjacent boards' : 'Entire level'}</span>
+                                            )}
+                                        </div>
+                                        <div className="tactics-detail-flavor">{discDef.flavorText}</div>
+                                    </div>
+                                )}
+                                {!discDef && (
+                                    <div className="tactics-placeholder">Select a discipline above to see details.</div>
+                                )}
+                                <button
+                                    className={`compound-brew-btn ${canCommit ? 'ready' : 'disabled'}`}
+                                    disabled={!canCommit}
+                                    onClick={() => this.handleInnerDisciplineCommit(selectedDisc)}
+                                >
+                                    {isBusy
+                                        ? `Practising: ${activeDisc.name}…`
+                                        : isMaxChi
+                                            ? 'Maximum chi charges reached'
+                                            : discDef
+                                                ? `Begin ${discDef.name}`
+                                                : 'Select a discipline first'}
+                                </button>
+                            </div>
+                        );
+                    })()}
                     </div>
                 </div>
                 )
@@ -1281,7 +1422,13 @@ class DungeonPage extends React.Component {
                                     ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
                                     : (a.type === 'brew'
                                         ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
-                                        : `${member.name} has finished ${a.name}`));
+                                        : (a.type === 'inner_discipline'
+                                            ? (a.category === 'chi'
+                                                ? `${member.name} has gathered a chi charge through ${a.name}`
+                                                : a.category === 'stance'
+                                                    ? `${member.name} has trained ${a.name} stance`
+                                                    : `${member.name} has completed ${a.name}`)
+                                            : `${member.name} has finished ${a.name}`)));
                             updates.push({
                                 text: updateText,
                                 owner: `${member.name}`,
@@ -1301,7 +1448,13 @@ class DungeonPage extends React.Component {
                                     ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
                                     : (a.type === 'brew'
                                         ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
-                                        : `${member.name} has finished ${a.name}`));
+                                        : (a.type === 'inner_discipline'
+                                            ? (a.category === 'chi'
+                                                ? `${member.name} has gathered a chi charge through ${a.name}`
+                                                : a.category === 'stance'
+                                                    ? `${member.name} has trained ${a.name} stance`
+                                                    : `${member.name} has completed ${a.name}`)
+                                            : `${member.name} has finished ${a.name}`)));
                             updates.push({
                                 text: updateText,
                                 owner: `${member.name}`,
@@ -1718,6 +1871,7 @@ class DungeonPage extends React.Component {
         
         // Consolidated check: mark finished special actions available and collect updates
         const { updates, modified } = this.checkAndCollectFinishedSpecialActions({ markNotified: false }); // eslint-disable-line no-unused-vars
+        const initialExpanded = initialSelectedCrewMember ? (Array.isArray(initialSelectedCrewMember.actionMenuTypeExpanded) ? initialSelectedCrewMember.actionMenuTypeExpanded : (initialSelectedCrewMember.actionMenuTypeExpanded ? [initialSelectedCrewMember.actionMenuTypeExpanded] : [])) : [];
         this.setState((state, props) => {
             return {
                 tileSize,
@@ -1731,16 +1885,22 @@ class DungeonPage extends React.Component {
                 updates,
                 selectedCrewMember: initialSelectedCrewMember,
                 actionsTrayExpanded: initialSelectedCrewMember ? initialSelectedCrewMember.actionsTrayExpanded : false,
-                actionMenuTypeExpanded: initialSelectedCrewMember ? (Array.isArray(initialSelectedCrewMember.actionMenuTypeExpanded) ? initialSelectedCrewMember.actionMenuTypeExpanded : (initialSelectedCrewMember.actionMenuTypeExpanded ? [initialSelectedCrewMember.actionMenuTypeExpanded] : [])) : [],
+                actionMenuTypeExpanded: initialExpanded,
                 // Glyph builder state — which tier is open, and which spells the user has slotted so far
                 glyphBuilderOpen: null,
                 glyphBuilderSpells: [],
                 // Compound Potions builder state — whether the panel is open, and which reagents are in the 3 slots
-                compoundBuilderOpen: false,
+                compoundBuilderOpen: initialExpanded.includes('compound'),
                 compoundBuilderSlots: [], // array of reagent IDs (max 3)
                 // Brews builder state — whether the panel is open, and which ingredients are in the 2 slots
-                brewBuilderOpen: false,
+                brewBuilderOpen: initialExpanded.includes('brew'),
                 brewBuilderSlots: [], // array of ingredient IDs (max 2)
+                // Battle tactics builder state
+                tacticsBuilderOpen: initialExpanded.includes('tactics'),
+                // Inner Discipline (Monk) builder state
+                innerDisciplineBuilderOpen: initialExpanded.includes('inner_discipline'),
+                innerDisciplineSelected: null, // which disciplineKey is previewed
+                innerDisciplineCategoryOpen: null, // which category submenu is expanded: 'stance' | 'spirit' | null
                 // Do NOT open the modal at mount time — the CModal 'modal-open' body class
                 // from an immediately-visible modal can persist and trap all clicks if a
                 // second modal (quests popup) opens before CoreUI finishes the close animation.
@@ -2754,44 +2914,98 @@ class DungeonPage extends React.Component {
 
         this._setTimeout(() => {
             const bm = this.props.boardManager;
-            const targetLevelId = portal.targetLevelId;
-            const targetOrientation = portal.targetOrientation;
-            const targetMiniboardIndex = portal.targetMiniboardIndex;
-            const targetCoordinates = portal.targetCoordinates;
+            let targetLevelIdVal = portal.targetLevelId;
+            let targetOrientation = portal.targetOrientation;
+            let targetMiniboardIndex = portal.targetMiniboardIndex;
+            let targetCoordinates = portal.targetCoordinates;
 
-            if (targetLevelId !== null && targetLevelId !== undefined) {
-                if (targetLevelId !== bm.currentLevel.id) {
-                    const incomingLevel = bm.dungeon.levels.find(l => l.id === targetLevelId);
+            // Bulletproof dynamic resolution if any target property is missing or incomplete
+            if (portal.targetPortalId && (targetLevelIdVal === null || targetLevelIdVal === undefined || targetOrientation === null || targetOrientation === undefined || targetMiniboardIndex === null || targetMiniboardIndex === undefined || !targetCoordinates)) {
+                try {
+                    const allLevels = bm.dungeon?.levels || [];
+                    let foundTarget = null;
+                    for (const level of allLevels) {
+                        for (const orientation of ['front', 'back']) {
+                            const plane = level[orientation];
+                            if (plane && Array.isArray(plane.miniboards)) {
+                                for (let mbIndex = 0; mbIndex < plane.miniboards.length; mbIndex++) {
+                                    const mb = plane.miniboards[mbIndex];
+                                    if (mb && Array.isArray(mb.tiles)) {
+                                        const tile = mb.tiles.find(t => t.contains && t.contains.portalId === portal.targetPortalId);
+                                        if (tile) {
+                                            foundTarget = {
+                                                levelId: level.id,
+                                                orientation: orientation,
+                                                miniboardIndex: mbIndex,
+                                                coordinates: tile.coordinates
+                                            };
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (foundTarget) break;
+                        }
+                        if (foundTarget) break;
+                    }
+                    if (foundTarget) {
+                        targetLevelIdVal = foundTarget.levelId;
+                        targetOrientation = foundTarget.orientation;
+                        targetMiniboardIndex = foundTarget.miniboardIndex;
+                        targetCoordinates = foundTarget.coordinates;
+                    }
+                } catch (e) {
+                    console.warn("Failed to dynamically resolve target portal properties", e);
+                }
+            }
+
+            const canTransition = targetLevelIdVal !== null && targetLevelIdVal !== undefined && targetMiniboardIndex !== null && targetMiniboardIndex !== undefined && targetCoordinates;
+
+            if (canTransition) {
+                const targetLevelId = Number(targetLevelIdVal);
+                if (targetLevelId !== Number(bm.currentLevel?.id)) {
+                    const incomingLevel = bm.dungeon.levels.find(l => Number(l.id) === targetLevelId);
                     if (incomingLevel) {
                         bm.currentLevel = incomingLevel;
                     }
                 }
                 
-                if (targetOrientation && targetOrientation !== bm.currentOrientation) {
-                    bm.currentOrientation = targetOrientation;
+                const mappedOrientation = (targetOrientation === 'front' || targetOrientation === 'F') ? 'F' : 'B';
+                if (targetOrientation) {
+                    if (mappedOrientation !== bm.currentOrientation) {
+                        bm.currentOrientation = mappedOrientation;
+                    }
                 }
                 
                 bm.tiles = [];
-                const targetIdx = bm.getIndexFromCoordinates(targetCoordinates);
-                bm.initializeTilesFromMap(targetMiniboardIndex, targetIdx);
+                const targetIdx = bm.getIndexFromCoordinates([targetCoordinates[1], targetCoordinates[0]]);
+                
+                try {
+                    bm.initializeTilesFromMap(targetMiniboardIndex, targetIdx);
+                } catch (err) {
+                    console.error("initializeTilesFromMap crashed inside executePortalTeleport:", err);
+                }
                 
                 const levelTracker = this.state.levelTracker;
                 levelTracker.forEach(e => e.active = false);
-                const lvl = levelTracker.find(e => e.id === targetLevelId);
+                const lvl = levelTracker.find(e => Number(e.id) === targetLevelId);
                 if (lvl) lvl.active = true;
                 
                 const meta = getMeta() || {};
-                let indicatorsGroup = meta.minimapIndicators.find(e => e.level === targetLevelId && e.orientation === targetOrientation);
+                let indicatorsGroup = meta.minimapIndicators.find(e => Number(e.level) === targetLevelId && e.orientation === mappedOrientation);
                 if (!indicatorsGroup) {
                     let newIndicators = [];
                     for (let i = 0; i < 9; i++) {
                         newIndicators.push({ enemies: [], gates: [], merchant: [], stairs: [], misc: [], custom: [] });
                     }
-                    indicatorsGroup = { level: targetLevelId, orientation: targetOrientation, indicators: newIndicators };
+                    indicatorsGroup = { level: targetLevelId, orientation: mappedOrientation, indicators: newIndicators };
                     meta.minimapIndicators.push(indicatorsGroup);
                 }
                 if (meta.location) {
                     meta.location.levelId = targetLevelId;
+                    meta.location.orientation = mappedOrientation;
+                    meta.location.boardIndex = targetMiniboardIndex;
+                    meta.location.tileIndex = targetIdx;
                 }
                 storeMeta(meta);
                 
@@ -2821,9 +3035,10 @@ class DungeonPage extends React.Component {
                     }, 800);
                 });
             } else {
-                const targetIdx = bm.getIndexFromCoordinates(targetCoordinates);
-                bm.placePlayer(targetCoordinates);
-                bm.playerTile.location = [...targetCoordinates];
+                const targetIdx = bm.getIndexFromCoordinates([targetCoordinates[1], targetCoordinates[0]]);
+                const correctedCoordinates = [15 + targetCoordinates[1], 15 + targetCoordinates[0]];
+                bm.placePlayer(correctedCoordinates);
+                bm.playerTile.location = [...correctedCoordinates];
                 bm.tiles.forEach(t => t.playerTile = false);
                 bm.tiles[targetIdx].playerTile = true;
                 bm.handleFogOfWar(bm.tiles[targetIdx]);
@@ -4787,12 +5002,17 @@ class DungeonPage extends React.Component {
             this.props.saveUserData();
         }
         val = member.data;
+        const expanded = foundMember ? (Array.isArray(foundMember.actionMenuTypeExpanded) ? foundMember.actionMenuTypeExpanded : (foundMember.actionMenuTypeExpanded ? [foundMember.actionMenuTypeExpanded] : [])) : [];
 
         this.setState({
             selectedCrewMember: val,
             leftPanelExpanded: expand,
             actionsTrayExpanded: foundMember ? foundMember.actionsTrayExpanded : false,
-            actionMenuTypeExpanded: foundMember ? (Array.isArray(foundMember.actionMenuTypeExpanded) ? foundMember.actionMenuTypeExpanded : (foundMember.actionMenuTypeExpanded ? [foundMember.actionMenuTypeExpanded] : [])) : []
+            actionMenuTypeExpanded: expanded,
+            compoundBuilderOpen: expanded.includes('compound'),
+            brewBuilderOpen: expanded.includes('brew'),
+            tacticsBuilderOpen: expanded.includes('tactics'),
+            innerDisciplineBuilderOpen: expanded.includes('inner_discipline'),
         })
     }
 
@@ -4832,11 +5052,16 @@ class DungeonPage extends React.Component {
             console.warn('failed to store meta when cycling selected crew', e);
         }
 
+        const expanded = Array.isArray(foundMember.actionMenuTypeExpanded) ? foundMember.actionMenuTypeExpanded : (foundMember.actionMenuTypeExpanded ? [foundMember.actionMenuTypeExpanded] : []);
         // update local state so UI updates (inventory popup border, etc.)
         this.setState({
             selectedCrewMember: foundMember,
             actionsTrayExpanded: foundMember.actionsTrayExpanded,
-            actionMenuTypeExpanded: Array.isArray(foundMember.actionMenuTypeExpanded) ? foundMember.actionMenuTypeExpanded : (foundMember.actionMenuTypeExpanded ? [foundMember.actionMenuTypeExpanded] : [])
+            actionMenuTypeExpanded: expanded,
+            compoundBuilderOpen: expanded.includes('compound'),
+            brewBuilderOpen: expanded.includes('brew'),
+            tacticsBuilderOpen: expanded.includes('tactics'),
+            innerDisciplineBuilderOpen: expanded.includes('inner_discipline'),
         })
     }
     handleEquipmentItemClick = (item) => {
@@ -5615,6 +5840,7 @@ class DungeonPage extends React.Component {
         if (this.props.questManager) {
             this.props.questManager.generateQuestSet(dungeon, this.props.monsterManager, this.props.inventoryManager);
         }
+        const expanded = selectedCrewMember ? (Array.isArray(selectedCrewMember.actionMenuTypeExpanded) ? selectedCrewMember.actionMenuTypeExpanded : (selectedCrewMember.actionMenuTypeExpanded ? [selectedCrewMember.actionMenuTypeExpanded] : [])) : [];
         this.setState(()=>{
             return {
                 spawn: meta.location.tileIndex,
@@ -5625,7 +5851,11 @@ class DungeonPage extends React.Component {
                 levelTracker: levels,
                 selectedCrewMember,
                 actionsTrayExpanded: selectedCrewMember ? selectedCrewMember.actionsTrayExpanded : false,
-                actionMenuTypeExpanded: selectedCrewMember ? (Array.isArray(selectedCrewMember.actionMenuTypeExpanded) ? selectedCrewMember.actionMenuTypeExpanded : (selectedCrewMember.actionMenuTypeExpanded ? [selectedCrewMember.actionMenuTypeExpanded] : [])) : []
+                actionMenuTypeExpanded: expanded,
+                compoundBuilderOpen: expanded.includes('compound'),
+                brewBuilderOpen: expanded.includes('brew'),
+                tacticsBuilderOpen: expanded.includes('tactics'),
+                innerDisciplineBuilderOpen: expanded.includes('inner_discipline'),
             }
         }, () => {
             // After board loads, position floating player at its location
@@ -6328,6 +6558,23 @@ class DungeonPage extends React.Component {
             nextState.tacticsBuilderOpen = !isOpen;
             if (isOpen) nextState.tacticsBuilderSelected = null;
         }
+        // Toggle inner discipline builder open/closed
+        if (action.type === 'inner_discipline') {
+            const character = this.state.selectedCrewMember;
+            const busyDisc = (character?.specialActions || []).find(a => {
+                if (!a || a.type !== 'inner_discipline') return false;
+                return new Date(a.endDate) > new Date();
+            });
+            if (busyDisc) {
+                this.displayMessage(`Already practising: ${busyDisc.name}!`);
+                return;
+            }
+            nextState.innerDisciplineBuilderOpen = !isOpen;
+            if (isOpen) {
+                nextState.innerDisciplineSelected = null;
+                nextState.innerDisciplineCategoryOpen = null;
+            }
+        }
         this.setState(nextState);
     }
     getSubtypeClass = (subtype, maxReached) => {
@@ -6349,6 +6596,69 @@ class DungeonPage extends React.Component {
             );
             if (readyTactic && readyTactic.tacticKey === subtype.tacticKey) {
                 return 'available'; // active and ready — highlighted
+            }
+            return null; // selectable
+        }
+
+        // ── Inner Discipline subtype: in-prep blocks all; active stance/chi shows count ──
+        if (subtype.disciplineKey || subtype.isCategory) {
+            const specialActions = this.state.selectedCrewMember?.specialActions || [];
+            const discInProgress = specialActions.find(a =>
+                a && a.type === 'inner_discipline' && new Date(a.endDate) > new Date()
+            );
+            if (discInProgress) {
+                if (subtype.disciplineKey) {
+                    return discInProgress.disciplineKey === subtype.disciplineKey ? 'in-progress' : 'disabled';
+                }
+                // Category: show in-progress if any child matches
+                if (subtype.isCategory && subtype.children) {
+                    const childMatch = subtype.children.some(c => c.disciplineKey === discInProgress.disciplineKey);
+                    return childMatch ? 'in-progress' : 'disabled';
+                }
+                return 'disabled';
+            }
+            // Category-level: check if any child is active
+            if (subtype.isCategory && subtype.children) {
+                if (subtype.category === 'stance') {
+                    const activeStance = specialActions.find(a =>
+                        a && a.type === 'inner_discipline' && a.category === 'stance'
+                        && a.available === true && (a.combatsRemaining || 0) > 0
+                    );
+                    if (activeStance) return 'available';
+                }
+                if (subtype.category === 'spirit') {
+                    const activeSpirit = specialActions.find(a =>
+                        a && a.type === 'inner_discipline' && a.category === 'spirit' && a.available === true
+                    );
+                    if (activeSpirit) return 'available';
+                }
+                return null;
+            }
+            // Chi: show available if charges exist
+            if (subtype.category === 'chi') {
+                const charges = specialActions.filter(a => a.type === 'inner_discipline' && a.category === 'chi' && a.available).length;
+                const maxCharges = (INNER_DISCIPLINES[subtype.disciplineKey] || {}).maxCharges || 3;
+                if (charges >= maxCharges) return 'max-reached';
+                if (charges > 0) return 'available';
+            }
+            // Stance: show available if this stance is active with combats remaining
+            if (subtype.category === 'stance') {
+                const activeStance = specialActions.find(a =>
+                    a && a.type === 'inner_discipline' && a.category === 'stance'
+                    && a.available === true && (a.combatsRemaining || 0) > 0
+                );
+                if (activeStance && activeStance.disciplineKey === subtype.disciplineKey) {
+                    return 'available';
+                }
+            }
+            // Spirit: show available if this spirit walk is active
+            if (subtype.category === 'spirit') {
+                const activeSpirit = specialActions.find(a =>
+                    a && a.type === 'inner_discipline' && a.category === 'spirit' && a.available === true
+                );
+                if (activeSpirit && activeSpirit.disciplineKey === subtype.disciplineKey) {
+                    return 'available';
+                }
             }
             return null; // selectable
         }
@@ -6410,6 +6720,24 @@ class DungeonPage extends React.Component {
             const current = this.state.tacticsBuilderSelected;
             this.setState({ tacticsBuilderSelected: current === subType.tacticKey ? null : subType.tacticKey });
             return;
+        }
+        // For inner discipline: handle category expansion + child selection
+        if (action.type === 'inner_discipline') {
+            // Category subtype (Body Conditioning / Spirit Walk) — toggle submenu
+            if (subType.isCategory && subType.categoryKey) {
+                const current = this.state.innerDisciplineCategoryOpen;
+                this.setState({
+                    innerDisciplineCategoryOpen: current === subType.categoryKey ? null : subType.categoryKey,
+                    innerDisciplineSelected: null, // reset selection when toggling category
+                });
+                return;
+            }
+            // Direct discipline (Meditative Focus) or child discipline — select for preview
+            if (subType.disciplineKey) {
+                const current = this.state.innerDisciplineSelected;
+                this.setState({ innerDisciplineSelected: current === subType.disciplineKey ? null : subType.disciplineKey });
+                return;
+            }
         }
         // Original path for rituals, scrimmage, etc.
         let characterFromCrew = this.props.crewManager.crew.find(e=>e.id === this.state.selectedCrewMember.id)
@@ -6498,6 +6826,50 @@ class DungeonPage extends React.Component {
         this.setState({
             tacticsBuilderOpen: false,
             tacticsBuilderSelected: null,
+            selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
+        });
+    }
+
+    // ── Inner Discipline commit handler (Monk) ─────────────────────────────────
+    handleInnerDisciplineCommit = (disciplineKey) => {
+        if (!disciplineKey) return;
+        const discDef = INNER_DISCIPLINES[disciplineKey];
+        if (!discDef) return;
+        const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        if (!characterFromCrew) return;
+
+        const category = discDef.category;
+
+        // Chi: enforce max charges
+        if (category === 'chi') {
+            const currentCharges = (characterFromCrew.specialActions || []).filter(
+                a => a.type === 'inner_discipline' && a.category === 'chi' && a.available
+            ).length;
+            if (currentCharges >= (discDef.maxCharges || 3)) {
+                this.displayMessage(`Maximum chi charges reached (${discDef.maxCharges || 3})!`);
+                return;
+            }
+        }
+
+        // Stances: beginSpecialAction handles removal of previous stance
+        // Spirit: beginSpecialAction handles removal of previous spirit walk
+
+        const action = { type: 'inner_discipline' };
+        const subType = { disciplineKey };
+        this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+
+        const meta = getMeta();
+        meta.crew = this.props.crewManager.crew;
+        storeMeta(meta);
+        this.props.saveUserData();
+
+        const updatedCrewMember = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        const catLabel = category === 'chi' ? 'Meditation' : category === 'stance' ? 'Stance training' : 'Spirit walk';
+        this.displayMessage(`${catLabel} begun: ${discDef.name}. Preparation underway.`);
+        this.setState({
+            innerDisciplineBuilderOpen: false,
+            innerDisciplineSelected: null,
+            innerDisciplineCategoryOpen: null,
             selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
         });
     }

@@ -631,7 +631,7 @@ const skillsMatrix = {
         range: 'far',
         atkPercentage: 10,
         type: 'damage',
-        flatDamage: 10
+        flatDamage: 5
     },
     lightning_strike: {
         class: 'wizard',
@@ -1659,14 +1659,15 @@ const skillsMatrix = {
         power: 60,
     },
     hex: {
+        class: 'witch',
         id: 'hex',
         tier: 2,
         name: 'Hex',
-        desc: 'Curse the target, giving their skills a chance to backfire.',
+        desc: 'Curse the target for 4 rounds. Reduces ATK by 2 and gives all skill uses a 35% chance to backfire, failing the action and dealing 10 damage to the caster.',
         icon: images['hex'],
         cooldown: 10,
         duration: 'medium',
-        range: 'medium',
+        range: 'far',
         type: 'debuff',
         mentalityDebuff: true,
         power: 45,
@@ -1730,18 +1731,33 @@ const skillsMatrix = {
         effect: { type: 'stun', chance: 20, duration: 'short' }
     },
     shadow_curse: {
+        class: 'witch',
         id: 'shadow_curse',
         tier: 3,
         name: 'Shadow Curse',
-        desc: 'Curse the target, causing them to lose triple stamina on any movement or action for a long duration.',
+        desc: 'Curse the target for 4 rounds. While active, the stamina (endurance) cost of any movement or action is tripled (increased from 2 to 6). If stamina drops to 0, the unit is immediately exhausted, falling asleep and becoming stunned for 4 rounds.',
         icon: images['shadow_curse'],
         cooldown: 12,
         duration: 'long',
-        range: 'medium',
+        range: 'far',
         type: 'debuff',
         effect: { type: 'shadow_curse', duration: 'long' }
     },
+    greater_magic_missile: {
+        class: 'witch',
+        id: 'greater_magic_missile',
+        tier: 2,
+        name: 'Greater Magic Missile',
+        desc: 'Shoot a large, high-velocity magic missile that deals heavy damage.',
+        icon: images['magic_missile_icon'],
+        cooldown: 5,
+        duration: 'instant',
+        range: 'far',
+        atkPercentage: 100,
+        type: 'damage'
+    },
     spiderweb: {
+        class: 'witch',
         id: 'spiderweb',
         tier: 2,
         name: 'Spiderweb',
@@ -1749,11 +1765,12 @@ const skillsMatrix = {
         icon: images['spiderweb'],
         cooldown: 8,
         duration: 'short',
-        range: 'medium',
+        range: 'far',
         type: 'debuff',
         effect: { type: 'ensnared', duration: 'short' }
     },
     summon_spiders: {
+        class: 'witch',
         id: 'summon_spiders',
         tier: 3,
         name: 'Summon Spiders',
@@ -1762,9 +1779,11 @@ const skillsMatrix = {
         cooldown: 12,
         duration: 'instant',
         range: 'medium',
-        type: 'utility'
+        type: 'utility',
+        initialCooldown: 1
     },
     dispell: {
+        class: 'witch',
         id: 'dispell',
         tier: 3,
         name: 'Dispell',
@@ -1772,10 +1791,11 @@ const skillsMatrix = {
         icon: images['witch_dispell'],
         cooldown: 10,
         duration: 'instant',
-        range: 'medium',
+        range: 'far',
         type: 'utility'
     },
     demonic_whispers: {
+        class: 'witch',
         id: 'demonic_whispers',
         tier: 3,
         name: 'Demonic Whispers',
@@ -1783,7 +1803,7 @@ const skillsMatrix = {
         icon: images['demonic_whispers'],
         cooldown: 10,
         duration: 'short',
-        range: 'medium',
+        range: 'far',
         type: 'debuff',
         effect: { type: 'fear', duration: 'short' }
     },
@@ -1793,11 +1813,13 @@ const skillsMatrix = {
         name: 'Transform',
         desc: 'Transform into a dark beast, increasing attack power.',
         icon: images['transform'],
-        cooldown: 14,
+        cooldown: 18,
         duration: 'long',
         range: 'self',
         type: 'buff',
         effect: ['buff_self'],
+        chargingRounds: 2,
+        demonRounds: 5,
         buff: {
             increase_stats: {
                 stats: ['atk'],

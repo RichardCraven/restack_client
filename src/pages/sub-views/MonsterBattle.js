@@ -18,7 +18,7 @@ import {
 import Canvas from '../../components/Canvas/canvas'
 // import Overlay from '../../components/Overlay'
 // import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
-import CombatGrid from '../../components/combat-panes/CombatGrid'
+import CombatGrid, { getActiveEffects } from '../../components/combat-panes/CombatGrid'
 import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
 
 import { INTERVALS, INTERVAL_DISPLAY_NAMES } from '../../utils/shared-constants';
@@ -141,6 +141,8 @@ class MonsterBattle extends React.Component {
         // mount flag to avoid setState on unmounted component warnings
         this._isMounted = false;
         this.state = {
+            activeEffectPopup: null,
+            popupOpenedWhilePaused: false,
             message: '',
             combatStarted : false,
             source: null,
@@ -737,6 +739,23 @@ class MonsterBattle extends React.Component {
         // Mummy diagnostics
         const mummyBefore = Object.values(battleData || {}).find(c => c && (c.id === 'mummy' || c.type === 'mummy' || c.key === 'mummy' || String(c.id).includes('mummy')));
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
+        
+        // Preserve dead crew members so they are kept in state and can be rendered
+        // in the "Dead Crew" summary column, even after being deleted from combatants map.
+        if (this.state.battleData && Object.keys(clonedBattleData).length > 0) {
+            Object.values(this.state.battleData).forEach(oldMember => {
+                if (oldMember && !oldMember.isMonster && !oldMember.isMinion && !oldMember.isVCT) {
+                    if (!clonedBattleData[oldMember.id]) {
+                        clonedBattleData[oldMember.id] = {
+                            ...oldMember,
+                            dead: true,
+                            hp: 0
+                        };
+                    }
+                }
+            });
+        }
+        
         const mummyAfter = Object.values(clonedBattleData || {}).find(c => c && (c.id === 'mummy' || c.type === 'mummy' || c.key === 'mummy' || String(c.id).includes('mummy')));
         
         if (mummyBefore || mummyAfter) {
@@ -880,6 +899,14 @@ class MonsterBattle extends React.Component {
             this.setState((prev) => ({ showInventoryPopup: !prev.showInventoryPopup }));
         } catch (err) {
             console.warn('toggleInventory failed', err);
+        }
+    }
+
+    closeActiveEffectPopup = () => {
+        const wasPausedWhenOpened = this.state.popupOpenedWhilePaused;
+        this.setState({ activeEffectPopup: null });
+        if (!wasPausedWhenOpened && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+            this.props.combatManager.pauseCombat(false);
         }
     }
 
@@ -1044,6 +1071,19 @@ class MonsterBattle extends React.Component {
                 this.props.inventoryManager.addItemsByName(itemsGained)
             }
             experienceGained = this.props.monster.level * 10;
+            try {
+                let spiderKillsCount = 0;
+                Object.values(latestBattleData || {}).forEach(c => {
+                    if (c && c.type === 'spider_minion' && c.dead && c.hp <= 0 && !c.hasContacted) {
+                        spiderKillsCount++;
+                    }
+                });
+                if (spiderKillsCount > 0) {
+                    const spiderXp = spiderKillsCount * 10;
+                    experienceGained += spiderXp;
+                    console.log(`[Spider XP] Added ${spiderXp} XP for killing ${spiderKillsCount} spider(s) before contact.`);
+                }
+            } catch(e) { console.warn('[Spider XP] calculation failed', e); }
             // ── Battle Tactics: apply XP multiplier if an active tactic is in effect ──
             try {
                 const soldierMember = (this.props.crew || []).find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
@@ -1258,7 +1298,7 @@ class MonsterBattle extends React.Component {
                     try {
                         if (this._isMounted) this.setState({
                             showSummaryPanel: true,
-                            suppressSummaryPortraits: true,
+                            suppressSummaryPortraits: false,
                             isFinalDeath: true,
                             summaryMessage: 'This is the end.',
                             battleResult: 'loss',
@@ -1283,8 +1323,8 @@ class MonsterBattle extends React.Component {
                     // Suppress the later "persist final HP" block so it does not overwrite our planned restore
                     this._suppressPersistFinalHP = true;
 
-                    // Set a state flag so the summary-panel rendering hides portraits
-                    try { if (this._isMounted) this.setState({ suppressSummaryPortraits: true }); } catch(e) {}
+                    // Set a state flag so the summary-panel rendering shows portraits
+                    try { if (this._isMounted) this.setState({ suppressSummaryPortraits: false }); } catch(e) {}
 
                     // After a short delay, close summary, restore crew and respawn (do NOT navigate to death scene for non-final deaths)
                     this._setTimeout(async () => {
@@ -1387,8 +1427,9 @@ class MonsterBattle extends React.Component {
             stolenItems: this._stolenItems && this._stolenItems.length ? [...this._stolenItems] : [],
             summaryMessage,
             battleResult,
-            suppressSummaryPortraits: !!this._suppressPersistFinalHP,
+            suppressSummaryPortraits: false,
             isFinalDeath: false,
+            battleData: latestBattleData,
         })
         }, 1500);
     }
@@ -1835,25 +1876,20 @@ class MonsterBattle extends React.Component {
                         const currentTarget = this.props.combatManager.getCombatant(selectedFighter.targetId);
                         if (!currentTarget) return;
 
-                        if (spellKey === 'magic_missile') {
-                            this.props.combatManager.fighterAI.roster['wizard']
-                                .triggerMagicMissile(selectedFighter, currentTarget, 1500);
-                        } else {
-                            // Look up the skill definition from combatManager or use a minimal object
-                            const specialsMatrix = this.props.combatManager?.specialsMatrix || {};
-                            const spellDef = specialsMatrix[spellKey] || { id: spellKey, name: spellKey, type: 'damage', selected: true };
-                            const spellWithSelected = { ...spellDef, selected: true };
-                            
-                            // Bypass action restrictions for barrage spells
-                            const cmFighter = this.props.combatManager.getCombatant(selectedFighter.id);
-                            const prevActions = cmFighter ? cmFighter.actionsTakenThisRound : 0;
-                            if (cmFighter) cmFighter.actionsTakenThisRound = 0;
-                            
-                            this.props.combatManager.fighterSpecialAttack(spellWithSelected);
-                            
-                            // Restore so we don't grant free standard actions
-                            if (cmFighter) cmFighter.actionsTakenThisRound = prevActions;
-                        }
+                        // Look up the skill definition from combatManager or use a minimal object
+                        const specialsMatrix = this.props.combatManager?.specialsMatrix || {};
+                        const spellDef = specialsMatrix[spellKey] || { id: spellKey, name: spellKey, type: 'damage', selected: true };
+                        const spellWithSelected = { ...spellDef, selected: true };
+                        
+                        // Bypass action restrictions for barrage spells
+                        const cmFighter = this.props.combatManager.getCombatant(selectedFighter.id);
+                        const prevActions = cmFighter ? cmFighter.actionsTakenThisRound : 0;
+                        if (cmFighter) cmFighter.actionsTakenThisRound = 0;
+                        
+                        this.props.combatManager.fighterSpecialAttack(spellWithSelected);
+                        
+                        // Restore so we don't grant free standard actions
+                        if (cmFighter) cmFighter.actionsTakenThisRound = prevActions;
                         const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
                             ? this.props.combatManager.getCombatLog()
                             : [];
@@ -2262,122 +2298,201 @@ class MonsterBattle extends React.Component {
                         boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
                         overflow: 'visible'
                     }}>
-                    {this.state.showSummaryPanel && 
-                    <div className='summary-panel'>
-                        <div className="content-container">
-                            <div className="summary-message-container">
-                                {this.state.summaryMessage}
-                            </div>
-                            {this.state.itemsGained && this.state.itemsGained.length > 0 &&
-                                this.state.itemsGained.map((itemKey, idx) => {
-                                    const itemDef = this.props.inventoryManager.allItems[itemKey];
-                                    const iconSrc = itemDef?.icon ? images[itemDef.icon] : null;
-                                    const displayName = itemDef?.name || itemKey.replaceAll('_', ' ');
-                                    return (
-                                        <div key={idx} className="experience-container">
-                                            {iconSrc && <img className="summary-icon" src={iconSrc} alt="" />}
-                                            You found a {displayName}
-                                        </div>
-                                    );
-                                })
-                            }
-                            {this.state.goldGained > 0 && 
-                            <div className="experience-container">
-                                <img className="summary-icon" src={images.gold} alt="" />
-                                You found {this.state.goldGained} gold
-                            </div>
-                            }
-                            {this.state.stolenItems && this.state.stolenItems.length > 0 &&
-                                this.state.stolenItems.map((entry, idx) => {
-                                    const itemName = typeof entry === 'string' ? entry : entry?.itemName;
-                                    const itemIconKey = typeof entry === 'string' ? null : entry?.itemIconKey;
-                                    const iconSrc = (itemIconKey && images[itemIconKey]) ? images[itemIconKey] : images.goblin_portrait;
-                                    return (
-                                        <div key={`stolen-${idx}`} className="experience-container stolen-item">
-                                            {iconSrc && <img className="summary-icon" src={iconSrc} alt="" />}
-                                            {itemName} was stolen by a goblin!
-                                        </div>
-                                    );
-                                })
-                            }
-                            {this.state.foodGained > 0 &&
-                            <div className="experience-container">
-                                <span className="summary-icon summary-icon-emoji" role="img" aria-label="meat">🍖</span>
-                                Your crew foraged {this.state.foodGained} food
-                            </div>
-                            }
-                            {this.state.experienceGained > 0 && 
-                            <div className="experience-container">
-                                <img className="summary-icon" src={images.exp} alt="" />
-                                Each crew member has earned {this.state.experienceGained} experience
-                            </div>} 
-                            { !this.state.suppressSummaryPortraits && (
-                                <div className="portraits-container">
-                                    {Object.values(this.state.battleData).filter(e=>!e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                        // Defensive portrait resolution with avatar fallback
-                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
-                                        // authoritative crew member stored in crewManager (may contain justLeveled and recent gains)
-                                        const cmMember = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && (c.id === crewMember.id || c.name === crewMember.name)) : null;
-                                        const percent = this.props.crewManager.calculateExpPercentage(crewMember);
-                                        const shouldShowArrow = (cmMember && cmMember.justLeveled) || percent >= 100;
-                                        // aggregate recent gains into a single object for display
-                                        let gainsAgg = null;
-                                        try {
-                                            if (cmMember && Array.isArray(cmMember._recentLevelGains) && cmMember._recentLevelGains.length) {
-                                                gainsAgg = {};
-                                                cmMember._recentLevelGains.forEach(g => {
-                                                    Object.keys(g).forEach(k => {
-                                                        gainsAgg[k] = (gainsAgg[k] || 0) + (g[k] || 0);
-                                                    });
-                                                });
-                                            }
-                                        } catch (err) { gainsAgg = null }
-                                        return (
-                                            <div key={i} className="single-portrait-container">
-                                                <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}></div>
-                                                {shouldShowArrow && (
-                                                    <Canvas 
-                                                        className="level-up-canvas"
-                                                        width={80}
-                                                        height={80}
-                                                        draw={this.draw}
-                                                    />
-                                                )}
-                                                {gainsAgg && Object.keys(gainsAgg).length > 0 && (
-                                                    <div className="level-gains">
-                                                        {Object.keys(gainsAgg).map((k, idx) => (
-                                                            <div key={idx} className="gain-item">{k.toUpperCase()} +{gainsAgg[k]}</div>
-                                                        ))}
-                                                    </div>
-                                                )}
-                                                {this.state.levelTransitions[crewMember.id] && (
-                                                    <div className="level-transition">
-                                                        Lvl {this.state.levelTransitions[crewMember.id].from} → {this.state.levelTransitions[crewMember.id].to}
-                                                    </div>
-                                                )}
-                                                <div className="experience-bar-container">
-                                                    <div className="experience-bar" style={{width: `${percent}%`}}></div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
-                                    {Object.values(this.state.battleData).filter(e=>e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
-                                        const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
-                                        return (
-                                            <div key={i} className="single-portrait-container dead-member">
-                                                <div className="portrait" style={{backgroundImage: `url(${portraitUrl})`}}>
-                                                    <div className="skull-image" style={{backgroundImage: `url(${images['whiteskull']})`}}></div>
-                                                </div>
-                                            </div>
-                                        )
-                                    })}
+                    {this.state.showSummaryPanel && (() => {
+                        const battleEntries = Object.values(this.state.battleData || {});
+                        const isVictory = !this.state.suppressSummaryPortraits && battleEntries.some(e => e && !e.dead && !e.isMonster && !e.isMinion);
+                        const headerText = isVictory ? "VICTORY" : "DEFEAT";
+                        const headerClass = isVictory ? "victory-header" : "defeat-header";
+
+                        return (
+                            <div className={`summary-panel ${isVictory ? 'victory' : 'defeat'}`}>
+                                {/* Header */}
+                                <div className="summary-header">
+                                    <h1 className={headerClass}>{headerText}</h1>
+                                    <div className="summary-subtitle">{this.state.summaryMessage}</div>
                                 </div>
-                            )}
-                        </div>
-                        <div className="button-row">
-                            {!this.state.isFinalDeath && <div className="confirm-button" onClick={() => this.confirmClicked()}>OK</div>}
-                        </div>
-                    </div>}
+
+                                {/* Content Grid */}
+                                <div className="summary-content-grid">
+                                    {/* Left: Battle Spoils */}
+                                    <div className="summary-section spoils-section">
+                                        <h2 className="section-title">BATTLE REWARDS</h2>
+                                        <div className="spoils-grid">
+                                            {this.state.goldGained > 0 && (
+                                                <div className="spoil-card gold">
+                                                    <img className="spoil-icon" src={images.gold} alt="Gold" />
+                                                    <div className="spoil-info">
+                                                        <span className="spoil-label">Gold Gained</span>
+                                                        <span className="spoil-value">+{this.state.goldGained}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {this.state.foodGained > 0 && (
+                                                <div className="spoil-card food">
+                                                    <span className="spoil-icon-emoji">🍖</span>
+                                                    <div className="spoil-info">
+                                                        <span className="spoil-label">Food Foraged</span>
+                                                        <span className="spoil-value">+{this.state.foodGained}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {this.state.experienceGained > 0 && (
+                                                <div className="spoil-card exp">
+                                                    <img className="spoil-icon" src={images.exp} alt="XP" />
+                                                    <div className="spoil-info">
+                                                        <span className="spoil-label">XP per Hero</span>
+                                                        <span className="spoil-value">+{this.state.experienceGained}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Items Gained */}
+                                        {((this.state.itemsGained && this.state.itemsGained.length > 0) || (this.state.stolenItems && this.state.stolenItems.length > 0)) && (
+                                            <div className="gained-items-section">
+                                                <h3 className="sub-section-title">ITEMS</h3>
+                                                <div className="items-list">
+                                                    {this.state.itemsGained && this.state.itemsGained.length > 0 &&
+                                                        this.state.itemsGained.map((itemKey, idx) => {
+                                                            const itemDef = this.props.inventoryManager.allItems[itemKey];
+                                                            const iconSrc = itemDef?.icon ? images[itemDef.icon] : null;
+                                                            const displayName = itemDef?.name || itemKey.replaceAll('_', ' ');
+                                                            return (
+                                                                <div key={`item-${idx}`} className="item-spoil-row">
+                                                                    <div className="item-icon-wrapper">
+                                                                        {iconSrc ? <img className="item-spoil-icon" src={iconSrc} alt="" /> : <span className="item-fallback-icon">🎒</span>}
+                                                                    </div>
+                                                                    <span className="item-spoil-text">Found <strong className="highlight-text">{displayName}</strong></span>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    }
+                                                    {this.state.stolenItems && this.state.stolenItems.length > 0 &&
+                                                        this.state.stolenItems.map((entry, idx) => {
+                                                            const itemName = typeof entry === 'string' ? entry : entry?.itemName;
+                                                            const itemIconKey = typeof entry === 'string' ? null : entry?.itemIconKey;
+                                                            const iconSrc = (itemIconKey && images[itemIconKey]) ? images[itemIconKey] : images.goblin_portrait;
+                                                            return (
+                                                                <div key={`stolen-${idx}`} className="item-spoil-row stolen">
+                                                                    <div className="item-icon-wrapper stolen">
+                                                                        <img className="item-spoil-icon" src={iconSrc} alt="" />
+                                                                    </div>
+                                                                    <span className="item-spoil-text stolen"><strong className="highlight-text-stolen">{itemName}</strong> was stolen by a goblin!</span>
+                                                                </div>
+                                                            );
+                                                        })
+                                                    }
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Right: Crew Status */}
+                                    {!this.state.suppressSummaryPortraits && (
+                                        <div className="summary-section crew-section">
+                                            <h2 className="section-title">HEROES</h2>
+                                            <div className="summary-crew-list">
+                                                {/* Surviving Crew */}
+                                                {Object.values(this.state.battleData).filter(e => !e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                                    const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
+                                                    const cmMember = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && (c.id === crewMember.id || c.name === crewMember.name)) : null;
+                                                    const percent = this.props.crewManager.calculateExpPercentage(crewMember);
+                                                    const shouldShowArrow = (cmMember && cmMember.justLeveled) || percent >= 100;
+                                                    
+                                                    let gainsAgg = null;
+                                                    try {
+                                                        if (cmMember && Array.isArray(cmMember._recentLevelGains) && cmMember._recentLevelGains.length) {
+                                                            gainsAgg = {};
+                                                            cmMember._recentLevelGains.forEach(g => {
+                                                                Object.keys(g).forEach(k => {
+                                                                    gainsAgg[k] = (gainsAgg[k] || 0) + (g[k] || 0);
+                                                                });
+                                                            });
+                                                        }
+                                                    } catch (err) { gainsAgg = null }
+
+                                                    return (
+                                                        <div key={`live-${i}`} className="crew-summary-row">
+                                                            <div className="crew-portrait-box">
+                                                                <div className="crew-portrait-img" style={{ backgroundImage: `url(${portraitUrl})` }} />
+                                                                {shouldShowArrow && (
+                                                                    <Canvas 
+                                                                        className="level-up-canvas"
+                                                                        width={80}
+                                                                        height={80}
+                                                                        draw={this.draw}
+                                                                    />
+                                                                )}
+                                                            </div>
+                                                            <div className="crew-summary-details">
+                                                                <div className="crew-name-row">
+                                                                    <span className="crew-name">{crewMember.name}</span>
+                                                                    {this.state.levelTransitions[crewMember.id] ? (
+                                                                        <span className="crew-level-badge level-up">
+                                                                            Lvl {this.state.levelTransitions[crewMember.id].from} → {this.state.levelTransitions[crewMember.id].to}
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="crew-level-badge">Lvl {crewMember.stats?.level || 1}</span>
+                                                                    )}
+                                                                </div>
+                                                                
+                                                                {/* XP Bar */}
+                                                                <div className="crew-xp-container">
+                                                                    <div className="crew-xp-bg">
+                                                                        <div className="crew-xp-fill" style={{ width: `${percent}%` }} />
+                                                                    </div>
+                                                                    <span className="crew-xp-text">{Math.round(percent)}% XP</span>
+                                                                </div>
+
+                                                                {/* Stats Gains */}
+                                                                {gainsAgg && Object.keys(gainsAgg).length > 0 && (
+                                                                    <div className="crew-gains-pills">
+                                                                        {Object.keys(gainsAgg).map((k, idx) => (
+                                                                            <span key={idx} className="gain-pill">{k.toUpperCase()} +{gainsAgg[k]}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+
+                                                {/* Dead Crew */}
+                                                {Object.values(this.state.battleData).filter(e => e.dead && !e.isMonster && !e.isMinion).map((crewMember, i) => {
+                                                    const portraitUrl = images[crewMember.portrait] || crewMember.portrait || images['avatar'];
+                                                    return (
+                                                        <div key={`dead-${i}`} className="crew-summary-row dead">
+                                                            <div className="crew-portrait-box dead">
+                                                                <div className="crew-portrait-img" style={{ backgroundImage: `url(${portraitUrl})` }} />
+                                                                <div className="skull-overlay-icon" style={{ backgroundImage: `url(${images['whiteskull']})` }} />
+                                                            </div>
+                                                            <div className="crew-summary-details">
+                                                                <div className="crew-name-row">
+                                                                    <span className="crew-name dead">{crewMember.name}</span>
+                                                                    <span className="crew-status-badge dead">FALLEN</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="summary-actions">
+                                    {!this.state.isFinalDeath ? (
+                                        <button className="confirm-btn-premium" onClick={() => this.confirmClicked()}>
+                                            CONTINUE
+                                        </button>
+                                    ) : (
+                                        <div className="final-death-disclaimer">GAME OVER</div>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
 
                     <CModal className='inventory-modal' alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false })}>
                         <div className='inventory-content'>
@@ -2736,46 +2851,195 @@ class MonsterBattle extends React.Component {
 
                                         {/* Active status effects */}
                                         {(() => {
-                                            const liveUnit = this.props.combatManager.getCombatant?.(liveSelectedFighter.id);
-                                            const statuses = [];
-                                            if (liveUnit?.frozen || liveSelectedFighter.frozen) statuses.push({ label: 'Frozen', color: '#7dd5f5' });
-                                            if (liveUnit?.stunned || liveSelectedFighter.stunned) statuses.push({ label: 'Stunned', color: '#f5c842' });
-                                            if (liveUnit?.bleed || liveSelectedFighter.bleed) statuses.push({ label: 'Bleeding', color: '#e05555' });
-                                            if (liveUnit?.astralBeingActive) statuses.push({ label: 'Astral Being', color: '#21e6c1' });
-                                            if (liveUnit?.thirdEyeActive) statuses.push({ label: 'Third Eye', color: '#21e6c1' });
-                                            if (liveUnit?.shieldWallActive) statuses.push({ label: 'Shield Wall', color: '#90c4ff' });
-                                            if (liveUnit?.berserkerActive || liveSelectedFighter.berserkerActive) statuses.push({ label: 'Berserk', color: '#ff4444' });
-                                            if (liveUnit?.riftPortalActive) statuses.push({ label: 'Rift Open', color: '#cc44ff' });
-                                            // Active buffs from _applyBuff
-                                            if (Array.isArray(liveUnit?.activeBuffs)) {
-                                                liveUnit.activeBuffs.forEach(b => {
-                                                    if (b && b.label && !statuses.find(s => s.label === b.label)) {
-                                                        statuses.push({ label: `${b.label} (${b.roundsLeft}r)`, color: '#7affa0' });
-                                                    }
-                                                });
-                                            }
-                                            if (Array.isArray(liveUnit?.activeDebuffs)) {
-                                                liveUnit.activeDebuffs.forEach(d => {
-                                                    if (d) {
-                                                        const label = d.label || (d.name === 'Hexed' ? 'Hexed' : d.name === 'Polymorphed' ? 'Polymorphed' : d.name);
-                                                        if (label && !statuses.find(s => s.label === label)) {
-                                                            statuses.push({ label, color: '#ff8844' });
-                                                        }
-                                                    }
-                                                });
-                                            }
-                                            if ((liveUnit?.hexed || liveSelectedFighter.hexed) && !statuses.find(s => s.label === 'Hexed')) {
-                                                statuses.push({ label: 'Hexed', color: '#cc44ff' });
-                                            }
-                                            if ((liveUnit?.polymorphed || liveSelectedFighter.polymorphed) && !statuses.find(s => s.label === 'Polymorphed')) {
-                                                statuses.push({ label: 'Polymorphed', color: '#22c55e' });
-                                            }
-                                            if (!statuses.length) return null;
+                                            const liveUnit = this.props.combatManager.getCombatant?.(liveSelectedFighter.id) || liveSelectedFighter;
+                                            const activeEffects = getActiveEffects(liveUnit, this.props.combatManager);
+                                            if (!activeEffects || activeEffects.length === 0) return null;
+
+                                            const EFFECT_LABELS = {
+                                                frozen: 'Frozen',
+                                                stunned: 'Stunned',
+                                                sleep: 'Asleep',
+                                                fear: 'Feared',
+                                                bleed: 'Bleeding',
+                                                poison: 'Poisoned',
+                                                defensive_stance: 'Defensive Stance',
+                                                berserker: 'Berserk',
+                                                weakness: 'Weakness Revealed',
+                                                marked: 'Marked',
+                                                ensnared: 'Ensnared',
+                                                shadow_curse: 'Shadow Curse',
+                                                hexed: 'Hexed',
+                                                polymorphed: 'Polymorphed',
+                                                third_eye: 'Third Eye',
+                                                shield_wall: 'Shield Wall',
+                                                rift_portal: 'Rift Open',
+                                                spiderweb: 'Spiderweb'
+                                            };
+
+                                            const EFFECT_EXPLANATIONS = {
+                                                frozen: 'Frozen in absolute-zero ice. Cannot move or take actions.',
+                                                stunned: 'Stunned. Cannot move or take actions.',
+                                                sleep: 'Asleep. Cannot move or take actions. Wakes up when taking damage.',
+                                                fear: 'Terrified. Bypasses normal behavior and flees to a corner tile.',
+                                                bleed: 'Bleeding. Takes damage at the end of each round.',
+                                                poison: 'Poisoned. Takes tick damage over time.',
+                                                defensive_stance: 'Defensive Stance. Increases DEF and blocks incoming attacks.',
+                                                berserker: 'Berserk. Greatly increases speed and attack power.',
+                                                weakness: 'Weakness. Takes increased damage from physical and magical hits.',
+                                                marked: 'Marked. Ranged attacks against this unit deal extra damage.',
+                                                ensnared: 'Ensnared. Restricted movement. Cannot walk to adjacent tiles.',
+                                                shadow_curse: 'Curse the target for 4 rounds. While active, the stamina (endurance) cost of any movement or action is tripled (increased from 2 to 6). If stamina drops to 0, the unit is immediately exhausted, falling asleep and becoming stunned for 4 rounds.',
+                                                hexed: 'Hexed. Reduces ATK by 2 for 4 rounds. All skill uses have a 35% chance to backfire, failing the action and dealing 10 damage to the caster.',
+                                                polymorphed: 'Polymorphed into a harmless creature. Stunned for the duration.',
+                                                third_eye: 'Third Eye. Increases accuracy and critical strike chance.',
+                                                shield_wall: 'Shield Wall. Protects adjacent allies and increases DEF.',
+                                                rift_portal: 'Rift Open. Portal is open and channeling energy.',
+                                                spiderweb: 'Trapped in a sticky spiderweb. Cannot move. Contact with spider minions will cause double damage and detonate in a purple blast.'
+                                            };
+
+                                            const mappedEffects = activeEffects.map(eff => {
+                                                const label = EFFECT_LABELS[eff.key] || eff.key || 'Status Effect';
+                                                const explanation = EFFECT_EXPLANATIONS[eff.key] || 'An active status effect.';
+                                                return { ...eff, label, explanation };
+                                            });
+
                                             return (
-                                                <div className="redux-status-badges">
-                                                    {statuses.map((s, i) => (
-                                                        <span key={i} className="redux-status-badge" style={{ borderColor: s.color, color: s.color }}>{s.label}</span>
-                                                    ))}
+                                                <div className="redux-status-badges" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', margin: '10px 0', alignItems: 'center' }}>
+                                                    {mappedEffects.map((eff, i) => {
+                                                        const roundsLeft = eff.roundsLeft || 0;
+                                                        const total = eff.totalDuration || 4;
+                                                        const roundDurationMs = this.props.combatManager?.roundDurationMs || (this.props.combatManager?.gameSpeed === 'fast' ? 1000 : 2000);
+                                                        
+                                                        let preciseRoundsLeft = 0;
+                                                        if (eff.endTimeMs && eff.totalDurationMs && eff.totalDurationMs > 0) {
+                                                            const now = Date.now();
+                                                            const timeLeftMs = eff.endTimeMs - now;
+                                                            preciseRoundsLeft = Math.max(0, (timeLeftMs / eff.totalDurationMs) * total);
+                                                        } else {
+                                                            const roundProgress = (this.props.combatManager?.roundTimeElapsedMs || 0) / roundDurationMs;
+                                                            preciseRoundsLeft = roundsLeft > 0 ? Math.max(0, roundsLeft - roundProgress) : 0;
+                                                        }
+
+                                                        const segmentedDuration = eff.stackDuration || 0;
+                                                        const segmentedRoundsLeft = eff.segmented && segmentedDuration > 0
+                                                            ? (() => {
+                                                                const modulo = preciseRoundsLeft % segmentedDuration;
+                                                                return modulo === 0 && preciseRoundsLeft > 0 ? segmentedDuration : modulo;
+                                                            })()
+                                                            : preciseRoundsLeft;
+                                                        const pctBase = eff.segmented && segmentedDuration > 0 ? segmentedDuration : total;
+                                                        let pct = pctBase > 0 ? Math.min(100, Math.max(0, (segmentedRoundsLeft / pctBase) * 100)) : 0;
+                                                        const dashOffset = (pct / 100) * 31.42;
+
+                                                        const ratio = pct / 100;
+                                                        const angle = (1 - ratio) * 360;
+                                                        const rad = angle * (Math.PI / 180);
+                                                        const coords = {
+                                                            x2: 10 + 10 * Math.cos(rad),
+                                                            y2: 10 + 10 * Math.sin(rad)
+                                                        };
+
+                                                        const showBadge = eff.alwaysShowBadge ? (eff.stacks || 0) > 0 : (eff.stacks || 0) > 1;
+
+                                                        return (
+                                                            <div 
+                                                                key={eff.key || i} 
+                                                                className="effect-icon-clickable" 
+                                                                style={{
+                                                                    width: '28px', 
+                                                                    height: '28px', 
+                                                                    borderRadius: '50%',
+                                                                    backgroundColor: '#111', 
+                                                                    border: `2px solid ${eff.border || '#f39c12'}`,
+                                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
+                                                                    position: 'relative',
+                                                                    overflow: 'visible',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                                onClick={() => {
+                                                                    const initiallyPaused = !!(this.props.paused || this.props.combatManager?.combatPaused);
+                                                                    this.setState({ 
+                                                                        activeEffectPopup: eff,
+                                                                        popupOpenedWhilePaused: initiallyPaused
+                                                                    });
+                                                                    if (!initiallyPaused && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+                                                                        this.props.combatManager.pauseCombat(true);
+                                                                    }
+                                                                }}
+                                                                title={`Click to inspect ${eff.label}`}
+                                                            >
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    top: 0,
+                                                                    left: 0,
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    borderRadius: '50%',
+                                                                    backgroundImage: `url(${eff.icon?.default || eff.icon})`,
+                                                                    backgroundSize: 'cover',
+                                                                    backgroundRepeat: 'no-repeat',
+                                                                    backgroundPosition: 'center'
+                                                                }} />
+                                                                {preciseRoundsLeft > 0 && (
+                                                                    <svg 
+                                                                        style={{
+                                                                            position: 'absolute',
+                                                                            top: 0,
+                                                                            left: 0,
+                                                                            width: '100%',
+                                                                            height: '100%',
+                                                                            transform: 'rotate(-90deg)',
+                                                                            pointerEvents: 'none',
+                                                                            zIndex: 10
+                                                                        }}
+                                                                        viewBox="0 0 20 20"
+                                                                    >
+                                                                        <circle
+                                                                            cx="10"
+                                                                            cy="10"
+                                                                            r="5"
+                                                                            fill="none"
+                                                                            stroke="rgba(0, 0, 0, 0.5)"
+                                                                            strokeWidth="10"
+                                                                            strokeDasharray="31.42"
+                                                                            strokeDashoffset={dashOffset}
+                                                                        />
+                                                                        {coords && (
+                                                                            <line
+                                                                                x1="10"
+                                                                                y1="10"
+                                                                                x2={coords.x2}
+                                                                                y2={coords.y2}
+                                                                                stroke="#ffffff"
+                                                                                strokeWidth="0.8"
+                                                                            />
+                                                                        )}
+                                                                    </svg>
+                                                                )}
+                                                                {showBadge && (
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        bottom: '-4px',
+                                                                        left: '-8px',
+                                                                        background: eff.badgeBackground || eff.border || '#f39c12',
+                                                                        color: '#fff',
+                                                                        fontSize: '9px',
+                                                                        fontWeight: 'bold',
+                                                                        borderRadius: '50%',
+                                                                        width: '12px',
+                                                                        height: '12px',
+                                                                        display: 'flex',
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center',
+                                                                        border: `1px solid ${eff.badgeBorder || '#111'}`,
+                                                                        zIndex: 11
+                                                                    }}>
+                                                                        {eff.stacks}
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             );
                                         })()}
@@ -3441,6 +3705,88 @@ class MonsterBattle extends React.Component {
                     </div>
                     )}
                 </div>}
+
+                {this.state.activeEffectPopup && (
+                    <div style={{
+                        position: 'fixed',
+                        top: 0,
+                        left: 0,
+                        width: '100vw',
+                        height: '100vh',
+                        backgroundColor: 'rgba(0, 0, 0, 0.375)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        zIndex: 9999,
+                        backdropFilter: 'blur(4px)'
+                    }} onClick={this.closeActiveEffectPopup}>
+                        <div style={{
+                            background: 'linear-gradient(135deg, #1e1e24 0%, #121215 100%)',
+                            border: `2px solid ${this.state.activeEffectPopup.border || '#444'}`,
+                            borderRadius: '12px',
+                            padding: '24px',
+                            maxWidth: '400px',
+                            width: '90%',
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 255, 255, 0.05)',
+                            textAlign: 'center',
+                            color: '#fff',
+                            animation: 'scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                        }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{
+                                width: '64px',
+                                height: '64px',
+                                borderRadius: '50%',
+                                border: `3px solid ${this.state.activeEffectPopup.border || '#444'}`,
+                                margin: '0 auto 16px auto',
+                                backgroundImage: `url(${this.state.activeEffectPopup.icon?.default || this.state.activeEffectPopup.icon})`,
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                            }} />
+                            <h3 style={{
+                                margin: '0 0 4px 0',
+                                fontSize: '22px',
+                                fontWeight: '700',
+                                color: this.state.activeEffectPopup.border || '#fff',
+                                textTransform: 'uppercase',
+                                letterSpacing: '1px'
+                            }}>{this.state.activeEffectPopup.label}</h3>
+                            <div style={{ fontSize: '13px', color: '#aaa', marginBottom: '16px', fontWeight: '500' }}>
+                                Active on {liveSelectedFighter?.name || 'this unit'}
+                            </div>
+                            {this.state.activeEffectPopup.roundsLeft !== undefined && (
+                                <div style={{
+                                    fontSize: '13px',
+                                    color: '#888',
+                                    marginBottom: '16px',
+                                    fontWeight: '500'
+                                }}>
+                                    Duration: {Math.max(0, Math.ceil(this.state.activeEffectPopup.roundsLeft))} {Math.ceil(this.state.activeEffectPopup.roundsLeft) === 1 ? 'round' : 'rounds'} remaining
+                                </div>
+                            )}
+                            <p style={{
+                                fontSize: '15px',
+                                lineHeight: '1.6',
+                                color: '#ddd',
+                                margin: '0 0 20px 0'
+                            }}>{this.state.activeEffectPopup.explanation}</p>
+                            <button style={{
+                                padding: '8px 24px',
+                                background: this.state.activeEffectPopup.border || '#3b82f6',
+                                border: 'none',
+                                color: '#fff',
+                                fontWeight: 'bold',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                outline: 'none'
+                            }} onClick={this.closeActiveEffectPopup}>
+                                Close
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {this.state.showLevelUpScreen && this.state.levelUpQueue.length > 0 && (
                     <LevelUpScreen

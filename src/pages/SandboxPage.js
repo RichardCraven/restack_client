@@ -194,6 +194,9 @@ import {
   shadow_curse,
   spiderweb,
   summon_spiders_icon,
+  spider1,
+  spider2,
+  spider3,
   witch_dispell,
   demonic_whispers,
   transform,
@@ -203,6 +206,7 @@ import {
   invoke_darkness,
   sphere_of_darkness,
 } from '../utils/images';
+import '../styles/monster-battle.scss';
 
 // Dynamically load all runes from the directory
 const req = require.context('../assets/icons/runes', true, /\.png$/);
@@ -340,7 +344,7 @@ const monstersData = [
       { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
       { id: 'begin_trials', name: 'Begin the Trials', desc: 'Unleash the Trials of the Sphinx.', icon: begin_trials, type: 'begin_trials_type' },
       { id: 'polymorph', name: 'Polymorph', desc: 'Transform the target into a helpless frog for a long duration.', icon: polymorph, type: 'polymorph_type' },
-      { id: 'hex', name: 'Hex', desc: 'Curse the target, giving their skills a chance to backfire.', icon: hex, type: 'hex_type' },
+      { id: 'hex', name: 'Hex', desc: 'Curse the target for 4 rounds. Reduces ATK by 2 and gives all skill uses a 35% chance to backfire, failing the action and dealing 10 damage to the caster.', icon: hex, type: 'hex_type' },
       { id: 'third_eye', name: 'Third Eye', desc: 'Chance to dodge incoming physical attacks.', icon: third_eye, type: 'third_eye_type', isPassive: true }
     ]
   },
@@ -434,8 +438,8 @@ const monstersData = [
     portrait: witch_p1_1,
     abilities: [
       { id: 'greater_magic_missile', name: 'Greater Magic Missile', desc: 'Fire five seeking magic missiles in sequence.', icon: greater_magic_missile, type: 'greater_magic_missile' },
-      { id: 'hex', name: 'Hex', desc: 'Curse the target, giving their skills a chance to backfire.', icon: hex, type: 'hex_type' },
-      { id: 'shadow_curse', name: 'Shadow Curse', desc: 'Afflict the target with dark magic that drains their power.', icon: shadow_curse, type: 'shadow_curse_type' },
+      { id: 'hex', name: 'Hex', desc: 'Curse the target for 4 rounds. Reduces ATK by 2 and gives all skill uses a 35% chance to backfire, failing the action and dealing 10 damage to the caster.', icon: hex, type: 'hex_type' },
+      { id: 'shadow_curse', name: 'Shadow Curse', desc: 'Curse the target for 4 rounds. While active, the stamina (endurance) cost of any movement or action is tripled (increased from 2 to 6). If stamina drops to 0, the unit is immediately exhausted, falling asleep and becoming stunned for 4 rounds.', icon: shadow_curse, type: 'shadow_curse_type' },
       { id: 'spiderweb', name: 'Spiderweb', desc: 'Trap targets in a sticky web, restricting movement.', icon: spiderweb, type: 'spiderweb_type' },
       { id: 'summon_spiders', name: 'Summon Spiders', desc: 'Summon arachnid minions to aid in battle.', icon: summon_spiders_icon, type: 'summon_spiders_type' },
       { id: 'dispell', name: 'Dispell', desc: 'Remove magical effects.', icon: witch_dispell, type: 'witch_dispell_type' },
@@ -670,6 +674,17 @@ const SandboxPage = () => {
   const [hitEffect, setHitEffect] = useState(null);
   const [bombardWarnings, setBombardWarnings] = useState(null);
   const [floatingTexts, setFloatingTexts] = useState([]);
+  const floatingTextQueueRef = useRef([]);
+  const lastFloatingTextTimeRef = useRef(0);
+  const queueTimeoutRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (queueTimeoutRef.current) {
+        clearTimeout(queueTimeoutRef.current);
+      }
+    };
+  }, []);
   const [targetShake, setTargetShake] = useState(false);
   // eslint-disable-next-line no-unused-vars
   const [fighterShake, setFighterShake] = useState(false);
@@ -1660,10 +1675,41 @@ const SandboxPage = () => {
       color = '#ffffff';
     }
     const id = Math.random();
-    setFloatingTexts(prev => [...prev, { id, text, type, color, row, col }]);
-    setTimeout(() => {
-      setFloatingTexts(prev => prev.filter(t => t.id !== id));
-    }, 1800);
+    floatingTextQueueRef.current.push({ id, text, type, color, row, col });
+
+    const processQueue = () => {
+      if (queueTimeoutRef.current) {
+        clearTimeout(queueTimeoutRef.current);
+        queueTimeoutRef.current = null;
+      }
+      if (floatingTextQueueRef.current.length === 0) return;
+      const now = Date.now();
+      const timeDiff = now - lastFloatingTextTimeRef.current;
+      if (timeDiff >= 150) {
+        const next = floatingTextQueueRef.current.shift();
+        lastFloatingTextTimeRef.current = now;
+        setFloatingTexts(prev => {
+          const activeOnTile = prev.filter(t => t.row === next.row && t.col === next.col);
+          let xOffset = 0;
+          if (activeOnTile.length > 0) {
+            const offsets = [-15, 15, -8, 8];
+            xOffset = offsets[(activeOnTile.length - 1) % offsets.length];
+          }
+          return [...prev, { ...next, xOffset }];
+        });
+        setTimeout(() => {
+          setFloatingTexts(prev => prev.filter(t => t.id !== next.id));
+        }, 1800);
+        if (floatingTextQueueRef.current.length > 0) {
+          queueTimeoutRef.current = setTimeout(processQueue, 150);
+        }
+      } else {
+        const neededDelay = 150 - timeDiff;
+        queueTimeoutRef.current = setTimeout(processQueue, neededDelay);
+      }
+    };
+
+    processQueue();
   };
 
   const applyRegen = (duration, tickInterval = 1500) => {
@@ -3118,7 +3164,7 @@ const SandboxPage = () => {
       setHexCastExplosion({ row: fighterPos.row, col: fighterPos.col });
       setTimeout(() => {
         setHexCastExplosion(null);
-        setHitEffect({ type: 'hex_impact' });
+        setHitEffect({ type: 'hex_overlay' });
         addFloatingText('HEXED!', 'crit', '#ff00ff', targetPosRef.current.row, targetPosRef.current.col);
 
         if (isFighterSource) {
@@ -3129,7 +3175,7 @@ const SandboxPage = () => {
           setFighterHexEndTime(Date.now() + 16000);
         }
 
-        setTimeout(() => setHitEffect(null), 800);
+        setTimeout(() => setHitEffect(null), 1500);
         setAnimationPhase('return');
         setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
       }, 500);
@@ -3778,9 +3824,9 @@ const SandboxPage = () => {
       setAnimationPhase('cast_spell');
       setAnimating(true);
       setTimeout(() => {
-        setHitEffect({ type: 'shadow' });
+        setHitEffect({ type: 'shadow_curse_rings' });
         addFloatingText('SHADOW CURSE!', 'crit', '#9b59b6', targetPosRef.current.row, targetPosRef.current.col);
-        setTimeout(() => setHitEffect(null), 800);
+        setTimeout(() => setHitEffect(null), 1500);
         setAnimationPhase('return');
         setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
       }, 500);
@@ -3801,10 +3847,135 @@ const SandboxPage = () => {
     else if (ability.type === 'summon_spiders_type') {
       setAnimationPhase('cast_spell');
       setAnimating(true);
+      addFloatingText('SUMMON SPIDERS!', 'crit', '#2ecc71', fighterPos.row, fighterPos.col);
+
+      const isFighterSource = selectedUnitType === 'fighter';
+      const originalCol = isFighterSource ? fighterPos.col : targetPos.col;
+      const atBackline = originalCol === GRID_SIZE - 1;
+      const spawnerRow = isFighterSource ? fighterPos.row : targetPos.row;
+
+      // 1. Move Witch 1 tile off the backline
+      if (atBackline) {
+        if (isFighterSource) {
+          setFighterPos(prev => ({ ...prev, col: GRID_SIZE - 2 }));
+        } else {
+          setTargetPos(prev => ({ ...prev, col: GRID_SIZE - 2 }));
+        }
+      }
+
+      // 2. Spawn the spawner icon at the backline
+      const spawnerId = `spawner_${Date.now()}`;
+      const spawnerObj = {
+        id: spawnerId,
+        x: (GRID_SIZE - 1) * 20,
+        y: spawnerRow * 20,
+        isSpawner: true,
+        icon: summon_spiders_icon,
+        dead: false
+      };
+
       setTimeout(() => {
-        setHitEffect({ type: 'poison_burst' });
-        addFloatingText('SPIDERS SUMMONED!', 'crit', '#2ecc71', fighterPos.row, fighterPos.col);
-        setTimeout(() => setHitEffect(null), 800);
+        setProjectiles(prev => [...prev, spawnerObj]);
+
+        // Staggered spawning of 5 spiders
+        let spawnCount = 0;
+        const maxSpiders = 5;
+
+        const spawnInterval = setInterval(() => {
+          if (spawnCount >= maxSpiders) {
+            clearInterval(spawnInterval);
+            // Remove the spawner icon
+            setProjectiles(prev => prev.filter(p => p.id !== spawnerId));
+            
+            // Witch moves back to the backline
+            if (atBackline) {
+              if (isFighterSource) {
+                setFighterPos(prev => ({ ...prev, col: GRID_SIZE - 1 }));
+              } else {
+                setTargetPos(prev => ({ ...prev, col: GRID_SIZE - 1 }));
+              }
+            }
+            return;
+          }
+
+          // Spawn a spider
+          const spiderIndex = spawnCount;
+          const spiderId = `spider_proj_${Date.now()}_${spiderIndex}`;
+          const spiderObj = {
+            id: spiderId,
+            x: (GRID_SIZE - 1) * 20,
+            y: spawnerRow * 20,
+            isSpider: true,
+            icon: [spider1, spider2, spider3][spiderIndex % 3],
+            row: spawnerRow,
+            col: GRID_SIZE - 1,
+            dead: false
+          };
+
+          setProjectiles(prev => [...prev, spiderObj]);
+
+          // Move the spider (2 tiles per round: update coordinates every 400ms)
+          let spiderCol = GRID_SIZE - 1;
+          const targetCol = targetPosRef.current.col;
+          const targetRow = targetPosRef.current.row;
+
+          const moveInterval = setInterval(() => {
+            spiderCol -= 1;
+            if (spiderCol < 0) {
+              clearInterval(moveInterval);
+              setProjectiles(prev => prev.filter(p => p.id !== spiderId));
+              return;
+            }
+
+            // Pathfinding simulation: spiders bypass the Witch if she is on their row at column 4
+            setProjectiles(prev => prev.map(p => {
+              if (p.id === spiderId && !p.dead) {
+                let spiderY = p.y;
+                let spiderRowVal = p.row;
+
+                const witchCol = GRID_SIZE - 2; // column 4
+                const witchRow = spawnerRow;
+
+                if (spiderCol === witchCol) {
+                  const bypassRow = (witchRow === 0) ? 1 : witchRow - 1;
+                  spiderY = bypassRow * 20;
+                  spiderRowVal = bypassRow;
+                } else if (spiderCol < witchCol) {
+                  spiderY = targetRow * 20;
+                  spiderRowVal = targetRow;
+                }
+
+                if (spiderCol === targetCol && spiderRowVal === targetRow) {
+                  addFloatingText('-25', 'normal', '#e74c3c', targetRow, targetCol);
+                  addFloatingText('ENSNARED!', 'crit', '#2ecc71', targetRow, targetCol);
+                  setTargetShake(true);
+                  setHitEffect({ type: 'poison_burst' });
+                  setTimeout(() => setTargetShake(false), 200);
+                  setTimeout(() => setHitEffect(null), 800);
+
+                  clearInterval(moveInterval);
+                  setTimeout(() => {
+                    setProjectiles(prev => prev.filter(p => p.id !== spiderId));
+                  }, 150);
+                  return { ...p, dead: true, x: spiderCol * 20, y: spiderY, row: spiderRowVal, col: spiderCol };
+                }
+
+                return { ...p, x: spiderCol * 20, y: spiderY, row: spiderRowVal, col: spiderCol };
+              }
+              return p;
+            }));
+
+            if (spiderCol <= targetCol) {
+              clearInterval(moveInterval);
+              setTimeout(() => {
+                setProjectiles(prev => prev.filter(p => p.id !== spiderId));
+              }, 500);
+            }
+          }, 400);
+
+          spawnCount += 1;
+        }, 1000);
+
         setAnimationPhase('return');
         setTimeout(() => { setAnimationPhase(null); setAnimating(false); }, 250);
       }, 500);
@@ -4601,6 +4772,7 @@ const SandboxPage = () => {
       // Start concentric organic rings as soon as the beam makes contact (at 150ms)
       setTimeout(() => {
         setAnnihilationExplosion({ row: targetRowCenter, col: targetColCenter });
+        setHitEffect({ type: 'annihilation_portal', row: targetRowCenter, col: targetColCenter });
       }, 150);
 
       setTimeout(() => {
@@ -4645,12 +4817,7 @@ const SandboxPage = () => {
         setActiveBeam(null);
         setAnnihilationSweepActive(false);
         setAnnihilationExplosion(null);
-        setHitEffect({ type: 'annihilation_portal', row: targetRowCenter, col: targetColCenter });
-
-        setTimeout(() => {
-          setHitEffect(null);
-        }, 800);
-
+        setHitEffect(null);
         setAnimating(false);
       }, 1400);
     }
@@ -10361,6 +10528,40 @@ const SandboxPage = () => {
                       )}
                     </div>
                   </div>
+                ) : p.isSpider ? (
+                  <img
+                    key={p.id}
+                    src={p.icon}
+                    alt="spider minion"
+                    style={{
+                      position: 'absolute',
+                      width: '16px',
+                      height: '16px',
+                      left: `calc(${p.x}% + ${TILE_PCT / 2}% - 8px)`,
+                      top: `calc(${p.y}% + ${TILE_PCT / 2}% - 8px)`,
+                      zIndex: 30,
+                      transform: 'none',
+                      objectFit: 'contain',
+                      transition: 'left 0.4s linear, top 0.4s linear'
+                    }}
+                  />
+                ) : p.isSpawner ? (
+                  <img
+                    key={p.id}
+                    src={p.icon}
+                    alt="summoning nest"
+                    style={{
+                      position: 'absolute',
+                      width: '32px',
+                      height: '32px',
+                      left: `calc(${p.x}% + ${TILE_PCT / 2}% - 16px)`,
+                      top: `calc(${p.y}% + ${TILE_PCT / 2}% - 16px)`,
+                      zIndex: 30,
+                      objectFit: 'contain',
+                      transform: 'none',
+                      animation: 'pulse 1s infinite alternate'
+                    }}
+                  />
                 ) : p.isNetherBolt ? (
                   <div
                     key={p.id}
@@ -11912,30 +12113,139 @@ const SandboxPage = () => {
                       ))}
                     </div>
                   )}
+
+                  {hitEffect.type === 'hex_overlay' && (
+                    <div style={{
+                      position: 'relative',
+                      width: '120px',
+                      height: '120px',
+                      pointerEvents: 'none',
+                      zIndex: 4500,
+                    }}>
+                      {/* Outer clockwise dashed ring */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '10px', left: '10px', right: '10px', bottom: '10px',
+                        border: '2px dashed #ab47bc',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 12px rgba(171, 71, 188, 0.6), inset 0 0 12px rgba(171, 71, 188, 0.6)',
+                        animation: 'hexRingSpinCw 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                      }} />
+                      {/* Inner counter-clockwise dotted ring */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '22px', left: '22px', right: '22px', bottom: '22px',
+                        border: '1.5px dotted #e040fb',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 8px rgba(224, 64, 251, 0.5), inset 0 0 8px rgba(224, 64, 251, 0.5)',
+                        animation: 'hexRingSpinCcw 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                      }} />
+                      {/* Overlapping glowing squares forming an 8-pointed star */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '32px', left: '32px', right: '32px', bottom: '32px',
+                        border: '1.5px solid #d500f9',
+                        boxShadow: '0 0 15px #d500f9',
+                        transform: 'rotate(0deg)',
+                        animation: 'hexStarPulse 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                      }} />
+                      <div style={{
+                        position: 'absolute',
+                        top: '32px', left: '32px', right: '32px', bottom: '32px',
+                        border: '1.5px solid #d500f9',
+                        boxShadow: '0 0 15px #d500f9',
+                        transform: 'rotate(45deg)',
+                        animation: 'hexStarPulseOffset 1.5s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                      }} />
+                      {/* Glowing core */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '45px', left: '45px', right: '45px', bottom: '45px',
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, #ffffff 0%, #aa00ff 50%, transparent 100%)',
+                        boxShadow: '0 0 20px #d500f9',
+                        animation: 'hexCorePulse 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                      }} />
+                      {/* Floating curse runes */}
+                      <div style={{
+                        position: 'absolute',
+                        top: '50%', left: '50%',
+                        color: '#d500f9',
+                        fontSize: '18px',
+                        fontWeight: 'bold',
+                        textShadow: '0 0 8px #d500f9',
+                        transform: 'translate(-50%, -50%)',
+                        animation: 'hexRuneFloat 1.5s ease-out forwards',
+                      }}>
+                        ☠
+                      </div>
+                      {/* Glowing particle burst */}
+                      {[...Array(6)].map((_, idx) => {
+                        const angle = (idx * 360) / 6;
+                        const rad = angle * (Math.PI / 180);
+                        const dist = 45;
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              position: 'absolute',
+                              top: '50%', left: '50%',
+                              width: '6px', height: '6px',
+                              backgroundColor: '#e040fb',
+                              borderRadius: '50%',
+                              boxShadow: '0 0 8px #e040fb',
+                              transform: 'translate(-50%, -50%)',
+                              animation: 'hexParticleFly 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                              '--target-x': `${Math.cos(rad) * dist}px`,
+                              '--target-y': `${Math.sin(rad) * dist}px`,
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {hitEffect.type === 'shadow_curse_rings' && (
+                    <div style={{
+                      position: 'relative',
+                      width: '120px',
+                      height: '120px',
+                      pointerEvents: 'none',
+                      zIndex: 4500,
+                    }}>
+                      <div className="shadow-curse-ring ring-1" />
+                      <div className="shadow-curse-ring ring-2" />
+                      <div className="shadow-curse-ring ring-3" />
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* --- Floating Combat Text --- */}
-              {floatingTexts.map(ft => (
-                <div
-                  key={ft.id}
-                  style={{
-                    position: 'absolute',
-                    left: `${ft.col * TILE_PCT + TILE_PCT / 2}%`,
-                    top: `${ft.row * TILE_PCT}%`,
-                    transform: 'translateX(-50%)',
-                    color: ft.color || '#ff4d4d',
-                    fontWeight: 'bold',
-                    fontSize: isNaN(parseInt(ft.text)) ? (ft.type === 'crit' ? '12px' : '9px') : (ft.type === 'crit' ? '22px' : '17px'),
-                    textShadow: '0 2px 4px #000, 0 0 8px rgba(0,0,0,0.8)',
-                    zIndex: 60,
-                    pointerEvents: 'none',
-                    animation: 'floatUp 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
-                  }}
-                >
-                  {ft.text}
-                </div>
-              ))}
+              {floatingTexts.map(ft => {
+                const xOffset = typeof ft.xOffset === 'number' ? ft.xOffset : 0;
+
+                return (
+                  <div
+                    key={ft.id}
+                    style={{
+                      position: 'absolute',
+                      left: `calc(${ft.col * TILE_PCT + TILE_PCT / 2}% + ${xOffset}px)`,
+                      top: `${ft.row * TILE_PCT}%`,
+                      transform: 'translateX(-50%)',
+                      color: ft.color || '#ff4d4d',
+                      fontWeight: 'bold',
+                      fontSize: isNaN(parseInt(ft.text)) ? (ft.type === 'crit' ? '10px' : '8px') : (ft.type === 'crit' ? '18px' : '14px'),
+                      textShadow: '0 2px 4px #000, 0 0 8px rgba(0,0,0,0.8)',
+                      zIndex: 60,
+                      pointerEvents: 'none',
+                      animation: 'floatUp 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards'
+                    }}
+                  >
+                    {ft.text}
+                  </div>
+                );
+              })}
 
               {/* --- Shield Wall Overlay (Real established visual) --- */}
               {shieldWallActive && selectedFighterId === 'soldier' && (() => {

@@ -41,6 +41,7 @@ export function CombatManagerRedux() {
     this.vctByMonster = {};
     this.pendingBombardments = [];
     this.bombardWarnings = null;
+    this.activeWebs = [];
 
     // Mummy status change logging/diagnostic helper
     let lastMummyState = null;
@@ -157,7 +158,7 @@ export function CombatManagerRedux() {
 
     this.applyEnduranceCost = (unit, cost = this.ACTION_ENDURANCE_COST, source = 'action') => {
         if (!unit) return;
-        if (unit.type === 'darkness_sphere') return;
+        if (unit.type === 'darkness_sphere' || unit.isMinion || unit.type === 'spider_minion') return;
         if ((unit.endurance || 0) <= 0 && unit.exhausted) return;
 
         let actualCost = cost;
@@ -838,6 +839,23 @@ export function CombatManagerRedux() {
             return forceBoost ? true : Math.random() >= 0.70; // 0% fail if forced, else 70%
         }
         return true;
+    };
+
+    this.isUnitInWeb = (unit) => {
+        if (!unit || !unit.coordinates) return false;
+        if (unit.type === 'spider_minion' || unit.type === 'spiders_spawner' || unit.portrait === 'summon_spiders_icon') return false;
+        if (!Array.isArray(this.activeWebs) || this.activeWebs.length === 0) return false;
+
+        const unitTiles = Array.isArray(unit.occupiedCoords) && unit.occupiedCoords.length > 0
+            ? unit.occupiedCoords
+            : [unit.coordinates];
+
+        return this.activeWebs.some(web => {
+            if (web.roundsLeft <= 0) return false;
+            return unitTiles.some(tile => {
+                return Math.abs(tile.x - web.x) <= 1 && Math.abs(tile.y - web.y) <= 1;
+            });
+        });
     };
 
     this.canFitAt = (unit, x, y) => {
@@ -1982,7 +2000,7 @@ export function CombatManagerRedux() {
         }
 
         const unitType = unit.type || unit.image || '';
-        if (unitType === 'dragon_egg' || unitType === 'trials_icon' || unit.isTrialIcon || unitType === 'darkness_sphere') {
+        if (unitType === 'dragon_egg' || unitType === 'trials_icon' || unit.isTrialIcon || unitType === 'darkness_sphere' || unitType === 'spider_minion' || unitType === 'spiders_spawner') {
             return;
         }
 
@@ -2000,6 +2018,7 @@ export function CombatManagerRedux() {
             case 'dragon':   return this._aiDragon(unit);
             case 'beholder_minion': return this._aiBeholderMinion(unit);
             case 'goat_demon': return this._aiGoatDemon(unit);
+            case 'witch':    return this._aiWitch(unit);
             default:         return this._aiGeneric(unit);
         }
     };
@@ -3794,6 +3813,320 @@ export function CombatManagerRedux() {
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
     };
 
+    // WITCH: Backline ranged caster. Stays at the back line (MAX_DEPTH), summons spiders, uses curses/hexes and magic missiles.
+    this._aiWitch = (unit) => {
+        // Charging phase logic
+        if (unit.isChargingTransform) {
+            if (unit.chargingRoundsLeft > 0) {
+                unit.chargingRoundsLeft -= 1;
+                unit.actionsTakenThisRound = 1; // skip turn
+                unit.movesTakenThisRound = 1; // skip move
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} is gathering dark energy...`);
+                return;
+            } else {
+                // Transform!
+                unit.isChargingTransform = false;
+                unit.isDemonMode = true;
+                unit.demonModeRoundsLeft = 5;
+                
+                // Swap portrait (assumes MonsterBattle reacts to this)
+                unit.image = 'witch_transformed'; 
+                unit.originalPortrait = unit.portrait;
+                unit.portrait = images.witch_transformed?.default || images.witch_transformed;
+                
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} has transformed into a dark beast!`);
+                
+                if (this.overlayManager && typeof this.overlayManager.addAnimation === 'function') {
+                    this.overlayManager.addAnimation({
+                        type: 'transform_transition_overlay',
+                        id: unit.id,
+                        scale: 2,
+                        duration: 1500
+                    });
+                }
+            }
+        }
+        
+        // Demon mode expiration check
+        if (unit.isDemonMode) {
+            if (unit.actionsTakenThisRound === 0 && unit.movesTakenThisRound === 0) {
+                unit.demonModeRoundsLeft -= 1;
+                if (unit.demonModeRoundsLeft <= 0) {
+                    // Revert
+                    unit.isDemonMode = false;
+                    unit.image = 'witch'; // Revert to original
+                    unit.portrait = unit.originalPortrait || images.witch_p1_1?.default || images.witch_p1_1;
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)}'s demon form fades.`);
+                    if (this.overlayManager && typeof this.overlayManager.addAnimation === 'function') {
+                        this.overlayManager.addAnimation({
+                            type: 'transform_transition_overlay',
+                            id: unit.id,
+                            scale: 2,
+                            duration: 1500
+                        });
+                    }
+                }
+            }
+        }
+
+        if (unit.isDemonMode) {
+            // Can move twice per round
+            let attacksMade = 0;
+            let movesMade = 0;
+            
+            while (attacksMade < 1 || movesMade < 2) {
+                // Prefer switching targets if we already attacked someone
+                const excluded = unit.lastDemonTargetId ? [unit.lastDemonTargetId] : [];
+                this.acquireTarget(unit, true, excluded);
+                let target = this.combatants[unit.targetId];
+                
+                // If excluded targeting found no one, fallback to any target
+                if (!target && unit.lastDemonTargetId) {
+                    this.acquireTarget(unit, true, []);
+                    target = this.combatants[unit.targetId];
+                }
+                if (!target) break;
+
+                // Use claw strike
+                const clawSpec = this.resolveSpecial(unit, 'claw_strike') || { id: 'claw_strike', range: 'close', type: 'damage' };
+                if (this.targetInRange(unit, target, clawSpec.range || 'close')) {
+                    if (unit.actionsTakenThisRound === 0 && attacksMade < 1) {
+                        this.useAbility(unit, clawSpec, target);
+                        unit.actionsTakenThisRound += 1;
+                        attacksMade++;
+                        unit.lastDemonTargetId = target.id;
+                    } else {
+                        // If we are already adjacent and already attacked, we are done this round
+                        break;
+                    }
+                } else {
+                    // Move closer
+                    if (unit.movesTakenThisRound < 2 && movesMade < 2) {
+                        const beforeMoves = unit.movesTakenThisRound;
+                        this.moveCloserToCoord(unit, target.coordinates.x, target.coordinates.y);
+                        if (unit.movesTakenThisRound > beforeMoves) {
+                            movesMade++;
+                        } else {
+                            // Blocked or couldn't move closer
+                            break;
+                        }
+                    } else {
+                        break;
+                    }
+                }
+            }
+            return;
+        }
+
+        // --- NORMAL WITCH AI ---
+        this.acquireTarget(unit, true, unit._excludedTargetIds || []);
+        const target = this.combatants[unit.targetId];
+        if (!target) return;
+
+        // Check if any fighter unit is adjacent to the witch
+        const isFighterAdjacent = (x, y) => {
+            return Object.values(this.combatants).some(c => {
+                if (!c || c.dead || c.isVCT || c.isMonster || c.isMinion) return false;
+                const fighterTiles = (Array.isArray(c.occupiedCoords) && c.occupiedCoords.length > 0) ? c.occupiedCoords : [c.coordinates];
+                return fighterTiles.some(tile => {
+                    const dx = Math.abs(x - tile.x);
+                    const dy = Math.abs(y - tile.y);
+                    return dx <= 1 && dy <= 1; // Adjacent
+                });
+            });
+        };
+
+        const adjacentFighterPresent = isFighterAdjacent(unit.coordinates.x, unit.coordinates.y);
+
+        if (adjacentFighterPresent && unit.movesTakenThisRound === 0) {
+            // Flee to a non-adjacent tile
+            const sortedDirections = [
+                { dx: 1, dy: 0 },   // Back up towards MAX_DEPTH
+                { dx: 0, dy: -1 },  // Sidestep
+                { dx: 0, dy: 1 },   // Sidestep
+                { dx: -1, dy: 0 }   // Move forward (last resort)
+            ];
+
+            let fled = false;
+            for (let dir of sortedDirections) {
+                const nx = unit.coordinates.x + dir.dx;
+                const ny = unit.coordinates.y + dir.dy;
+                if (this.canFitAt(unit, nx, ny) && !isFighterAdjacent(nx, ny)) {
+                    this.updateUnitCoordinates(unit, nx, ny);
+                    unit.movesTakenThisRound += 1;
+                    this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} flees to keep distance at (${nx}, ${ny}).`);
+                    fled = true;
+                    break;
+                }
+            }
+
+            if (!fled) {
+                // Fallback retreat (standard reposition)
+                this.repositionUnit(unit, target, 'retreat');
+            }
+        } else if (unit.coordinates.x < MAX_DEPTH && unit.movesTakenThisRound === 0) {
+            // Retreat to backline but make sure we don't land adjacent to a fighter
+            const nextX = unit.coordinates.x + 1;
+            const currentY = unit.coordinates.y;
+            if (this.canFitAt(unit, nextX, currentY) && !isFighterAdjacent(nextX, currentY)) {
+                this.updateUnitCoordinates(unit, nextX, currentY);
+                unit.movesTakenThisRound += 1;
+                this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} moves back towards the backline at (${nextX}, ${currentY}).`);
+            }
+        }
+
+        // Helper to move closer while maintaining distance (never ending adjacent to a fighter)
+        const moveWitchCloser = (u, targetX, targetY) => {
+            if (u.movesTakenThisRound >= 1) return;
+            const dx = targetX - u.coordinates.x;
+            const dy = targetY - u.coordinates.y;
+            let moves = [];
+            if (Math.abs(dx) >= Math.abs(dy)) {
+                const stepY = Math.sign(dy) || (Math.random() < 0.5 ? 1 : -1);
+                moves = [
+                    { x: u.coordinates.x + Math.sign(dx), y: u.coordinates.y },
+                    { x: u.coordinates.x, y: u.coordinates.y + stepY },
+                    { x: u.coordinates.x, y: u.coordinates.y - stepY }
+                ];
+            } else {
+                const stepX = Math.sign(dx) || (Math.random() < 0.5 ? 1 : -1);
+                moves = [
+                    { x: u.coordinates.x, y: u.coordinates.y + Math.sign(dy) },
+                    { x: u.coordinates.x + stepX, y: u.coordinates.y },
+                    { x: u.coordinates.x - stepX, y: u.coordinates.y }
+                ];
+            }
+            
+            let bestMove = moves.find(m => this.canFitAt(u, m.x, m.y) && !isFighterAdjacent(m.x, m.y));
+            
+            if (!bestMove) {
+                const allDirs = [
+                    { dx: 1, dy: 0 }, { dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }
+                ];
+                for (let dir of allDirs) {
+                    const nx = u.coordinates.x + dir.dx;
+                    const ny = u.coordinates.y + dir.dy;
+                    if (this.canFitAt(u, nx, ny) && !isFighterAdjacent(nx, ny)) {
+                        bestMove = { x: nx, y: ny };
+                        break;
+                    }
+                }
+            }
+            
+            if (bestMove) {
+                this.updateUnitCoordinates(u, bestMove.x, bestMove.y);
+                u.movesTakenThisRound += 1;
+                this.applyEnduranceCost(u, this.MOVE_ENDURANCE_COST, 'move');
+                this.appendCombatLog(`${this.getCombatantLogName(u)} repositions to (${bestMove.x}, ${bestMove.y}) to keep distance.`);
+            }
+        };
+
+        // 2. Prioritize Summon Spiders
+        if (this._abilityReady(unit, 'summon_spiders')) {
+            const summonSpec = this.resolveSpecial(unit, 'summon_spiders');
+            if (summonSpec) {
+                this.useAbility(unit, summonSpec, target);
+                unit.actionsTakenThisRound += 1;
+                return;
+            }
+        }
+
+        // 3. Prioritize Hex if target is in range and not hexed
+        if (this._abilityReady(unit, 'hex') && !target.hexed) {
+            const hexSpec = this.resolveSpecial(unit, 'hex');
+            if (hexSpec && this.targetInRange(unit, target, hexSpec.range || 'medium')) {
+                this.useAbility(unit, hexSpec, target);
+                unit.actionsTakenThisRound += 1;
+                return;
+            }
+        }
+
+        // 4. Prioritize Spiderweb if ready and target is not ensnared
+        if (this._abilityReady(unit, 'spiderweb') && !target.ensnared) {
+            const webSpec = this.resolveSpecial(unit, 'spiderweb');
+            if (webSpec && this.targetInRange(unit, target, webSpec.range || 'medium')) {
+                this.useAbility(unit, webSpec, target);
+                unit.actionsTakenThisRound += 1;
+                return;
+            }
+        }
+
+        // 5. Demonic Whispers
+        if (this._abilityReady(unit, 'demonic_whispers')) {
+            const whispersSpec = this.resolveSpecial(unit, 'demonic_whispers');
+            if (whispersSpec && this.targetInRange(unit, target, whispersSpec.range || 'medium')) {
+                this.useAbility(unit, whispersSpec, target);
+                unit.actionsTakenThisRound += 1;
+                return;
+            }
+        }
+
+        // 6. Shadow Curse
+        if (this._abilityReady(unit, 'shadow_curse')) {
+            const curseSpec = this.resolveSpecial(unit, 'shadow_curse');
+            if (curseSpec && this.targetInRange(unit, target, curseSpec.range || 'medium')) {
+                this.useAbility(unit, curseSpec, target);
+                unit.actionsTakenThisRound += 1;
+                return;
+            }
+        }
+
+        // 7. Transform
+        if (this._abilityReady(unit, 'transform')) {
+            const transformSpec = this.resolveSpecial(unit, 'transform');
+            if (transformSpec) {
+                unit.isChargingTransform = true;
+                unit.chargingRoundsLeft = transformSpec.chargingRounds || 2;
+                
+                const baseCooldown = (typeof transformSpec.cooldown === 'number') ? transformSpec.cooldown : 18;
+                let cooldownPenalty = unit.exhausted ? 2.0 : 1.0;
+                if (!unit.exhausted && unit.endurance <= unit.maxEndurance * 0.5) {
+                    cooldownPenalty = 1.5;
+                }
+                const finalCooldown = Math.round(baseCooldown * cooldownPenalty);
+                unit.cooldowns['transform'] = finalCooldown;
+
+                unit.actionsTakenThisRound += 1;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} begins gathering dark energy to transform!`);
+                return;
+            }
+        }
+
+        // 8. Magic Missile / Greater Magic Missile
+        const mmId = this.resolveSpecial(unit, 'greater_magic_missile') ? 'greater_magic_missile' : 'magic_missile';
+        if (this._abilityReady(unit, mmId)) {
+            const mmSpec = this.resolveSpecial(unit, mmId);
+            if (mmSpec && this.targetInRange(unit, target, mmSpec.range || 'medium')) {
+                this.useAbility(unit, mmSpec, target);
+                unit.actionsTakenThisRound += 1;
+                return;
+            }
+        }
+
+        // Fallback: Scored ability or basic attack
+        const scored = this._scoredAbilityPick(unit, target);
+        if (scored && this.targetInRange(unit, target, scored.resolved.range || 'medium')) {
+            this.useAbility(unit, scored.resolved, target);
+            unit.actionsTakenThisRound += 1;
+        } else {
+            const baseAttack = Array.isArray(unit.attacks) && unit.attacks.length > 0 ? unit.attacks[0] : null;
+            let rangeType = 'medium';
+            if (baseAttack) {
+                const resolved = this.resolveSpecial(unit, baseAttack);
+                if (resolved && resolved.range) rangeType = resolved.range;
+            }
+            if (this.targetInRange(unit, target, rangeType)) {
+                this._basicAttack(unit, target);
+            } else {
+                if (unit.movesTakenThisRound === 0) {
+                    moveWitchCloser(unit, target.coordinates.x, target.coordinates.y);
+                }
+            }
+        }
+    };
+
     // GENERIC: Used for monsters and unrecognized unit types
     this._aiGeneric = (unit) => {
         const getMinDistance = (u, t) => {
@@ -4485,6 +4818,143 @@ export function CombatManagerRedux() {
         }
     };
 
+    this._moveSpiderMinion = (spider) => {
+        if (spider.dead) return;
+
+        this.acquireTarget(spider, true, spider._excludedTargetIds || []);
+        const target = this.combatants[spider.targetId];
+        if (!target) {
+            const nextX = spider.coordinates.x - 1;
+            const currentY = spider.coordinates.y;
+            if (nextX >= 0 && this.canFitAt(spider, nextX, currentY)) {
+                spider.coordinates.x = nextX;
+                this._setCombatantOccupiedCoords(spider, this.combatants);
+            } else if (nextX < 0) {
+                spider.dead = true;
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        const dx = Math.abs(spider.coordinates.x - target.coordinates.x);
+        const dy = Math.abs(spider.coordinates.y - target.coordinates.y);
+        const isAdjacent = (dx + dy === 1);
+
+        if (isAdjacent) {
+            this._spiderHitTarget(spider, target);
+            return;
+        }
+
+        const originalMoves = spider.movesTakenThisRound;
+        spider.movesTakenThisRound = 0;
+        this.moveCloser(spider, target);
+        spider.movesTakenThisRound = originalMoves + 1;
+
+        const postDx = Math.abs(spider.coordinates.x - target.coordinates.x);
+        const postDy = Math.abs(spider.coordinates.y - target.coordinates.y);
+        if (postDx + postDy === 1) {
+            this._spiderHitTarget(spider, target);
+        }
+
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
+    this._spiderHitTarget = (spider, target) => {
+        let damage = Math.max(1, Math.round((spider.stats?.atk || 10) * 0.5));
+        const inWeb = this.isUnitInWeb(target);
+        if (inWeb) {
+            damage = damage * 2;
+        }
+        
+        target.hp = Math.max(0, target.hp - damage);
+        
+        target.damageIndicators = target.damageIndicators || [];
+        target.damageIndicators.push({
+            id: Date.now() + Math.random(),
+            value: `-${damage}`,
+            source: 'Spider Minion',
+            type: 'damage'
+        });
+
+        target.ensnared = true;
+        target.ensnaredRounds = Math.max(target.ensnaredRounds || 0, 2);
+        target.ensnaredTotalRounds = Math.max(target.ensnaredTotalRounds || 0, 2);
+        target.ensnaredStackDuration = Math.max(target.ensnaredStackDuration || 0, 2);
+        const durMs = 2 * (this.roundDurationMs || 2000);
+        target.ensnaredTotalDurationMs = Math.max(target.ensnaredTotalDurationMs || 0, durMs);
+        target.ensnaredEndTimeMs = Math.max(target.ensnaredEndTimeMs || 0, Date.now() + durMs);
+        this._applyDebuff(target, null, 'ensnared', 2);
+
+        if (inWeb) {
+            this.appendCombatLog(`Spider Minion contacts ${this.getCombatantLogName(target)} under the effects of spiderweb and detonates, dealing double damage (${damage} damage)!`);
+        } else {
+            this.appendCombatLog(`Spider Minion hits ${this.getCombatantLogName(target)} dealing ${damage} damage and ensnaring them for 2 rounds!`);
+        }
+
+        if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+            const animationKey = inWeb ? 'spiderweb_detonation' : 'poison_burst';
+            this.animManagerRedux.triggerAbility(spider.coordinates, target.coordinates, animationKey, false, null, spider.id);
+        }
+
+        spider.hasContacted = true;
+        spider.dead = true;
+
+        if (target.hp <= 0) {
+            this.targetKilled(target);
+        }
+    };
+
+    this._spawnerSpawnSpider = (spawner) => {
+        if (spawner.dead || spawner.spidersSpawnedCount >= spawner.maxSpiders) return;
+
+        const witchAtk = spawner.stats?.atk || 10;
+        const index = spawner.spidersSpawnedCount;
+        const spiderId = `spider_minion_${Date.now()}_${index}_${Math.floor(Math.random() * 1000)}`;
+        const spiderMinion = {
+            id: spiderId,
+            type: 'spider_minion',
+            name: `Spider`,
+            isMinion: true,
+            isMonster: true,
+            dead: false,
+            asleep: false,
+            sleepRounds: 0,
+            sleepTotalRounds: 0,
+            sleepTotalDurationMs: 0,
+            sleepEndTimeMs: 0,
+            endurance: 100,
+            maxEndurance: 100,
+            coordinates: { x: spawner.coordinates.x, y: spawner.coordinates.y },
+            hp: 15,
+            starting_hp: 15,
+            stats: { str: 10, dex: 10, atk: witchAtk, def: 5, speed: 0, hp: 15 },
+            hasContacted: false,
+            portrait: `spider${(index % 3) + 1}`,
+            cooldowns: {},
+            movesTakenThisRound: 0,
+            actionsTakenThisRound: 0,
+            damageIndicators: [],
+            activeBuffs: [],
+            activeDebuffs: [],
+            moveTimerMs: 0
+        };
+
+        this.combatants[spiderId] = spiderMinion;
+        this._setCombatantOccupiedCoords(spiderMinion);
+        this._moveSpiderMinion(spiderMinion);
+
+        spawner.spidersSpawnedCount += 1;
+
+        if (spawner.spidersSpawnedCount >= spawner.maxSpiders) {
+            spawner.dead = true;
+            spawner.occupiedCoords = [];
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(spawner.coordinates, spawner.coordinates, 'poison_burst', false, null, spawner.id);
+            }
+        }
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
     this._resolveBombardmentStrike = (pb) => {
         const caster = this.combatants[pb.casterId];
         this.bombardWarnings = null;
@@ -4606,7 +5076,7 @@ export function CombatManagerRedux() {
             for (let h = 0; h < missilesCount; h++) {
                 preRolledHits.push(isSelfTarget ? true : this.hitCheck(unit, target));
             }
-        } else if (abilityId === 'acid_blast') {
+        } else if (abilityId === 'acid_blast' || abilityId === 'fireball') {
             preRolledHits.push(isSelfTarget ? true : this.hitCheck(unit, target));
         }
         const isMeleeAbility = [
@@ -5174,6 +5644,98 @@ export function CombatManagerRedux() {
 
             if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
                 this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'lay_eggs', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'summon_spiders') {
+            const witchAtk = unit.stats?.atk || unit.atk || 10;
+            const originalX = unit.coordinates.x;
+
+            // Move Witch 1 tile off the backline if she is currently on the backline (MAX_DEPTH)
+            if (originalX === MAX_DEPTH) {
+                const nextX = MAX_DEPTH - 1;
+                const currentY = unit.coordinates.y;
+                if (this.canFitAt(unit, nextX, currentY)) {
+                    this.updateUnitCoordinates(unit, nextX, currentY);
+                }
+            }
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} summons a Spider Nest at the backline!`);
+
+            // Spawn the spiders spawner at the backline (MAX_DEPTH)
+            const spawnerId = `spiders_spawner_${Date.now()}`;
+            const spawner = {
+                id: spawnerId,
+                type: 'spiders_spawner',
+                name: 'Spider Nest',
+                isMinion: true,
+                isMonster: true,
+                dead: false,
+                asleep: false,
+                sleepRounds: 0,
+                sleepTotalRounds: 0,
+                sleepTotalDurationMs: 0,
+                sleepEndTimeMs: 0,
+                endurance: 100,
+                maxEndurance: 100,
+                coordinates: { x: MAX_DEPTH, y: unit.coordinates.y },
+                hp: 50,
+                starting_hp: 50,
+                stats: { str: 10, dex: 10, atk: witchAtk, def: 5, speed: 0 },
+                portrait: 'summon_spiders_icon',
+                cooldowns: {},
+                movesTakenThisRound: 0,
+                actionsTakenThisRound: 0,
+                damageIndicators: [],
+                activeBuffs: [],
+                activeDebuffs: [],
+                spidersSpawnedCount: 0,
+                maxSpiders: 5,
+                moveTimerMs: 0
+            };
+
+            this.combatants[spawnerId] = spawner;
+            this._setCombatantOccupiedCoords(spawner);
+
+            // Spawn the first spider immediately
+            this._spawnerSpawnSpider(spawner);
+
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerSummon === 'function') {
+                const summonIcon = (images && images.summon_spiders) || 'summon_spiders_icon';
+                this.animManagerRedux.triggerSummon({ x: MAX_DEPTH, y: unit.coordinates.y }, 'spider', summonIcon);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'spiderweb') {
+            const center = { x: target.coordinates.x, y: target.coordinates.y };
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Spiderweb at (${center.x}, ${center.y})!`);
+
+            this.activeWebs = this.activeWebs || [];
+            this.activeWebs.push({
+                id: `web_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                x: center.x,
+                y: center.y,
+                roundsLeft: 3
+            });
+
+            // Ensnare target unit
+            const dur = getDurationRounds(ability.duration || 'short');
+            target.ensnared = true;
+            target.ensnaredRounds = dur;
+            target.ensnaredTotalRounds = dur;
+            target.ensnaredStackDuration = dur;
+            const durMs = getDurationMsFromRounds(dur);
+            target.ensnaredTotalDurationMs = durMs;
+            target.ensnaredEndTimeMs = Date.now() + durMs;
+            this._applyDebuff(target, null, 'ensnared', dur);
+            this.appendCombatLog(`${this.getCombatantLogName(target)} is ensnared by the spiderweb!`);
+
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, center, 'spiderweb', false, null, unit.id);
             }
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             return;
@@ -5770,7 +6332,7 @@ export function CombatManagerRedux() {
             let hit;
             if (isMagicMissile && Array.isArray(preRolledHits)) {
                 hit = preRolledHits[h];
-            } else if (abilityId === 'acid_blast' && Array.isArray(preRolledHits)) {
+            } else if ((abilityId === 'acid_blast' || abilityId === 'fireball') && Array.isArray(preRolledHits)) {
                 hit = preRolledHits[0];
             } else {
                 hit = isSelfTarget ? true : this.hitCheck(unit, target);
@@ -5793,11 +6355,11 @@ export function CombatManagerRedux() {
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} crits for DOUBLE damage from Crimson Sight!`);
                 }
 
-                if (finalDmg > 0) {
+                if (finalDmg > 0 || ability.type === 'debuff' || ability.type === 'utility' || abilityId === 'hex' || abilityId === 'polymorph') {
                     // ── Circle of Deflection: ranged attacks may reflect back to the attacker ──
                     const hasCod = target.activeBuffs && target.activeBuffs.some(b => b.name === 'circle_of_deflection');
                     const isRangedAttack = ability.range && ability.range !== 'close';
-                    if (hasCod && isRangedAttack && !isSelfTarget) {
+                    if (hasCod && isRangedAttack && !isSelfTarget && finalDmg > 0) {
                         const sameTeamSage = Object.values(this.combatants).find(c => {
                             if (!c || c.dead || c.isVCT) return false;
                             const sameTeam = (!!target.isMonster === !!c.isMonster);
@@ -5824,14 +6386,18 @@ export function CombatManagerRedux() {
                     }
                     target.hp = Math.max(0, target.hp - finalDmg);
                     this.wakeSleepingTarget(target, ability.name || this.getCombatActionName(ability));
-                    target.damageIndicators = target.damageIndicators || [];
-                    target.damageIndicators.push({
-                        id: Date.now() + Math.random() + h,
-                        value: `-${finalDmg}`,
-                        source: ability.name,
-                        type: 'damage'
-                    });
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+                    if (finalDmg > 0) {
+                        target.damageIndicators = target.damageIndicators || [];
+                        target.damageIndicators.push({
+                            id: Date.now() + Math.random() + h,
+                            value: `-${finalDmg}`,
+                            source: ability.name,
+                            type: 'damage'
+                        });
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+                    } else {
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} casts ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
+                    }
 
                     hitsSucceeded++;
 
@@ -6437,6 +7003,10 @@ export function CombatManagerRedux() {
 
     // ── Movement ──────────────────────────────────────────────────────────────
     this.moveCloser = (unit, target) => {
+        if (this.isUnitInWeb(unit)) {
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} is trapped in spiderweb and cannot move!`);
+            return;
+        }
         if (unit.ensnared) {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} is ensnared and cannot move!`);
             return;
@@ -6445,7 +7015,7 @@ export function CombatManagerRedux() {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
             return;
         }
-        const maxMoves = unit.etherealSpeedActive ? 2 : 1;
+        const maxMoves = (unit.etherealSpeedActive || unit.isDemonMode) ? 2 : 1;
         if (unit.movesTakenThisRound >= maxMoves || !target) return;
 
         if (target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
@@ -6482,13 +7052,15 @@ export function CombatManagerRedux() {
 
         let moved = null;
         if (Math.abs(dx) >= Math.abs(dy)) {
+            const stepY = Math.sign(dy) || (Math.random() < 0.5 ? 1 : -1);
             moved = tryMove(newX + Math.sign(dx), newY)
-                 || tryMove(newX, newY + Math.sign(dy))
-                 || tryMove(newX, newY - Math.sign(dy));
+                 || tryMove(newX, newY + stepY)
+                 || tryMove(newX, newY - stepY);
         } else {
+            const stepX = Math.sign(dx) || (Math.random() < 0.5 ? 1 : -1);
             moved = tryMove(newX, newY + Math.sign(dy))
-                 || tryMove(newX + Math.sign(dx), newY)
-                 || moved || tryMove(newX - Math.sign(dx), newY);
+                 || tryMove(newX + stepX, newY)
+                 || tryMove(newX - stepX, newY);
         }
 
         if (moved) {
@@ -6500,6 +7072,10 @@ export function CombatManagerRedux() {
     };
 
     this.moveCloserToCoord = (unit, targetX, targetY) => {
+        if (this.isUnitInWeb(unit)) {
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} is trapped in spiderweb and cannot move!`);
+            return;
+        }
         if (unit.ensnared) {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} is ensnared and cannot move!`);
             return;
@@ -6508,7 +7084,7 @@ export function CombatManagerRedux() {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
             return;
         }
-        const maxMoves = unit.etherealSpeedActive ? 2 : 1;
+        const maxMoves = (unit.etherealSpeedActive || unit.isDemonMode) ? 2 : 1;
         if (unit.movesTakenThisRound >= maxMoves) return;
 
         const dx = targetX - unit.coordinates.x;
@@ -6525,13 +7101,15 @@ export function CombatManagerRedux() {
 
         let moved = null;
         if (Math.abs(dx) >= Math.abs(dy)) {
+            const stepY = Math.sign(dy) || (Math.random() < 0.5 ? 1 : -1);
             moved = tryMove(newX + Math.sign(dx), newY)
-                 || tryMove(newX, newY + Math.sign(dy))
-                 || tryMove(newX, newY - Math.sign(dy));
+                 || tryMove(newX, newY + stepY)
+                 || tryMove(newX, newY - stepY);
         } else {
+            const stepX = Math.sign(dx) || (Math.random() < 0.5 ? 1 : -1);
             moved = tryMove(newX, newY + Math.sign(dy))
-                 || tryMove(newX + Math.sign(dx), newY)
-                 || tryMove(newX - Math.sign(dx), newY);
+                 || tryMove(newX + stepX, newY)
+                 || tryMove(newX - stepX, newY);
         }
 
         if (moved) {
@@ -6552,7 +7130,7 @@ export function CombatManagerRedux() {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} cannot move while Shield Wall is active!`);
             return;
         }
-        const maxMoves = unit.etherealSpeedActive ? 2 : 1;
+        const maxMoves = (unit.etherealSpeedActive || unit.isDemonMode) ? 2 : 1;
         if (unit.movesTakenThisRound >= maxMoves || !enemyTarget) return;
         if (mode === 'retreat') {
             // Move away from the enemy
@@ -6671,6 +7249,32 @@ export function CombatManagerRedux() {
                 delete unit.soulSuckChanneling;
             }
         });
+
+        // Tick and move spider minions
+        const spiderRoundDurationMs = this.roundDurationMs || (this.gameSpeed === 'fast' ? 1000 : 2000);
+        const halfRoundMs = spiderRoundDurationMs / 2;
+        Object.values(this.combatants).forEach(c => {
+            if (c && c.type === 'spider_minion' && !c.dead) {
+                if (c.moveTimerMs === undefined) c.moveTimerMs = 0;
+                c.moveTimerMs += deltaMs;
+                if (c.moveTimerMs >= halfRoundMs) {
+                    c.moveTimerMs -= halfRoundMs;
+                    this._moveSpiderMinion(c);
+                }
+            }
+        });
+
+        // Tick and update spiders spawner
+        Object.values(this.combatants).forEach(c => {
+            if (c && c.type === 'spiders_spawner' && !c.dead) {
+                if (c.moveTimerMs === undefined) c.moveTimerMs = 0;
+                c.moveTimerMs += deltaMs;
+                if (c.moveTimerMs >= halfRoundMs) {
+                    c.moveTimerMs -= halfRoundMs;
+                    this._spawnerSpawnSpider(c);
+                }
+            }
+        });
         
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
     };
@@ -6703,6 +7307,13 @@ export function CombatManagerRedux() {
 
     this.incrementRound = () => {
         this.round += 1;
+
+        if (Array.isArray(this.activeWebs)) {
+            this.activeWebs.forEach(web => {
+                web.roundsLeft -= 1;
+            });
+            this.activeWebs = this.activeWebs.filter(web => web.roundsLeft > 0);
+        }
 
         // Malevolent Presence (goat demon passive) check
         const goatDemons = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && (c.type === 'goat_demon' || c.key === 'goat_demon'));
@@ -6880,9 +7491,17 @@ export function CombatManagerRedux() {
             wizard: {
                 monsterBattleRef: null,
                 triggerMagicMissile: (wizard, target, travelTime) => {
-                    if (wizard.monsterBattleRef && typeof wizard.monsterBattleRef.triggerMagicMissileAnimation === 'function') {
-                        wizard.monsterBattleRef.triggerMagicMissileAnimation(wizard, target, travelTime);
-                    }
+                    const wizardUnit = this.combatants[wizard.id] || wizard;
+                    const targetUnit = this.combatants[target.id] || target;
+                    const resolved = this.resolveSpecial(wizardUnit, 'magic_missile') || specialsMatrix['magic_missile'] || { id: 'magic_missile', name: 'magic_missile', type: 'damage' };
+                    
+                    const prevActions = wizardUnit.actionsTakenThisRound;
+                    wizardUnit.actionsTakenThisRound = 0;
+                    
+                    this.useAbility(wizardUnit, resolved, targetUnit);
+                    
+                    wizardUnit.actionsTakenThisRound = prevActions;
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 }
             },
             soldier: { monsterBattleRef: null },

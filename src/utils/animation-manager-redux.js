@@ -170,7 +170,7 @@ export class AnimationManagerRedux {
         this._malevolentPresenceFear(sourceCoords, targetCoords);
         break;
       case 'fireball':
-        this._fireball(sourceCoords, targetCoords);
+        this._fireball(sourceCoords, targetCoords, hitResults);
         break;
       case 'nether_bolt':
       case 'magic_missile':
@@ -242,13 +242,17 @@ export class AnimationManagerRedux {
         this._monkMeditate(sourceCoords, targetCoords);
         break;
       case 'ensnare':
+      case 'spiderweb':
         this._ensnareNet(sourceCoords, targetCoords);
+        break;
+      case 'spiderweb_detonation':
+        this._emit({ type: 'spiderweb_detonation', tgtPx: this._getImpactTargetPx(targetCoords), duration: 500 });
         break;
       case 'axe_throw':
       case 'deadeye_shot':
       case 'spear_throw':
       case 'loose':
-        this._projectileThrow(sourceCoords, targetCoords, name, arrowType, spherePx);
+        this._projectileThrow(sourceCoords, targetCoords, name, arrowType, spherePx, sourceUnitId);
         break;
       case 'execute':
         this._executeMultiShots(sourceCoords, targetCoords, name, arrowType, spherePx);
@@ -501,7 +505,7 @@ export class AnimationManagerRedux {
     });
   }
 
-  _fireball(src, tgt) {
+  _fireball(src, tgt, hitResults = null) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -514,12 +518,15 @@ export class AnimationManagerRedux {
       angle,
       duration: 1000,
     });
-    setTimeout(() => {
-      this._emit({ type: 'explosion', tgtPx, duration: 600 });
-    }, 900);
-    setTimeout(() => {
-      this._emit({ type: 'fire_secondary_ring', tgtPx, duration: 500 });
-    }, 980);
+    const didHit = !Array.isArray(hitResults) || hitResults.length === 0 || hitResults[0] === true;
+    if (didHit) {
+      setTimeout(() => {
+        this._emit({ type: 'explosion', tgtPx, duration: 600 });
+      }, 900);
+      setTimeout(() => {
+        this._emit({ type: 'fire_secondary_ring', tgtPx, duration: 500 });
+      }, 980);
+    }
   }
 
   _magicMissile(src, tgt, hitResults = null, abilityName = 'magic_missile', spherePx = null) {
@@ -747,7 +754,7 @@ export class AnimationManagerRedux {
     });
   }
 
-  _projectileThrow(src, tgt, name, arrowType = null, spherePx = null) {
+  _projectileThrow(src, tgt, name, arrowType = null, spherePx = null, sourceUnitId = null) {
     const srcPx = this._px(src);
     const tgtPx = this._getImpactTargetPx(tgt);
     const dx = tgtPx.x - srcPx.x;
@@ -763,6 +770,7 @@ export class AnimationManagerRedux {
       arrowType: activeArrow,
       duration: 700,
       spherePx,
+      sourceUnitId,
     });
     if (activeArrow === 'ice') {
       setTimeout(() => {
@@ -1007,14 +1015,14 @@ export class AnimationManagerRedux {
       });
     }, 150);
 
-    // Phase 3: Hit effect annihilation_portal on target
+    // Phase 3: Hit effect annihilation_portal on target (triggers at 150ms when beam makes contact)
     setTimeout(() => {
       this._emit({
         type: 'annihilation_portal',
         tgtPx,
         duration: 1200
       });
-    }, 1200);
+    }, 150);
   }
 
   _sleep(src, tgt) {

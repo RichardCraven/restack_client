@@ -571,6 +571,7 @@ import gorgon_portrait from '../assets/portraits/monsters/gorgon.png'
 import goat_demon_portrait from '../assets/portraits/monsters/goat_demon.png'
 
 import witch from '../assets/icons/monsters/mj_icons/witch.png';
+import witch_transformed from '../assets/portraits/monsters/witch_transformed.png';
 import witch_p1_1 from '../assets/portraits/monsters/variations/witch/type1/witch1.png';
 import witch_p1_2 from '../assets/portraits/monsters/variations/witch/type1/witch2.png';
 import witch_p1_3 from '../assets/portraits/monsters/variations/witch/type1/witch3.png';
@@ -826,9 +827,13 @@ import return_from_trial_3 from '../assets/icons/combat-icons/specials/monsters/
 import shadow_curse from '../assets/icons/combat-icons/specials/monsters/witch/shadow_curse.png';
 import spiderweb from '../assets/icons/combat-icons/specials/monsters/witch/spiderweb.png';
 import summon_spiders_icon from '../assets/icons/combat-icons/specials/monsters/witch/summon_spiders.png';
+import spider1 from '../assets/icons/combat-icons/specials/monsters/witch/spider1.png';
+import spider2 from '../assets/icons/combat-icons/specials/monsters/witch/spider2.png';
+import spider3 from '../assets/icons/combat-icons/specials/monsters/witch/spider3.png';
 import witch_dispell from '../assets/icons/combat-icons/specials/monsters/witch/dispell.png';
 import demonic_whispers from '../assets/icons/combat-icons/specials/monsters/witch/demonic_whispers.png';
 import transform from '../assets/icons/combat-icons/specials/monsters/witch/transform.png';
+import transform_transition_overlay from '../assets/icons/combat-icons/specials/monsters/witch/transform_transition_overlay.png';
 import shadow_presence from '../assets/icons/combat-icons/specials/monsters/witch/Aura_ShadowPresence_nb.png';
 import greater_magic_missile from '../assets/icons/combat-icons/specials/monsters/witch/greater_magic_missile.png';
 import shrine from '../assets/icons/buildings/shrine.png';
@@ -1572,6 +1577,7 @@ export {
     gorgon_portrait,
 
     witch,
+    witch_transformed,
     witch_p1_1,
     witch_p1_2,
     witch_p1_3,
@@ -1858,11 +1864,15 @@ export {
     greater_magic_missile,
     shadow_presence,
     spiderweb,
+    transform,
+    transform_transition_overlay,
     summon_spiders_icon,
     summon_spiders_icon as summon_spiders,
+    spider1,
+    spider2,
+    spider3,
     witch_dispell,
     demonic_whispers,
-    transform,
 
     nether_bolt,
     undead_grasp,

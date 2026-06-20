@@ -182,3 +182,105 @@ export const BATTLE_TACTICS = {
   },
 };
 
+// ── Inner Discipline — Monk dungeon prep actions ──────────────────────────
+// The Monk channels chi through focused practice. Three categories:
+//   Chi (Meditative Focus): accumulate charges that empower combat skills
+//   Stance (Body Conditioning): train a stance granting self-buffs for N combats
+//   Spirit (Spirit Walk): astral projection to reveal dungeon fog
+export const INNER_DISCIPLINES = {
+  // ── Chi: Meditative Focus ───────────────────────────────────────────────
+  meditative_focus: {
+    key: 'meditative_focus',
+    category: 'chi',
+    name: 'Meditative Focus',
+    icon: 'monk_meditate',
+    prepTime: 15 * 60 * 1000,          // 15 min per charge
+    maxCharges: 3,
+    description: 'Accumulate chi charges through meditation. Each charge can empower a combat skill — doubling its damage, range, or healing.',
+    flavorText: '"Still water runs deepest."',
+  },
+  // ── Stances: Body Conditioning ──────────────────────────────────────────
+  iron_skin_stance: {
+    key: 'iron_skin_stance',
+    category: 'stance',
+    name: 'Iron Skin',
+    icon: 'monk_inner_fire',
+    prepTime: 10 * 60 * 1000,          // 10 min
+    combatDuration: 4,
+    description: 'Train the body to absorb punishment. Monk takes 30% less damage; attackers take 5 reflected damage on hit.',
+    flavorText: '"The mountain does not flinch."',
+    bonuses: {
+      damage_reduction: { percent: 30 },
+      reflect_damage: { flat: 5 },
+    },
+  },
+  flowing_water_stance: {
+    key: 'flowing_water_stance',
+    category: 'stance',
+    name: 'Flowing Water',
+    icon: 'monk_ethereal_speed',
+    prepTime: 25 * 60 * 1000,          // 25 min
+    combatDuration: 3,
+    description: 'Move like water — evasion doubles and each dodge triggers a free counterattack at 50% ATK.',
+    flavorText: '"You cannot strike the river."',
+    bonuses: {
+      evasion_mult: 2,
+      counter_on_dodge: { atkPercent: 50 },
+    },
+  },
+  thundering_palm_stance: {
+    key: 'thundering_palm_stance',
+    category: 'stance',
+    name: 'Thundering Palm',
+    icon: 'monk_force_punch',
+    prepTime: 40 * 60 * 1000,          // 40 min
+    combatDuration: 2,
+    description: 'Channel all force into devastating strikes. 25% chance to stun on hit; crit chance +15%.',
+    flavorText: '"One palm. One truth."',
+    bonuses: {
+      stun_chance: { percent: 25, duration: 1 },
+      crit_bonus: { percent: 15 },
+    },
+  },
+  // ── Spirit: Spirit Walk ─────────────────────────────────────────────────
+  third_eye_pulse: {
+    key: 'third_eye_pulse',
+    category: 'spirit',
+    name: 'Third Eye Pulse',
+    icon: 'monk_third_eye',
+    prepTime: 5 * 60 * 1000,           // 5 min
+    revealScope: 'current_board',
+    revealDuration: 10 * 60 * 1000,    // 10 min reveal
+    description: 'A quick spiritual pulse reveals all tiles, monsters, and items on the current miniboard.',
+    flavorText: '"See what is hidden."',
+  },
+  astral_sweep: {
+    key: 'astral_sweep',
+    category: 'spirit',
+    name: 'Astral Sweep',
+    icon: 'monk_astral_focus',
+    prepTime: 15 * 60 * 1000,          // 15 min
+    revealScope: 'adjacent_boards',
+    revealDuration: 20 * 60 * 1000,    // 20 min reveal
+    description: 'Project the spirit outward. Reveals current board and all cardinally adjacent boards on the plane.',
+    flavorText: '"The mind reaches where feet cannot."',
+  },
+  spirit_cartography: {
+    key: 'spirit_cartography',
+    category: 'spirit',
+    name: 'Spirit Cartography',
+    icon: 'monk_astral_projection',
+    prepTime: 30 * 60 * 1000,          // 30 min
+    revealScope: 'current_level',
+    revealDuration: null,               // permanent until level change
+    description: 'Deep astral projection maps the entire current level — all boards, gates, portals, and connections.',
+    flavorText: '"The body rests. The spirit roams."',
+  },
+};
+
+// Category lookup helper
+export const DISCIPLINE_CATEGORIES = {
+  chi:    ['meditative_focus'],
+  stance: ['iron_skin_stance', 'flowing_water_stance', 'thundering_palm_stance'],
+  spirit: ['third_eye_pulse', 'astral_sweep', 'spirit_cartography'],
+};

@@ -1,6 +1,6 @@
 
 import * as images from '../utils/images'
-import { SPELLS, RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime, BATTLE_TACTICS } from './spells-table'
+import { SPELLS, RITUALS, GLYPHS, GLYPH_SPELL_SLOT_COST, computeGlyphPrepTime, BATTLE_TACTICS, INNER_DISCIPLINES } from './spells-table'
 
 // eslint-disable-next-line no-extend-native
 Date.prototype.addHours= function(h){
@@ -537,6 +537,48 @@ export function CrewManager(){
                     endDate,
                     notified: false,
                 });
+            }
+            break;
+            case 'inner_discipline': {
+                const discDef = INNER_DISCIPLINES[actionSubtype.disciplineKey];
+                if (!discDef) break;
+                const category = discDef.category; // 'chi' | 'stance' | 'spirit'
+                const prepTime = discDef.prepTime || (15 * 60 * 1000);
+                endDate = new Date(Date.now() + prepTime);
+
+                // Stances: only one at a time — remove any previous stance
+                if (category === 'stance') {
+                    member.specialActions = (member.specialActions || []).filter(
+                        a => !(a.type === 'inner_discipline' && a.category === 'stance')
+                    );
+                }
+                // Spirit walk: only one at a time — remove any previous spirit walk
+                if (category === 'spirit') {
+                    member.specialActions = (member.specialActions || []).filter(
+                        a => !(a.type === 'inner_discipline' && a.category === 'spirit')
+                    );
+                }
+
+                const entry = {
+                    type: 'inner_discipline',
+                    disciplineKey: discDef.key,
+                    category,
+                    name: discDef.name,
+                    iconUrl: images[discDef.icon] || '',
+                    available: false,
+                    startDate,
+                    endDate,
+                    notified: false,
+                };
+                // Add category-specific fields
+                if (category === 'stance') {
+                    entry.combatsRemaining = discDef.combatDuration;
+                }
+                if (category === 'spirit') {
+                    entry.revealScope = discDef.revealScope;
+                    entry.revealDuration = discDef.revealDuration;
+                }
+                member.specialActions.push(entry);
             }
             break;
             default:

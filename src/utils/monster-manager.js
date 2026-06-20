@@ -27,7 +27,6 @@ export function MonsterManager() {
         return array[index]
     }
     this.battleMonster = null;
-    console.log('[DEBUG][MonsterManager] wyvern_portrait:', images['wyvern_portrait'], 'goblin_portrait:', images['goblin_portrait']);
     this.monsters = {
         // ── Level 2 ──────────────────────────────────────────────────────
         goblin: {
@@ -521,7 +520,7 @@ export function MonsterManager() {
             image_names: ['witch_p1_1'],
             monster_names: ['Rhea', 'BabaYaga'],
             stats: {
-                hp: 160,
+                hp: 360,
                 atk: 13,
                 def: 8,
                 speed: 9, // elusive spell-caster
@@ -575,7 +574,7 @@ export function MonsterManager() {
             image_names: ['beholder'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
             stats: {
-                hp: 110,
+                hp: 310,
                 atk: 15,
                 def: 5,
                 speed: 9, // drifts and repositions
@@ -633,7 +632,7 @@ export function MonsterManager() {
             image_names: ['kabuki_demon_portrait'],
             monster_names: ['Ikiro', 'Jimbu'],
             stats: {
-                hp: 140,
+                hp: 440,
                 atk: 13,
                 def: 3,
                 speed: 11, // swift leader demon
@@ -665,7 +664,7 @@ export function MonsterManager() {
             image_names: ['djinn'],
             monster_names: ['Murmeros', 'Ixcalot', 'il Hagan'],
             stats: {
-                hp: 175,
+                hp: 375,
                 atk: 10,
                 def: 11,
                 speed: 10, // elemental mastery enhances evasion
@@ -706,7 +705,7 @@ export function MonsterManager() {
             image_names: ['sphinx'],
             monster_names: ['Nunufet', 'Ipalot', 'Vizieros'],
             stats: {
-                hp: 325,
+                hp: 365,
                 atk: 13,
                 def: 13,
                 speed: 7, // large creature, deliberate movements
@@ -864,13 +863,13 @@ export function MonsterManager() {
                 console.warn(`[WARN][MonsterManager] Could not resolve portrait for monster "${key}" with key "${m.portrait}"`);
             }
         }
-        console.log(`[DEBUG][MonsterManager] Init monster key: ${key}, resolved portrait:`, m.portrait);
+
     }
 
     this.getMonster = (monsterString) => {
         let match = null;
         match = this.monsters[monsterString];
-        console.log(`[DEBUG][MonsterManager] getMonster called for: ${monsterString}, template portrait:`, match?.portrait);
+
         return match ? JSON.parse(JSON.stringify(match)) : null;
     }
     this.getRandomMonster = () => {

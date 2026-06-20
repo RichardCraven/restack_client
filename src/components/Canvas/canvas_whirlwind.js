@@ -35,9 +35,10 @@ export default function CanvasWhirlwind({
       resolvedIcon = images.monk_punch?.default || images.monk_punch;
     } else if (caller) {
       const equippedWeapon = (caller.inventory || []).find(i => i && i.type === 'weapon' && (i.equippedSlot === 'right' || i.equippedSlot === 'left' || i.equippedBy === caller.id));
+      const isBarbarian = caller.type === 'barbarian' || caller.class === 'barbarian';
       resolvedIcon = equippedWeapon 
         ? (images[equippedWeapon.icon]?.default || images[equippedWeapon.icon] || images[equippedWeapon.id]?.default || images[equippedWeapon.id] || equippedWeapon.image || images[equippedWeapon.name]) 
-        : (images.axe?.default || images.axe);
+        : (isBarbarian ? (images.axe?.default || images.axe) : (images.longsword?.default || images.longsword));
     } else {
       resolvedIcon = images.axe?.default || images.axe;
     }
