@@ -667,6 +667,7 @@ const SandboxPage = () => {
   const [sagePerceiveInstanceActive, setSagePerceiveInstanceActive] = useState(false);
   const [copFading, setCopFading] = useState(false);
   const [isAnimating, setAnimating] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [isCasting, setIsCasting] = useState(false);
   const [animationPhase, setAnimationPhase] = useState(null); // 'lunge', 'leap', 'behind_target', 'teleport_fade', etc.
   const [projectile, setProjectile] = useState(null);
@@ -808,7 +809,9 @@ const SandboxPage = () => {
   const [trollRegenEndTime, setTrollRegenEndTime] = useState(null);
   const trollRegenIntervalRef = useRef(null);
 
+  // eslint-disable-next-line no-unused-vars
   const [blueDragonBreathActive, setBlueDragonBreathActive] = useState(false);
+  // eslint-disable-next-line no-unused-vars
   const [thirdEyeTriggered, setThirdEyeTriggered] = useState(false);
   const [fighterHexed, setFighterHexed] = useState(false);
   const [monsterHexed, setMonsterHexed] = useState(false);
@@ -822,6 +825,7 @@ const SandboxPage = () => {
   const [monsterPolymorphEndTime, setMonsterPolymorphEndTime] = useState(null);
   const fighterFrogIntervalRef = useRef(null);
   const monsterFrogIntervalRef = useRef(null);
+  // eslint-disable-next-line no-unused-vars
   const [hexCastExplosion, setHexCastExplosion] = useState(null); // { row, col }
 
 
@@ -838,8 +842,6 @@ const SandboxPage = () => {
   const [frozenDuration, setFrozenDuration] = useState(3000);
   const bleedIntervalRef = useRef(null);
   const isThirdEyeDodgeRef = useRef(false);
-  const [bleedSingleDuration, setBleedSingleDuration] = useState(0);
-  const [bleedDuration, setBleedDuration] = useState(0);
 
   const [poisonSingleDuration, setPoisonSingleDuration] = useState(8000);
   const [frozenSingleDuration, setFrozenSingleDuration] = useState(2000);
@@ -1192,7 +1194,7 @@ const SandboxPage = () => {
         setRangerPos({ row: 3, col: 0 }); // return to original tile
       }
     }
-  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime, fearEndTime, extraRangerFearEndTime, vampireCrimsonSightEndTime, skeletonHourglassEndTime, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitEndTime, djinnArcaneBarrierEndTime, djinnBindEndTime, rangerBetrayalEffectEndTime, fighterHexEndTime, monsterHexEndTime, fighterPos.row, fighterPos.col]);
+  }, [currentTime, frozenEndTime, poisonEndTime, bleedEndTime, sagePerceiveEndTime, astralModeEndTime, thirdEyeEndTime, riftPortalEndTime, fearEndTime, extraRangerFearEndTime, vampireCrimsonSightEndTime, skeletonHourglassEndTime, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitEndTime, djinnArcaneBarrierEndTime, djinnBindEndTime, rangerBetrayalEffectEndTime, fighterHexEndTime, monsterHexEndTime, fighterPos.row, fighterPos.col, fighterPolymorphEndTime, fighterPolymorphed, monsterPolymorphEndTime, trollRegenEndTime]);
 
   const TIER4_MONSTER_IDS = ['sphinx', 'dragon', 'hagigah', 'hashmallim'];
   const isFighterHuge = selectedUnitType === 'monster' && TIER4_MONSTER_IDS.includes(selectedMonsterId);
@@ -11351,8 +11353,6 @@ const SandboxPage = () => {
                     const swingDx = targetPos.col - adjCol;
                     const swingDy = targetPos.row - adjRow;
                     const baseAngle = Math.atan2(swingDy, swingDx) * (180 / Math.PI);
-                    const adjDist = Math.sqrt(swingDx * swingDx + swingDy * swingDy);
-                    const halfDistPx = (adjDist * 100) / 2;
 
                     const leftOffset = (swingDx / 2) * -100;
                     const topOffset = (swingDy / 2) * -100;

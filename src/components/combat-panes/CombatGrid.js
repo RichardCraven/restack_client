@@ -10,7 +10,7 @@
 import React from 'react';
 import * as images from '../../utils/images';
 import Overlay from '../Overlay';
-import { FIGHTER_MOVE_TRANSITION_MS, ROCK_DURATION } from '../../utils/shared-constants';
+import { ROCK_DURATION } from '../../utils/shared-constants';
 
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
@@ -114,6 +114,9 @@ export const getActiveEffects = (combatant, combatManager) => {
     const list = [];
     if (!combatant) return list;
     const liveUnit = combatManager?.getCombatant?.(combatant.id) || combatant;
+    if (liveUnit.dead || (typeof liveUnit.hp === 'number' && liveUnit.hp <= 0)) {
+        return [];
+    }
     if (combatManager && typeof combatManager.isUnitInWeb === 'function' && combatManager.isUnitInWeb(liveUnit)) {
         list.push({
             key: 'spiderweb',
@@ -326,6 +329,19 @@ export const getActiveEffects = (combatant, combatManager) => {
             totalDuration: polymorphDebuff?.totalRounds || liveUnit.polymorphTotalRounds || polymorphRounds || 4,
             endTimeMs: polymorphDebuff?.endTimeMs,
             totalDurationMs: polymorphDebuff?.totalDurationMs
+        });
+    }
+    const betrayedDebuff = Array.isArray(liveUnit.activeDebuffs) ? liveUnit.activeDebuffs.find(d => d && normalizeName(d.name) === 'betrayed') : null;
+    if (betrayedDebuff || liveUnit.betrayed) {
+        const betrayedRounds = betrayedDebuff?.roundsLeft || liveUnit.betrayed_eras || 0;
+        list.push({
+            key: 'betrayed',
+            icon: images.betrayal,
+            border: '#ff00ff',
+            roundsLeft: betrayedRounds,
+            totalDuration: betrayedDebuff?.totalRounds || betrayedRounds || 4,
+            endTimeMs: betrayedDebuff?.endTimeMs,
+            totalDurationMs: betrayedDebuff?.totalDurationMs
         });
     }
     if (liveUnit.isBones) {
@@ -585,6 +601,15 @@ export default function CombatGrid(props) {
         activeAnimations = [],
     } = props;
 
+    // ── Mounted check Ref ─────────────────────────────────────────────────────
+    const isMountedRef = React.useRef(true);
+    React.useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
     // ── Death animation state ─────────────────────────────────────────────────
     const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
     const [fullyDead, setFullyDead] = React.useState({});
@@ -597,8 +622,10 @@ export default function CombatGrid(props) {
     React.useEffect(() => {
         let animId;
         const tickLoop = () => {
-            setTick(t => t + 1);
-            animId = requestAnimationFrame(tickLoop);
+            if (isMountedRef.current) {
+                setTick(t => t + 1);
+                animId = requestAnimationFrame(tickLoop);
+            }
         };
 
         const hasActiveEffects = Object.values(battleData).some(unit => {
@@ -621,7 +648,9 @@ export default function CombatGrid(props) {
         allUnits.forEach(unit => {
             if (!unit) return;
             if (unit.dead && !showDeathAnimation[unit.id] && !fullyDead[unit.id]) {
-                setShowDeathAnimation(prev => ({ ...prev, [unit.id]: true }));
+                if (isMountedRef.current) {
+                    setShowDeathAnimation(prev => ({ ...prev, [unit.id]: true }));
+                }
                 const id = unit.id;
                 
                 // Animate organic melt scale from 0 to 120 using requestAnimationFrame
@@ -629,6 +658,7 @@ export default function CombatGrid(props) {
                 const startTime = performance.now();
                 let animId;
                 const animate = (now) => {
+                    if (!isMountedRef.current) return;
                     const elapsed = now - startTime;
                     const progress = Math.min(elapsed / duration, 1);
                     const currentScale = progress * 120;
@@ -647,13 +677,15 @@ export default function CombatGrid(props) {
                     if (deathTimeoutsRef.current[id].animId) cancelAnimationFrame(deathTimeoutsRef.current[id].animId);
                 }
                 const t = setTimeout(() => {
-                    setFullyDead(prev => { if (!prev[id]) return { ...prev, [id]: true }; return prev; });
-                    setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
-                    setMeltScales(prev => {
-                        const next = { ...prev };
-                        delete next[id];
-                        return next;
-                    });
+                    if (isMountedRef.current) {
+                        setFullyDead(prev => { if (!prev[id]) return { ...prev, [id]: true }; return prev; });
+                        setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                        setMeltScales(prev => {
+                            const next = { ...prev };
+                            delete next[id];
+                            return next;
+                        });
+                    }
                     delete deathTimeoutsRef.current[id];
                 }, 2400);
                 deathTimeoutsRef.current[id] = { timeout: t, animId };
@@ -664,13 +696,15 @@ export default function CombatGrid(props) {
                     if (item.animId) cancelAnimationFrame(item.animId);
                     delete deathTimeoutsRef.current[unit.id];
                 }
-                setShowDeathAnimation(prev => ({ ...prev, [unit.id]: false }));
-                setFullyDead(prev => ({ ...prev, [unit.id]: false }));
-                setMeltScales(prev => {
-                    const next = { ...prev };
-                    delete next[unit.id];
-                    return next;
-                });
+                if (isMountedRef.current) {
+                    setShowDeathAnimation(prev => ({ ...prev, [unit.id]: false }));
+                    setFullyDead(prev => ({ ...prev, [unit.id]: false }));
+                    setMeltScales(prev => {
+                        const next = { ...prev };
+                        delete next[unit.id];
+                        return next;
+                    });
+                }
             }
         });
         return () => {
@@ -688,6 +722,7 @@ export default function CombatGrid(props) {
     const [indicatorQueues, setIndicatorQueues] = React.useState({});
     const indicatorTimeouts = React.useRef({});
     const STAGGER_DELAY = 150;
+    const processedIndicatorsRef = React.useRef(new Set());
 
     React.useEffect(() => {
         Object.values(battleData).forEach(entity => {
@@ -695,19 +730,30 @@ export default function CombatGrid(props) {
             const id = entity.id;
             setIndicatorQueues(prev => {
                 const prevQueue = prev[id] || [];
-                const visibleIds = (visibleDamageIndicators[id] || []).map(e => e.id);
-                const queueIds = prevQueue.map(e => e.id);
                 const newIndicators = entity.damageIndicators
-                    .filter(e => e && !visibleIds.includes(e.id) && !queueIds.includes(e.id))
+                    .map((e, index) => {
+                        if (!e) return null;
+                        const stableId = e.id || `${id}_indicator_${index}`;
+                        return { ...e, id: stableId };
+                    })
+                    .filter(e => e && !processedIndicatorsRef.current.has(e.id))
                     .map(e => e.timestamp ? e : { ...e, timestamp: Date.now() });
                 if (newIndicators.length === 0) return prev;
+
+                newIndicators.forEach(e => processedIndicatorsRef.current.add(e.id));
+
                 return { ...prev, [id]: [...prevQueue, ...newIndicators] };
             });
         });
-        const timeoutsToClean = indicatorTimeouts.current;
-        return () => { Object.values(timeoutsToClean).forEach(clearTimeout); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battleData]);
+
+    React.useEffect(() => {
+        return () => {
+            // eslint-disable-next-line react-hooks/exhaustive-deps
+            Object.values(indicatorTimeouts.current).forEach(clearTimeout);
+        };
+    }, []);
 
     React.useEffect(() => {
         let activeTimeout = null;
@@ -723,13 +769,29 @@ export default function CombatGrid(props) {
 
                 if (visibleArr.length === 0 || timeDiff >= STAGGER_DELAY) {
                     const [next, ...rest] = indicatorQueues[id];
+                    if (visibleArr.some(e => e.id === next.id)) {
+                        setIndicatorQueues(prev => ({ ...prev, [id]: rest }));
+                        return;
+                    }
                     let xOffset = 0;
                     if (visibleArr.length > 0) {
                         const offsets = [-15, 15, -8, 8];
                         xOffset = offsets[(visibleArr.length - 1) % offsets.length];
                     }
-                    const nextWithOffset = { ...next, xOffset };
-                    setVisibleDamageIndicators(prev => ({ ...prev, [id]: [...(prev[id] || []), nextWithOffset] }));
+                    let slot = 0;
+                    if (visibleArr.length > 0) {
+                        const occupiedSlots = new Set(visibleArr.map(e => e.slot || 0));
+                        while (occupiedSlots.has(slot)) {
+                            slot++;
+                        }
+                    }
+                    const yOffset = slot * 16;
+                    const nextWithOffset = { ...next, xOffset, slot, yOffset };
+                    setVisibleDamageIndicators(prev => {
+                        const currentArr = prev[id] || [];
+                        if (currentArr.some(e => e.id === next.id)) return prev;
+                        return { ...prev, [id]: [...currentArr, nextWithOffset] };
+                    });
                     setIndicatorQueues(prev => ({ ...prev, [id]: rest }));
                     if (!indicatorTimeouts.current[next.id]) {
                         indicatorTimeouts.current[next.id] = setTimeout(() => {
@@ -937,11 +999,11 @@ export default function CombatGrid(props) {
                 {indicators.map((indicator, idx, arr) => {
                     const isStatDebuff = !indicator.isCrit && !indicator.isMiss && typeof indicator.value === 'string' && indicator.type !== 'robbed' && isNaN(indicator.value);
                     const xOffset = typeof indicator.xOffset === 'number' ? indicator.xOffset : 0;
-                    const yOffset = idx * 16;
+                    const yOffset = typeof indicator.yOffset === 'number' ? indicator.yOffset : 0;
 
                     return (
                         <div
-                            key={`${indicator.id || idx}-${idx}`}
+                            key={indicator.id}
                             style={{
                                 position: 'absolute',
                                 left: 0,
@@ -1251,6 +1313,19 @@ export default function CombatGrid(props) {
                             zIndex: 314,
                             animation: 'bleedPulseGlow 1.5s ease-in-out infinite alternate',
                             border: '2px solid rgba(224, 85, 85, 0.6)'
+                        }} />
+                    )}
+                    {/* Betrayal Overlay (pulsing pink glow) */}
+                    {(details?.betrayed || (details?.activeDebuffs && details.activeDebuffs.some(d => d && (d.name === 'Betrayed' || d.name === 'betrayed')))) && !details?.dead && (
+                        <div style={{
+                            boxSizing: 'border-box',
+                            position: 'absolute',
+                            top: 0, left: 0, width: '100%', height: '100%',
+                            borderRadius: '6px',
+                            pointerEvents: 'none',
+                            zIndex: 314,
+                            animation: 'betrayalPulseGlow 1.5s ease-in-out infinite alternate',
+                            border: '2px solid rgba(255, 0, 255, 0.6)'
                         }} />
                     )}
                     {/* Dripping Acid Drops */}
@@ -1609,6 +1684,7 @@ export default function CombatGrid(props) {
             liveMonster.frozen ? 'frozen' : '',
             liveMonster.activeDebuffs?.some(d => d && d.name === 'shadow_curse') ? 'shadow-cursed' : '',
             unit.fadingIn ? 'minion-fade-in' : '',
+            unit.image === 'witch_transformed' ? 'witch-demon-portrait' : '',
         ].filter(Boolean).join(' ');
 
         return (
@@ -1658,8 +1734,8 @@ export default function CombatGrid(props) {
                         className={portraitClasses}
                         style={{
                             backgroundImage: unit.portrait ? `url(${resolvePortrait(unit.portrait)})` : 'none',
-                            backgroundSize: unit.image === 'witch_transformed' ? '200% 200%' : undefined,
-                            backgroundPosition: unit.image === 'witch_transformed' ? 'center' : undefined,
+                            backgroundSize: undefined,
+                            backgroundPosition: undefined,
                             filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${liveMonster.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''} ${meltScales[unit.id] !== undefined ? `url(#melt-effect-${unit.id})` : ''}`,
                             zIndex: isMinion ? 2 : 1,
                             position: 'relative',
@@ -1785,6 +1861,19 @@ export default function CombatGrid(props) {
                                 zIndex: 14,
                                 animation: 'bleedPulseGlow 1.5s ease-in-out infinite alternate',
                                 border: '2px solid rgba(224, 85, 85, 0.6)'
+                            }} />
+                        )}
+                        {/* Betrayal Overlay (pulsing pink glow) */}
+                        {(liveMonster?.betrayed || liveMonster?.activeDebuffs?.some(d => d && d.name === 'Betrayed')) && !isDead && (
+                            <div style={{
+                                boxSizing: 'border-box',
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                borderRadius: '6px',
+                                pointerEvents: 'none',
+                                zIndex: 14,
+                                animation: 'betrayalPulseGlow 1.5s ease-in-out infinite alternate',
+                                border: '2px solid rgba(255, 0, 255, 0.6)'
                             }} />
                         )}
                     </div>
@@ -2014,19 +2103,21 @@ export default function CombatGrid(props) {
                         <div className="monster-hp-bar hp-bar">
                             {!isDead && <div className="red-fill" style={{ width: `${(unit.hp / (unit.stats?.hp || unit.starting_hp || 1)) * 100}%` }} />}
                         </div>
-                        {combatManager && combatManager.round !== undefined && unit.type !== 'spider_minion' ? (
-                            <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
-                                {!isDead && <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(unit.endurance / unit.maxEndurance) * 100}%` }} />}
-                            </div>
-                        ) : (
-                            <>
-                                <div className="monster-energy-bar energy-bar">
-                                    {!isDead && <div className="yellow-fill" style={{ width: `calc(${unit.energy}%)` }} />}
+                        {!(unit.type && String(unit.type).includes('spider')) && (
+                            combatManager && combatManager.round !== undefined ? (
+                                <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
+                                    {!isDead && <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(unit.endurance / unit.maxEndurance) * 100}%` }} />}
                                 </div>
-                                <div className="tempo-bar">
-                                    {!isDead && <div className="tempo-indicator" style={{ left: `calc(${unit.tempo}% - 4px)` }} />}
-                                </div>
-                            </>
+                            ) : (
+                                <>
+                                    <div className="monster-energy-bar energy-bar">
+                                        {!isDead && <div className="yellow-fill" style={{ width: `calc(${unit.energy}%)` }} />}
+                                    </div>
+                                    <div className="tempo-bar">
+                                        {!isDead && <div className="tempo-indicator" style={{ left: `calc(${unit.tempo}% - 4px)` }} />}
+                                    </div>
+                                </>
+                            )
                         )}
                     </div>
                 )}

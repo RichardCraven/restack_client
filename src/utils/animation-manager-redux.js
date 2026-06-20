@@ -29,11 +29,7 @@ import {
   fear,
   soldier_fist_of_honor,
   death_missile,
-  death_missile_hit,
-  stomp,
-  head_butt,
-  bite_animation_top,
-  bite_animation_bottom
+  death_missile_hit
 } from './images';
 
 export class AnimationManagerRedux {

@@ -891,7 +891,7 @@ function PyreEchoRules() {
     return (
         <div className="pe-rules-scroll">
             {/* Title */}
-            <div className="pe-rules-title">🃏 Pyre &amp; Echo — How to Play</div>
+            <div className="pe-rules-title"><span role="img" aria-label="cards">🃏</span> Pyre &amp; Echo — How to Play</div>
 
             {/* Overview */}
             <div className="pe-rules-section">
@@ -917,9 +917,9 @@ function PyreEchoRules() {
                 <div className="pe-rules-heading">Champion Cards (Crew Members)</div>
                 <p className="pe-rules-text">Each living crew member becomes a Champion Card. Their real dungeon stats determine card strength:</p>
                 <div className="pe-rules-stat-grid">
-                    <div className="pe-rules-stat-row"><span className="pe-rs-label">⚔ ATK</span><span>1 + floor(STR ÷ 3)</span></div>
-                    <div className="pe-rules-stat-row"><span className="pe-rs-label">⚡ Dodge</span><span>DEX × 4 %</span></div>
-                    <div className="pe-rules-stat-row"><span className="pe-rs-label">💎 Energy Cost</span><span>max(1, 4 − floor(FORT ÷ 3))</span></div>
+                    <div className="pe-rules-stat-row"><span className="pe-rs-label"><span role="img" aria-label="attack">⚔</span> ATK</span><span>1 + floor(STR ÷ 3)</span></div>
+                    <div className="pe-rules-stat-row"><span className="pe-rs-label"><span role="img" aria-label="dodge">⚡</span> Dodge</span><span>DEX × 4 %</span></div>
+                    <div className="pe-rules-stat-row"><span className="pe-rs-label"><span role="img" aria-label="energy cost">💎</span> Energy Cost</span><span>max(1, 4 − floor(FORT ÷ 3))</span></div>
                     <div className="pe-rules-stat-row"><span className="pe-rs-label">+Draw</span><span>+1 card if INT ≥ 5</span></div>
                 </div>
                 <p className="pe-rules-text" style={{ marginTop: 8 }}>Each class also has a unique ability triggered when that champion is played.</p>

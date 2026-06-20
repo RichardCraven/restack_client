@@ -18,7 +18,6 @@
  */
 
 import React, { Component } from 'react';
-import * as images from '../utils/images';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -251,7 +250,6 @@ class MapRedux extends Component {
             minimapIndicators = [],
             orientation,
             onBack,
-            onClose,
             onLevelSelect,
             onZoomIn,
             onZoomOut,
@@ -260,7 +258,6 @@ class MapRedux extends Component {
             onSendScoutCrow,
             getFastidiousCrowLevel,
             meta = {},
-            canEnterZone,
         } = this.props;
 
         const hasZoomed = zoomedLevelId !== null && zoomedLevelId !== undefined;
@@ -355,7 +352,7 @@ class MapRedux extends Component {
                 {/* ── scout status banner ─────────────────────────────────── */}
                 {isScouting && (
                     <div className="mrx-scout-banner mrx-scout-active" onClick={(e) => e.stopPropagation()}>
-                        🦅 Fastidious Crow is scouting… ({Math.ceil((new Date(scout.endDate) - now) / 60000)}m remaining)
+                        <span role="img" aria-label="eagle">🦅</span> Fastidious Crow is scouting… ({Math.ceil((new Date(scout.endDate) - now) / 60000)}m remaining)
                     </div>
                 )}
 

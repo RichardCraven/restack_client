@@ -1,5 +1,5 @@
 import React from 'react';
-import cardManager, { getForgeableEchos, getEchoCardForMonster } from '../../utils/card-manager';
+import cardManager, { getForgeableEchos } from '../../utils/card-manager';
 import * as images from '../../utils/images';
 
 /**
@@ -92,10 +92,10 @@ export default function CardForge({ crew, meta, onClose, onSave }) {
                 {/* Tabs */}
                 <div className="pf-tabs">
                     <button className={`pf-tab ${tab === 'forge' ? 'pf-tab--active' : ''}`} onClick={() => setTab('forge')}>
-                        ⚗ Forge Echoes
+                        <span role="img" aria-label="alembic">⚗</span> Forge Echoes
                     </button>
                     <button className={`pf-tab ${tab === 'deck' ? 'pf-tab--active' : ''}`} onClick={() => setTab('deck')}>
-                        🃏 Your Deck
+                        <span role="img" aria-label="joker">🃏</span> Your Deck
                     </button>
                 </div>
 
@@ -186,9 +186,9 @@ export default function CardForge({ crew, meta, onClose, onSave }) {
                                             <div className="pf-champ-name">{member.name || type}</div>
                                             <div className="pf-champ-class">{type.toUpperCase()}</div>
                                             <div className="pf-champ-stats">
-                                                <span>⚔ {atk}</span>
-                                                <span>⚡ {dodge}%</span>
-                                                <span>💎 {cost}</span>
+                                                <span><span role="img" aria-label="crossed swords">⚔</span> {atk}</span>
+                                                <span><span role="img" aria-label="lightning">⚡</span> {dodge}%</span>
+                                                <span><span role="img" aria-label="gem">💎</span> {cost}</span>
                                             </div>
                                         </div>
                                     );

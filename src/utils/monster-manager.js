@@ -41,7 +41,7 @@ export function MonsterManager() {
                 atk: 3,
                 def: 5,
                 speed: 11, // nimble, hard to pin down
-                willpower: 0,
+                willpower: 1,
                 str: 3,
                 int: 2,
                 dex: 8,
@@ -72,7 +72,7 @@ export function MonsterManager() {
                 atk: 5,
                 def: 7,
                 speed: 7, // shambling undead
-                willpower: 0,
+                willpower: 2,
                 str: 4,
                 int: 1,
                 dex: 4,
@@ -104,7 +104,7 @@ export function MonsterManager() {
                 atk: 5,
                 def: 3,
                 speed: 10, // agile demon
-                willpower: 0,
+                willpower: 3,
                 str: 4,
                 int: 6,
                 dex: 7,
@@ -136,7 +136,7 @@ export function MonsterManager() {
                 atk: 7,
                 def: 2,
                 speed: 8, // floating eyeball
-                willpower: 0,
+                willpower: 3,
                 str: 3,
                 int: 7,
                 dex: 5,
@@ -168,7 +168,7 @@ export function MonsterManager() {
                 atk: 7,
                 def: 6,
                 speed: 9,
-                willpower: 0,
+                willpower: 3,
                 str: 5,
                 int: 3,
                 dex: 6,
@@ -193,7 +193,7 @@ export function MonsterManager() {
             key: 'ghoul',
             image_names: ['ghoul'],
             monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 4, str: 0, int: 0, dex: 0, fort: 0 },
             level: 6,
             portrait: images['ghoul_portrait'],
             greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
@@ -205,7 +205,7 @@ export function MonsterManager() {
             key: 'blalok',
             image_names: ['blalok'],
             monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
+            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 3, str: 0, int: 0, dex: 0, fort: 0 },
             level: 6,
             portrait: images['blalok'],
             greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
@@ -222,7 +222,7 @@ export function MonsterManager() {
                 atk: 8,
                 def: 8,
                 speed: 10,
-                willpower: 5,
+                willpower: 4,
                 str: 3,
                 int: 7,
                 dex: 6,
@@ -251,7 +251,7 @@ export function MonsterManager() {
                 atk: 10,
                 def: 13,
                 speed: 5, // big lumbering brute
-                willpower: 0,
+                willpower: 2,
                 str: 9,
                 int: 2,
                 dex: 3,
@@ -280,7 +280,7 @@ export function MonsterManager() {
                 atk: 10,
                 def: 13,
                 speed: 4, // slow ancient undead — easy to hit but very tanky
-                willpower: 0,
+                willpower: 5,
                 str: 7,
                 int: 5,
                 dex: 2,
@@ -340,7 +340,7 @@ export function MonsterManager() {
                 atk: 9,
                 def: 8,
                 speed: 12, // ghostly, nearly untouchable
-                willpower: 0,
+                willpower: 5,
                 str: 3,
                 int: 7,
                 dex: 9,
@@ -370,7 +370,7 @@ export function MonsterManager() {
                 atk: 9,
                 def: 11,
                 speed: 5, // massive but slow
-                willpower: 0,
+                willpower: 3,
                 str: 8,
                 int: 2,
                 dex: 3,
@@ -401,7 +401,7 @@ export function MonsterManager() {
                 atk: 8,
                 def: 9,
                 speed: 8, // serpentine, medium agility
-                willpower: 0,
+                willpower: 5,
                 str: 6,
                 int: 5,
                 dex: 6,
@@ -431,7 +431,7 @@ export function MonsterManager() {
                 atk: 9,
                 def: 12,
                 speed: 13, // supernaturally fast
-                willpower: 0,
+                willpower: 7,
                 str: 6,
                 int: 7,
                 dex: 10,
@@ -492,7 +492,7 @@ export function MonsterManager() {
                 atk: 11,
                 def: 11,
                 speed: 10, // demonic quickness
-                willpower: 0,
+                willpower: 6,
                 str: 7,
                 int: 6,
                 dex: 7,
@@ -524,7 +524,7 @@ export function MonsterManager() {
                 atk: 13,
                 def: 8,
                 speed: 9, // elusive spell-caster
-                willpower: 0,
+                willpower: 10,
                 str: 4,
                 int: 10,
                 dex: 6,
@@ -578,7 +578,7 @@ export function MonsterManager() {
                 atk: 15,
                 def: 5,
                 speed: 9, // drifts and repositions
-                willpower: 0,
+                willpower: 11,
                 str: 4,
                 int: 12,
                 dex: 6,
@@ -636,7 +636,7 @@ export function MonsterManager() {
                 atk: 13,
                 def: 3,
                 speed: 11, // swift leader demon
-                willpower: 0,
+                willpower: 8,
                 str: 5,
                 int: 8,
                 dex: 8,
@@ -668,7 +668,7 @@ export function MonsterManager() {
                 atk: 10,
                 def: 11,
                 speed: 10, // elemental mastery enhances evasion
-                willpower: 0,
+                willpower: 10,
                 str: 5,
                 int: 8,
                 dex: 7,
@@ -709,7 +709,7 @@ export function MonsterManager() {
                 atk: 13,
                 def: 13,
                 speed: 7, // large creature, deliberate movements
-                willpower: 0,
+                willpower: 6,
                 wits: 18,  // used for willpower checks in Begin the Trials
                 str: 8,
                 int: 10,
@@ -744,7 +744,7 @@ export function MonsterManager() {
                 atk: 20,
                 def: 17,
                 speed: 6, // immense, slow but near-immune to damage
-                willpower: 0,
+                willpower: 10,
                 str: 12,
                 int: 6,
                 dex: 4,
@@ -855,7 +855,7 @@ export function MonsterManager() {
         }
 
         // Dynamically resolve portrait string keys to their asset references
-        if (typeof m.portrait === 'string') {
+        if (typeof m.portrait === 'string' && !m.portrait.includes('/') && !m.portrait.includes('data:')) {
             const mapped = images[m.portrait] || images[m.portrait.replace('_portrait', '')] || images[key] || images[key + '_portrait'];
             if (mapped) {
                 m.portrait = mapped.default || mapped;

@@ -16,6 +16,9 @@ const getActiveEffects = (combatant, combatManager) => {
     const list = [];
     if (!combatant) return list;
     const liveUnit = combatManager?.getCombatant?.(combatant.id) || combatant;
+    if (liveUnit.dead || (typeof liveUnit.hp === 'number' && liveUnit.hp <= 0)) {
+        return [];
+    }
 
     if (liveUnit.frozen) list.push({ key: 'frozen', icon: images.frozen, border: '#00bfff' });
     if (liveUnit.stunned && !liveUnit.feared) list.push({ key: 'stunned', icon: images.stunned || images.whiteskull || images.induce_fear, border: '#f5c842' });

@@ -25,7 +25,6 @@ const shuffle = (arr) => {
 };
 const coordToIdx = (col, row) => row * BOARD_SIZE + col;
 const idxToCoord = (idx) => [idx % BOARD_SIZE, Math.floor(idx / BOARD_SIZE)];
-const clone = (o) => JSON.parse(JSON.stringify(o));
 const inBounds = (c, r) => c >= 0 && c < BOARD_SIZE && r >= 0 && r < BOARD_SIZE;
 const inInterior = (c, r) => c >= 1 && c < BOARD_SIZE - 1 && r >= 1 && r < BOARD_SIZE - 1;
 

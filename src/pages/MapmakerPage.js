@@ -3729,7 +3729,7 @@ updateDungeonWithPlane = (plane) => {
         {this.state.showInscriptionModal && (
           <CModal alignment="center" backdrop="static" visible={this.state.showInscriptionModal} onClose={this.cancelInscription}>
             <CModalHeader>
-              <CModalTitle>✍ Wall Inscription</CModalTitle>
+              <CModalTitle><span role="img" aria-label="Writing Hand">✍</span> Wall Inscription</CModalTitle>
             </CModalHeader>
             <CModalBody>
               <p style={{color: '#888', fontSize: '13px', marginBottom: '10px'}}>
@@ -3755,7 +3755,7 @@ updateDungeonWithPlane = (plane) => {
         {this.state.showPortalModal && (
           <CModal alignment="center" backdrop="static" size="lg" visible={this.state.showPortalModal} onClose={this.closePortalModal}>
             <CModalHeader>
-              <CModalTitle>🌀 Dungeon Portal Configurator</CModalTitle>
+              <CModalTitle><span role="img" aria-label="Cyclone">🌀</span> Dungeon Portal Configurator</CModalTitle>
             </CModalHeader>
             <CModalBody>
               {(() => {
@@ -3833,14 +3833,14 @@ updateDungeonWithPlane = (plane) => {
                       <strong>Status:</strong>{' '}
                       {isLinked ? (
                         <span>
-                          <span className="text-success font-weight-bold" style={{color: '#198754', fontWeight: 'bold'}}>🟢 Linked</span> to portal at:{' '}
+                          <span className="text-success font-weight-bold" style={{color: '#198754', fontWeight: 'bold'}}><span role="img" aria-label="Green circle">🟢</span> Linked</span> to portal at:{' '}
                           <span className="badge bg-success" style={{color: '#fff', backgroundColor: '#198754', padding: '6px 10px', marginLeft: '5px'}}>{linkLocStr}</span>
                           <CButton color="danger" size="sm" className="ms-3" style={{marginLeft: '15px'}} onClick={() => this.breakPortalLink(tile, currentLvlId, currentOrientation, currentMiniboardIdx)}>
                             Break Link
                           </CButton>
                         </span>
                       ) : (
-                        <span className="text-danger font-weight-bold" style={{color: '#dc3545', fontWeight: 'bold'}}>🔴 Unlinked</span>
+                        <span className="text-danger font-weight-bold" style={{color: '#dc3545', fontWeight: 'bold'}}><span role="img" aria-label="Red circle">🔴</span> Unlinked</span>
                       )}
                     </div>
                     
@@ -3880,7 +3880,7 @@ updateDungeonWithPlane = (plane) => {
                                   <td style={{padding: '10px'}}>
                                     {pLinked ? (
                                       <span>
-                                        <span className="text-warning" style={{color: '#ffc107', fontWeight: 'bold'}}>⚠️ Linked</span>
+                                        <span className="text-warning" style={{color: '#ffc107', fontWeight: 'bold'}}><span role="img" aria-label="Warning sign">⚠️</span> Linked</span>
                                         <div style={{fontSize: '0.82em', color: '#6c757d', marginTop: '2px'}}>
                                           to {linkedToPortalName}
                                         </div>

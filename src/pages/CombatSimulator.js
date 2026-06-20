@@ -536,7 +536,6 @@ class CrewManagerPage extends React.Component {
             });
         }
 
-        console.log('[DEBUG][CombatSimulator] submit() called. selectedMonsterKey:', this.state.selectedMonsterKey, 'selectedMinionKeys:', this.state.selectedMinionKeys);
         // Calculate monster and minions synchronously
         const useMonsterKey = this.state.selectedMonsterKey || 'mummy';
         const useMinionKeys = this.state.selectedMinionKeys || [];
@@ -556,7 +555,6 @@ class CrewManagerPage extends React.Component {
             minion.inventory = [];
             minions.push(minion);
         });
-        console.log('[DEBUG][CombatSimulator] computed monster portrait:', monster?.portrait, 'minions portraits:', minions.map(m => m.portrait));
 
         if (this.state.useReduxCombat) {
             this.reduxCombatManager = new CombatManagerRedux();

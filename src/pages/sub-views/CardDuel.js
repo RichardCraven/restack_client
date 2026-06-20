@@ -635,14 +635,14 @@ class CardDuel extends React.Component {
             >
                 <div className="pe-card-cost">{card.energyCost}</div>
                 <div className="pe-card-portrait" style={portrait ? { backgroundImage: `url(${portrait})` } : {}}>
-                    {!portrait && <span className="pe-card-class-emoji">{CLASS_EMOJI[card.memberType] || '🗡'}</span>}
+                    {!portrait && <span className="pe-card-class-emoji" role="img" aria-label="class emoji">{CLASS_EMOJI[card.memberType] || '🗡'}</span>}
                 </div>
                 <div className="pe-card-body">
                     <div className="pe-card-name">{card.name}</div>
                     <div className="pe-card-class-badge">{(card.memberType || '').toUpperCase()}</div>
                     <div className="pe-card-stats-row">
-                        <span className="pe-stat pe-stat--atk">⚔ {card.atk}</span>
-                        {card.dodgeChance > 0 && <span className="pe-stat pe-stat--dex">⚡ {card.dodgeChance}%</span>}
+                        <span className="pe-stat pe-stat--atk"><span role="img" aria-label="attack">⚔</span> {card.atk}</span>
+                        {card.dodgeChance > 0 && <span className="pe-stat pe-stat--dex"><span role="img" aria-label="dodge chance">⚡</span> {card.dodgeChance}%</span>}
                     </div>
                     {card.ability && (
                         <div className="pe-card-ability">
@@ -674,7 +674,7 @@ class CardDuel extends React.Component {
                     <div className="pe-card-name">{card.name}</div>
                     <div className="pe-card-class-badge pe-badge--echo">ECHO</div>
                     <div className="pe-card-text">{card.text}</div>
-                    {isNeedRiddle && <div className="pe-riddle-hint">❓ Answer a riddle</div>}
+                    {isNeedRiddle && <div className="pe-riddle-hint"><span role="img" aria-label="question mark">❓</span> Answer a riddle</div>}
                 </div>
             </div>
         );
@@ -695,7 +695,7 @@ class CardDuel extends React.Component {
             <div className="pe-riddle-backdrop">
                 <div className="pe-riddle-modal">
                     <div className="pe-riddle-header">
-                        <span className="pe-riddle-sphinx">🦁</span>
+                        <span className="pe-riddle-sphinx" role="img" aria-label="sphinx">🦁</span>
                         <h2>The Sphinx Speaks</h2>
                     </div>
                     <div className="pe-riddle-question">{riddle.q}</div>
@@ -722,7 +722,13 @@ class CardDuel extends React.Component {
         return (
             <div className={`pe-end-screen ${isVictory ? 'pe-end--victory' : 'pe-end--defeat'}`}>
                 <div className="pe-end-modal">
-                    <div className="pe-end-icon">{isVictory ? '✨' : '💀'}</div>
+                    <div className="pe-end-icon">
+                        {isVictory ? (
+                            <span role="img" aria-label="victory">✨</span>
+                        ) : (
+                            <span role="img" aria-label="defeat">💀</span>
+                        )}
+                    </div>
                     <h2>{isVictory ? 'VICTORY' : 'DEFEATED'}</h2>
                     <p>{isVictory
                         ? 'The Reaper crumbles. Your crew lives to delve deeper.'
@@ -764,16 +770,16 @@ class CardDuel extends React.Component {
 
                         {bloodhoundReveal && (
                             <div className="pe-bloodhound-hint">
-                                🐕 Bloodhound: Reaper has <em>{bloodhoundReveal}</em>
+                                <span role="img" aria-label="dog">🐕</span> Bloodhound: Reaper has <em>{bloodhoundReveal}</em>
                             </div>
                         )}
 
                         {/* Status badges */}
                         <div className="pe-status-badges">
-                            {playerBlockTurns > 0  && <div className="pe-badge pe-badge--block">🛡 Block ({playerBlockTurns}t)</div>}
-                            {playerDodgeTurns > 0  && <div className="pe-badge pe-badge--dodge">⚡ Dodge ({playerDodgeTurns}t)</div>}
-                            {reaperStunTurns > 0   && <div className="pe-badge pe-badge--stun">❄ Reaper Stunned ({reaperStunTurns}t)</div>}
-                            {reaperSkipNextCard     && <div className="pe-badge pe-badge--skip">🚫 Skip Reaper Card</div>}
+                            {playerBlockTurns > 0  && <div className="pe-badge pe-badge--block"><span role="img" aria-label="shield">🛡</span> Block ({playerBlockTurns}t)</div>}
+                            {playerDodgeTurns > 0  && <div className="pe-badge pe-badge--dodge"><span role="img" aria-label="lightning">⚡</span> Dodge ({playerDodgeTurns}t)</div>}
+                            {reaperStunTurns > 0   && <div className="pe-badge pe-badge--stun"><span role="img" aria-label="snowflake">❄</span> Reaper Stunned ({reaperStunTurns}t)</div>}
+                            {reaperSkipNextCard     && <div className="pe-badge pe-badge--skip"><span role="img" aria-label="prohibited">🚫</span> Skip Reaper Card</div>}
                         </div>
 
                         <button
@@ -878,7 +884,7 @@ CardDuel.prototype.renderForfeitModal = function() {
     return (
         <div className="pe-riddle-backdrop" onClick={e => { if (e.target === e.currentTarget) this.setState({ showForfeitModal: false }); }}>
             <div className="pe-forfeit-modal">
-                <div className="pe-forfeit-icon">🏳</div>
+                <div className="pe-forfeit-icon"><span role="img" aria-label="white flag">🏳</span></div>
                 <h2 className="pe-forfeit-title">Forfeit the Duel?</h2>
                 {isScrimmage ? (
                     <p className="pe-forfeit-body">This is a scrimmage — no penalty applies.</p>

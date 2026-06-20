@@ -609,7 +609,7 @@ const skillsMatrix = {
         name: 'Ice Blast',
         desc: 'Freeze target in a block of absolute-zero ice.',
         icon: images['ice_blast_icon'],
-        cooldown: 6,
+        cooldown: 12,
         duration: 'short',
         range: 'medium',
         atkPercentage: 100,
@@ -1617,7 +1617,7 @@ const skillsMatrix = {
         type: 'debuff damage',
         flatDamage: 10,
         atkPercentage: 120,
-        effect: { type: 'poison', chance: 80, duration: 'medium' }
+        effect: { type: 'instant_death', chance: 15 }
     },
     bind: {
         id: 'bind',
@@ -1754,7 +1754,8 @@ const skillsMatrix = {
         duration: 'instant',
         range: 'far',
         atkPercentage: 100,
-        type: 'damage'
+        type: 'damage',
+        initialCooldown: 3
     },
     spiderweb: {
         class: 'witch',

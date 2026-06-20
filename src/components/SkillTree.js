@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useLayoutEffect } from 'react';
+import React, { useRef, useState, useLayoutEffect } from 'react';
 import skillsMatrix from '../utils/skills-matrix';
 import * as images from '../utils/images';
 import '../styles/skill-tree.scss';
@@ -108,6 +108,7 @@ const SkillTree = ({ crewMember, onClose }) => {
             clearTimeout(timeout);
             window.removeEventListener('resize', drawLines);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const pathLabels = {

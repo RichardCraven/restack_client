@@ -364,7 +364,6 @@ class LevelUpScreen extends Component {
         }
 
         if (dustDef.levelUpEffect === 'skill' || dustDef.levelUpEffect === 'supreme') {
-            const { skillOptions } = this.state;
             // For dust-skill we show ALL unlockable skills for the class (not just the 2-choice subset)
             const entry = this.state.entry;
             const allUnlockable = entry ? getUnlockableSkills(

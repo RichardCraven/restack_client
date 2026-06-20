@@ -481,7 +481,7 @@ class BoardsPalette extends React.Component {
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         fontSize: Math.max(8, this.props.tileSize * 0.35) + 'px',
                                         flexShrink: 0
-                                    }}>📜</div>
+                                    }}><span role="img" aria-label="scroll">📜</span></div>
                                 </div>
                             })}
                         </div>}

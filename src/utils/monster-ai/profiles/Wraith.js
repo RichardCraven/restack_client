@@ -165,7 +165,7 @@ export function Wraith(data, utilMethods, animationManager, overlayManager) {
                     attacks: []
                 };
 
-                const sphere = utilMethods.spawnMinion(template, {
+                utilMethods.spawnMinion(template, {
                     coordinates: freeTile,
                     hp: 9999,
                     starting_hp: 9999,

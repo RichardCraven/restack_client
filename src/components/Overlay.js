@@ -12,10 +12,10 @@ export default function Overlay(props) {
                     className="overlay-content overlay-transform-transition"
                     style={{
                         position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
+                        top: '-50%',
+                        left: '-50%',
+                        width: '200%',
+                        height: '200%',
                         backgroundImage: `url(${overlayImg})`,
                         backgroundSize: 'cover',
                         backgroundPosition: 'center',
@@ -23,6 +23,30 @@ export default function Overlay(props) {
                         zIndex: 10,
                         animation: 'transformTransitionOverlay 1.5s ease-in-out forwards',
                         pointerEvents: 'none'
+                    }}
+                />
+            );
+            break;
+        case 'transform_charging_overlay':
+            const chargingImg = images.transform_transition_overlay?.default || images.transform_transition_overlay;
+            content = (
+                <div 
+                    className="overlay-content overlay-transform-charging"
+                    style={{
+                        position: 'absolute',
+                        top: '-30%',
+                        left: '-30%',
+                        width: '160%',
+                        height: '160%',
+                        backgroundImage: `url(${chargingImg})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        backgroundRepeat: 'no-repeat',
+                        zIndex: 10,
+                        animation: 'transformTransitionCharging 2s ease-in-out infinite alternate',
+                        pointerEvents: 'none',
+                        mixBlendMode: 'screen',
+                        opacity: 0.9
                     }}
                 />
             );

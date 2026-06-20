@@ -418,7 +418,7 @@ export function CrewManager(){
         // Flat structure for special actions
         switch(actionType.type){
             case 'glyph':
-            case 'spell': {
+            case 'spell':
                 // ── New tiered glyph system ──────────────────────────────────────
                 // actionSubtype shape: { glyphTier, spellDefs: [{id, tier, name, icon}] }
                 // Legacy path: actionSubtype.type === 'magic missile' (kept for safety)
@@ -466,7 +466,6 @@ export function CrewManager(){
                     default:
                         break;
                 }
-            }
             break;
             case 'ritual': {
                 const ritualDef = RITUALS[actionSubtype.ritualKey];

@@ -489,8 +489,8 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
 
                     <div className="vendor-status-bar">
                         <div className="wallet-info">
-                            <span>Gold: <strong style={{color: '#ffd700'}}>🪙 {inventoryManager?.gold || 0}</strong></span>
-                            <span>Dust: <strong style={{color: '#b388ff'}}>✨ {inventoryManager?.shimmering_dust || 0}</strong></span>
+                            <span>Gold: <strong style={{color: '#ffd700'}}><span role="img" aria-label="gold coin">🪙</span> {inventoryManager?.gold || 0}</strong></span>
+                            <span>Dust: <strong style={{color: '#b388ff'}}><span role="img" aria-label="sparkles">✨</span> {inventoryManager?.shimmering_dust || 0}</strong></span>
                         </div>
                         {feedbackMsg && (
                             <div className="feedback-message" style={{color: feedbackColor}}>{feedbackMsg}</div>
@@ -583,9 +583,9 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
 
                     <div className="vendor-status-bar">
                         <div className="wallet-info">
-                            <span>Gold: <strong style={{color: '#ffd700'}}>🪙 {inventoryManager?.gold || 0}</strong></span>
-                            <span>Dust: <strong style={{color: '#b388ff'}}>✨ {inventoryManager?.shimmering_dust || 0}</strong></span>
-                            <span>Totems: <strong style={{color: '#4db8ff'}}>🗿 {inventoryManager?.totems || 0}</strong></span>
+                            <span>Gold: <strong style={{color: '#ffd700'}}><span role="img" aria-label="gold coin">🪙</span> {inventoryManager?.gold || 0}</strong></span>
+                            <span>Dust: <strong style={{color: '#b388ff'}}><span role="img" aria-label="sparkles">✨</span> {inventoryManager?.shimmering_dust || 0}</strong></span>
+                            <span>Totems: <strong style={{color: '#4db8ff'}}><span role="img" aria-label="totem">🗿</span> {inventoryManager?.totems || 0}</strong></span>
                         </div>
                         {feedbackMsg && (
                             <div className="feedback-message" style={{color: feedbackColor}}>{feedbackMsg}</div>
@@ -682,7 +682,7 @@ function TrainingDrillPicker({ member, drills, currentFood, onConfirm }) {
                     className={`training-risk-btn${!takeRisk ? ' active' : ''}`}
                     onClick={() => setTakeRisk(false)}
                 >
-                    <span className="training-risk-icon">🛡</span>
+                    <span className="training-risk-icon" role="img" aria-label="shield">🛡</span>
                     <span>
                         <div className="training-risk-mode">Safe</div>
                         <div className="training-risk-detail">{drill?.safeDesc || ''}</div>
@@ -692,7 +692,7 @@ function TrainingDrillPicker({ member, drills, currentFood, onConfirm }) {
                     className={`training-risk-btn risk${takeRisk ? ' active' : ''}`}
                     onClick={() => setTakeRisk(true)}
                 >
-                    <span className="training-risk-icon">⚡</span>
+                    <span className="training-risk-icon" role="img" aria-label="lightning bolt">⚡</span>
                     <span>
                         <div className="training-risk-mode">Push Hard</div>
                         <div className="training-risk-detail">{drill?.riskDesc || ''}</div>
@@ -706,7 +706,7 @@ function TrainingDrillPicker({ member, drills, currentFood, onConfirm }) {
                 disabled={!canAfford}
                 onClick={() => canAfford && onConfirm(selectedDrill, takeRisk)}
             >
-                {canAfford ? `Begin ${drill?.label || 'Drill'} ${takeRisk ? '(Push Hard)' : '(Safe)'} (Costs ${cost} 🍖)` : `Needs ${cost} food (Have ${currentFood} 🍖)`}
+                {canAfford ? <span>Begin {drill?.label || 'Drill'} {takeRisk ? '(Push Hard)' : '(Safe)'} (Costs {cost} <span role="img" aria-label="meat">🍖</span>)</span> : <span>Needs {cost} food (Have {currentFood} <span role="img" aria-label="meat">🍖</span>)</span>}
             </button>
         </div>
     );
@@ -1326,15 +1326,15 @@ class DungeonPage extends React.Component {
                                         <div className="tactics-detail-name">{discDef.name}</div>
                                         <div className="tactics-detail-desc">{discDef.description}</div>
                                         <div className="tactics-detail-meta">
-                                            <span>⏱ {Math.round(discDef.prepTime / 60000)} min prep</span>
+                                            <span><span role="img" aria-label="timer">⏱</span> {Math.round(discDef.prepTime / 60000)} min prep</span>
                                             {discDef.combatDuration && (
-                                                <span>⚔ {discDef.combatDuration} combat{discDef.combatDuration !== 1 ? 's' : ''}</span>
+                                                <span><span role="img" aria-label="crossed swords">⚔</span> {discDef.combatDuration} combat{discDef.combatDuration !== 1 ? 's' : ''}</span>
                                             )}
                                             {discDef.category === 'chi' && (
-                                                <span>🧘 Up to {discDef.maxCharges || 3} charges</span>
+                                                <span><span role="img" aria-label="meditation">🧘</span> Up to {discDef.maxCharges || 3} charges</span>
                                             )}
                                             {discDef.revealScope && (
-                                                <span>👁 {discDef.revealScope === 'current_board' ? 'Current board' : discDef.revealScope === 'adjacent_boards' ? 'Adjacent boards' : 'Entire level'}</span>
+                                                <span><span role="img" aria-label="eye">👁</span> {discDef.revealScope === 'current_board' ? 'Current board' : discDef.revealScope === 'adjacent_boards' ? 'Adjacent boards' : 'Entire level'}</span>
                                             )}
                                         </div>
                                         <div className="tactics-detail-flavor">{discDef.flavorText}</div>
@@ -7995,7 +7995,7 @@ class DungeonPage extends React.Component {
                         {/* Ritual complete — skill select */}
                         {sd.ritualComplete && (
                             <div style={{ textAlign: 'center', maxWidth: '360px', animation: 'fade-in 0.5s ease-out' }}>
-                                <div style={{ color: '#d4a844', fontSize: '15px', letterSpacing: '2px', marginBottom: '8px' }}>✨ The communion is complete</div>
+                                <div style={{ color: '#d4a844', fontSize: '15px', letterSpacing: '2px', marginBottom: '8px' }}><span role="img" aria-label="sparkles">✨</span> The communion is complete</div>
                                 <div style={{ color: '#ccc', fontSize: '13px', marginBottom: '20px', fontStyle: 'italic' }}>
                                     The ancestors grant {memberName} wisdom.
                                 </div>
@@ -8114,7 +8114,7 @@ class DungeonPage extends React.Component {
                         if (!all.length) {
                             return (
                                 <div style={{color: '#888', textAlign: 'center', padding: '48px 0', fontStyle: 'italic', fontSize: 14}}>
-                                    <div style={{fontSize: 40, marginBottom: 16}}>📜</div>
+                                    <div style={{fontSize: 40, marginBottom: 16}}><span role="img" aria-label="scroll">📜</span></div>
                                     No active quests. Enter a dungeon to receive your mission.
                                 </div>
                             );
@@ -9168,7 +9168,7 @@ class DungeonPage extends React.Component {
                                                 disabled={disabled}
                                                 title="Send the Fastidious Crow to scout a random board"
                                             >
-                                                <span style={{ fontSize: '14px' }}>🦅</span> {btnText}
+                                                <span style={{ fontSize: '14px' }} role="img" aria-label="eagle">🦅</span> {btnText}
                                             </button>
                                         );
                                     })()}
@@ -9213,7 +9213,7 @@ class DungeonPage extends React.Component {
                                     const remMin = Math.ceil((start - now) / 60000);
                                     return (
                                         <div style={{ background: 'rgba(235,178,54,0.15)', border: '1px solid #ebb236', borderRadius: '4px', padding: '6px 10px', fontSize: '12px', color: '#ffd67a', marginBottom: '8px', textAlign: 'center', fontWeight: '500' }}>
-                                            🦅 Fastidious Crow is scouting a random board... ({remMin}m remaining)
+                                            <span role="img" aria-label="eagle">🦅</span> Fastidious Crow is scouting a random board... ({remMin}m remaining)
                                         </div>
                                     );
                                 } else if (isRevealed) {
@@ -9222,7 +9222,7 @@ class DungeonPage extends React.Component {
                                     const remMin = Math.floor((remMs % 3600000) / 60000);
                                     return (
                                         <div style={{ background: 'rgba(82,163,255,0.15)', border: '1px solid #52a3ff', borderRadius: '4px', padding: '6px 10px', fontSize: '12px', color: '#a3d1ff', marginBottom: '8px', textAlign: 'center', fontWeight: '500' }}>
-                                            🦅 Fastidious Crow has scouted a 10x10 area on Level {meta.scoutActive.scoutedArea.levelId}, Board {meta.scoutActive.scoutedArea.boardIndex + 1} ({remHours}h {remMin}m remaining)
+                                            <span role="img" aria-label="eagle">🦅</span> Fastidious Crow has scouted a 10x10 area on Level {meta.scoutActive.scoutedArea.levelId}, Board {meta.scoutActive.scoutedArea.boardIndex + 1} ({remHours}h {remMin}m remaining)
                                         </div>
                                     );
                                 }
@@ -9342,6 +9342,8 @@ class DungeonPage extends React.Component {
                                                                                 return (
                                                                                     <span
                                                                                         className="slab-scout-marker"
+                                                                                        role="img"
+                                                                                        aria-label="eagle"
                                                                                         style={{
                                                                                             position: 'absolute',
                                                                                             left: `${cell.center.x}%`,
@@ -10102,7 +10104,7 @@ class DungeonPage extends React.Component {
                                         onClick={() => this.handleOpenCampPopup()}
                                         title="Go to Camp"
                                     >
-                                        <span>🏕 Go To Camp</span>
+                                        <span><span role="img" aria-label="camp">🏕</span> Go To Camp</span>
                                         <span className="hotkey-indicator">C</span>
                                     </button>
                                     <button
@@ -10110,7 +10112,7 @@ class DungeonPage extends React.Component {
                                         onClick={() => this.setUpCamp()}
                                         title="Immediately begin recuperating"
                                     >
-                                        <span>🛌 Recuperate</span>
+                                        <span><span role="img" aria-label="recuperate">🛌</span> Recuperate</span>
                                         <span className="hotkey-indicator">R</span>
                                     </button>
                                     <button
@@ -10122,7 +10124,7 @@ class DungeonPage extends React.Component {
                                         }}
                                         title="Play a practice card duel (no penalty)"
                                     >
-                                        <span>🃏 Card Scrimmage</span>
+                                        <span><span role="img" aria-label="card">🃏</span> Card Scrimmage</span>
                                         <span className="hotkey-indicator">S</span>
                                     </button>
                                     <button
@@ -10130,7 +10132,7 @@ class DungeonPage extends React.Component {
                                         onClick={() => this.setState({ showCodex: true })}
                                         title="Open the Codex"
                                     >
-                                        <span>📖 Codex</span>
+                                        <span><span role="img" aria-label="codex">📖</span> Codex</span>
                                         <span className="hotkey-indicator">X</span>
                                     </button>
                                     {this.state.campWarningMessage && (

@@ -142,6 +142,7 @@ class MonsterBattle extends React.Component {
         this._isMounted = false;
         this.state = {
             activeEffectPopup: null,
+            activeSkillPopup: null,
             popupOpenedWhilePaused: false,
             message: '',
             combatStarted : false,
@@ -905,6 +906,14 @@ class MonsterBattle extends React.Component {
     closeActiveEffectPopup = () => {
         const wasPausedWhenOpened = this.state.popupOpenedWhilePaused;
         this.setState({ activeEffectPopup: null });
+        if (!wasPausedWhenOpened && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+            this.props.combatManager.pauseCombat(false);
+        }
+    }
+
+    closeActiveSkillPopup = () => {
+        const wasPausedWhenOpened = this.state.popupOpenedWhilePaused;
+        this.setState({ activeSkillPopup: null });
         if (!wasPausedWhenOpened && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
             this.props.combatManager.pauseCombat(false);
         }
@@ -2329,7 +2338,7 @@ class MonsterBattle extends React.Component {
                                             )}
                                             {this.state.foodGained > 0 && (
                                                 <div className="spoil-card food">
-                                                    <span className="spoil-icon-emoji">🍖</span>
+                                                    <span className="spoil-icon-emoji" role="img" aria-label="meat">🍖</span>
                                                     <div className="spoil-info">
                                                         <span className="spoil-label">Food Foraged</span>
                                                         <span className="spoil-value">+{this.state.foodGained}</span>
@@ -2360,7 +2369,7 @@ class MonsterBattle extends React.Component {
                                                             return (
                                                                 <div key={`item-${idx}`} className="item-spoil-row">
                                                                     <div className="item-icon-wrapper">
-                                                                        {iconSrc ? <img className="item-spoil-icon" src={iconSrc} alt="" /> : <span className="item-fallback-icon">🎒</span>}
+                                                                        {iconSrc ? <img className="item-spoil-icon" src={iconSrc} alt="" /> : <span className="item-fallback-icon" role="img" aria-label="backpack">🎒</span>}
                                                                     </div>
                                                                     <span className="item-spoil-text">Found <strong className="highlight-text">{displayName}</strong></span>
                                                                 </div>
@@ -2884,7 +2893,7 @@ class MonsterBattle extends React.Component {
                                                 bleed: 'Bleeding. Takes damage at the end of each round.',
                                                 poison: 'Poisoned. Takes tick damage over time.',
                                                 defensive_stance: 'Defensive Stance. Increases DEF and blocks incoming attacks.',
-                                                berserker: 'Berserk. Greatly increases speed and attack power.',
+                                                berserker: 'Berserk. Increases Attack (ATK) by 12. Doubles movement speed (halves movement cooldown) and doubles attack speed (halves attack cooldowns) for 1 full turn cycle.',
                                                 weakness: 'Weakness. Takes increased damage from physical and magical hits.',
                                                 marked: 'Marked. Ranged attacks against this unit deal extra damage.',
                                                 ensnared: 'Ensnared. Restricted movement. Cannot walk to adjacent tiles.',
@@ -3127,13 +3136,19 @@ class MonsterBattle extends React.Component {
                                                         className={`interaction-tile special ${isReady ? 'available' : ''}`}
                                                         style={{
                                                             backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
-                                                            cursor: (liveSelectedFighter.isMonster || liveSelectedFighter.isMinion) ? 'default' : 'pointer',
+                                                            cursor: 'pointer',
                                                             opacity: isReady ? 1 : 0.7,
                                                         }}
                                                         title={spec.name || sourceKey}
                                                         onClick={() => {
-                                                            if (liveSelectedFighter.isMonster || liveSelectedFighter.isMinion) return;
-                                                            this.specialTileClicked(spec);
+                                                            const initiallyPaused = !!(this.props.paused || this.props.combatManager?.combatPaused);
+                                                            this.setState({ 
+                                                                activeSkillPopup: spec,
+                                                                popupOpenedWhilePaused: initiallyPaused
+                                                            });
+                                                            if (!initiallyPaused && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+                                                                this.props.combatManager.pauseCombat(true);
+                                                            }
                                                         }}
                                                     />
                                                     {cooldownPct > 0 && (
@@ -3787,6 +3802,123 @@ class MonsterBattle extends React.Component {
                         </div>
                     </div>
                 )}
+
+                {this.state.activeSkillPopup && (() => {
+                    const spec = this.state.activeSkillPopup;
+                    const iconCandidate = spec.iconUrl || spec.icon;
+                    let iconUrl = '';
+                    if (iconCandidate) {
+                        if (typeof iconCandidate === 'string') {
+                            if (iconCandidate.trim().startsWith('url(')) {
+                                iconUrl = iconCandidate.replace(/^url\((.*)?\)$/i, '$1').replace(/^['"]|['"]$/g, '');
+                            } else {
+                                const mapped = images[iconCandidate.trim()];
+                                iconUrl = mapped ? (mapped.default || mapped) : iconCandidate;
+                            }
+                        } else if (typeof iconCandidate === 'object' && iconCandidate.default) {
+                            iconUrl = iconCandidate.default;
+                        }
+                    }
+                    const skillName = spec.name || 'Ability';
+                    const cd = spec.cooldown || 0;
+                    const cost = spec.energy_cost || spec.energyCost || spec.cost || 0;
+                    const range = spec.range || '';
+                    const type = spec.type || '';
+                    const descText = spec.desc || spec.explanation || spec.description || 'No description available.';
+                    return (
+                        <div style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            width: '100vw',
+                            height: '100vh',
+                            backgroundColor: 'rgba(0, 0, 0, 0.375)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 9999,
+                            backdropFilter: 'blur(4px)'
+                        }} onClick={this.closeActiveSkillPopup}>
+                            <div style={{
+                                background: 'linear-gradient(135deg, #1e1e24 0%, #121215 100%)',
+                                border: '2px solid #ffb830',
+                                borderRadius: '12px',
+                                padding: '24px',
+                                maxWidth: '400px',
+                                width: '90%',
+                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.8), 0 0 16px rgba(255, 255, 255, 0.05)',
+                                textAlign: 'center',
+                                color: '#fff',
+                                animation: 'scaleIn 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                            }} onClick={(e) => e.stopPropagation()}>
+                                <div style={{
+                                    width: '64px',
+                                    height: '64px',
+                                    borderRadius: '50%',
+                                    border: '3px solid #ffb830',
+                                    margin: '0 auto 16px auto',
+                                    backgroundImage: iconUrl ? `url(${iconUrl})` : 'none',
+                                    backgroundSize: 'cover',
+                                    backgroundPosition: 'center',
+                                    boxShadow: '0 4px 12px rgba(0,0,0,0.5)'
+                                }} />
+                                <h3 style={{
+                                    margin: '0 0 4px 0',
+                                    fontSize: '22px',
+                                    fontWeight: '700',
+                                    color: '#ffb830',
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '1px'
+                                }}>{skillName}</h3>
+                                <div style={{ fontSize: '13px', color: '#aaa', marginBottom: '16px', fontWeight: '500' }}>
+                                    Ability of {liveSelectedFighter?.name || 'this unit'}
+                                </div>
+                                <div style={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    gap: '16px',
+                                    fontSize: '13px',
+                                    color: '#888',
+                                    marginBottom: '16px',
+                                    fontWeight: '500'
+                                }}>
+                                    {cd > 0 && (
+                                        <span>Cooldown: {cd} {cd === 1 ? 'round' : 'rounds'}</span>
+                                    )}
+                                    {cost > 0 && (
+                                        <span>Cost: {cost} Energy</span>
+                                    )}
+                                    {range && (
+                                        <span style={{ textTransform: 'capitalize' }}>Range: {range}</span>
+                                    )}
+                                    {type && (
+                                        <span style={{ textTransform: 'capitalize' }}>Type: {type}</span>
+                                    )}
+                                </div>
+                                <p style={{
+                                    fontSize: '15px',
+                                    lineHeight: '1.6',
+                                    color: '#ddd',
+                                    margin: '0 0 20px 0'
+                                }}>{descText}</p>
+                                <button style={{
+                                    padding: '8px 24px',
+                                    background: '#ffb830',
+                                    border: 'none',
+                                    color: '#000',
+                                    fontWeight: 'bold',
+                                    borderRadius: '6px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                                    outline: 'none'
+                                }} onClick={this.closeActiveSkillPopup}>
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    );
+                })()}
 
                 {this.state.showLevelUpScreen && this.state.levelUpQueue.length > 0 && (
                     <LevelUpScreen
