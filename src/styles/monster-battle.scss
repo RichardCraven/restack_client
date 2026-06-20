@@ -1665,19 +1665,19 @@
             }
             @keyframes weaponSwingArc {
                 0% {
-                    transform: rotate(60deg);
+                    transform: rotate(-60deg);
                     opacity: 0;
                 }
                 10% {
-                    transform: rotate(60deg);
+                    transform: rotate(-60deg);
                     opacity: 1;
                 }
                 90% {
-                    transform: rotate(-60deg);
+                    transform: rotate(60deg);
                     opacity: 1;
                 }
                 100% {
-                    transform: rotate(-60deg);
+                    transform: rotate(60deg);
                     opacity: 0;
                 }
             }
@@ -2714,132 +2714,132 @@
 
     @keyframes meltDownDeath {
         0% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
             opacity: 1;
             filter: blur(0px);
         }
         60% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1.15)) scaleY(calc(var(--portrait-base-scale, 1) * 1.15)) translateY(10px);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1.15)) scaleY(calc(var(--portrait-base-scale, 1) * 1.15)) translateY(10px);
             opacity: 0.85;
             filter: blur(1.5px);
         }
         80% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1.5)) scaleY(calc(var(--portrait-base-scale, 1) * 1.5)) translateY(40px);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1.5)) scaleY(calc(var(--portrait-base-scale, 1) * 1.5)) translateY(40px);
             opacity: 0.5;
             filter: blur(3px);
         }
         100% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 2.2)) scaleY(calc(var(--portrait-base-scale, 1) * 2.2)) translateY(80px);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 2.2)) scaleY(calc(var(--portrait-base-scale, 1) * 2.2)) translateY(80px);
             opacity: 0;
             filter: blur(8px);
         }
     }
     @-webkit-keyframes meltDownDeath {
         0% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
             opacity: 1;
             -webkit-filter: blur(0px);
         }
         60% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1.15)) scaleY(calc(var(--portrait-base-scale, 1) * 1.15)) translateY(10px);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1.15)) scaleY(calc(var(--portrait-base-scale, 1) * 1.15)) translateY(10px);
             opacity: 0.85;
             -webkit-filter: blur(1.5px);
         }
         80% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1.5)) scaleY(calc(var(--portrait-base-scale, 1) * 1.5)) translateY(40px);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1.5)) scaleY(calc(var(--portrait-base-scale, 1) * 1.5)) translateY(40px);
             opacity: 0.5;
             -webkit-filter: blur(3px);
         }
         100% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 2.2)) scaleY(calc(var(--portrait-base-scale, 1) * 2.2)) translateY(80px);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 2.2)) scaleY(calc(var(--portrait-base-scale, 1) * 2.2)) translateY(80px);
             opacity: 0;
             -webkit-filter: blur(8px);
         }
     }
     @-moz-keyframes meltDownDeath {
         0% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
             opacity: 1;
             -moz-filter: blur(0px);
         }
         60% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1.15)) scaleY(calc(var(--portrait-base-scale, 1) * 1.15)) translateY(10px);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1.15)) scaleY(calc(var(--portrait-base-scale, 1) * 1.15)) translateY(10px);
             opacity: 0.85;
             -moz-filter: blur(1.5px);
         }
         80% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1.5)) scaleY(calc(var(--portrait-base-scale, 1) * 1.5)) translateY(40px);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1.5)) scaleY(calc(var(--portrait-base-scale, 1) * 1.5)) translateY(40px);
             opacity: 0.5;
             -moz-filter: blur(3px);
         }
         100% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 2.2)) scaleY(calc(var(--portrait-base-scale, 1) * 2.2)) translateY(80px);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 2.2)) scaleY(calc(var(--portrait-base-scale, 1) * 2.2)) translateY(80px);
             opacity: 0;
             -moz-filter: blur(8px);
         }
     }
     @keyframes meltDownDeathFighter {
         0% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
             opacity: 1;
             filter: blur(0px);
         }
         60% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
             opacity: 0.85;
             filter: blur(1.5px);
         }
         80% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
             opacity: 0.5;
             filter: blur(3px);
         }
         100% {
-            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
+            transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
             opacity: 0;
             filter: blur(8px);
         }
     }
     @-webkit-keyframes meltDownDeathFighter {
         0% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
             opacity: 1;
             -webkit-filter: blur(0px);
         }
         60% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
             opacity: 0.85;
             -webkit-filter: blur(1.5px);
         }
         80% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
             opacity: 0.5;
             -webkit-filter: blur(3px);
         }
         100% {
-            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
+            -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
             opacity: 0;
             -webkit-filter: blur(8px);
         }
     }
     @-moz-keyframes meltDownDeathFighter {
         0% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
             opacity: 1;
             -moz-filter: blur(0px);
         }
         60% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
             opacity: 0.85;
             -moz-filter: blur(1.5px);
         }
         80% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
             opacity: 0.5;
             -moz-filter: blur(3px);
         }
         100% {
-            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
+            -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
             opacity: 0;
             -moz-filter: blur(8px);
         }
@@ -5153,22 +5153,22 @@
 
 @keyframes meltDownDeathNoEnlarge {
     0% {
-        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
         opacity: 1;
         filter: blur(0px);
     }
     60% {
-        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
+        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
         opacity: 0.85;
         filter: blur(1.5px);
     }
     80% {
-        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
+        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
         opacity: 0.5;
         filter: blur(3px);
     }
     100% {
-        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
+        transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
         opacity: 0;
         filter: blur(8px);
     }
@@ -5176,22 +5176,22 @@
 
 @-webkit-keyframes meltDownDeathNoEnlarge {
     0% {
-        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
         opacity: 1;
         -webkit-filter: blur(0px);
     }
     60% {
-        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
+        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
         opacity: 0.85;
         -webkit-filter: blur(1.5px);
     }
     80% {
-        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
+        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
         opacity: 0.5;
         -webkit-filter: blur(3px);
     }
     100% {
-        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
+        -webkit-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
         opacity: 0;
         -webkit-filter: blur(8px);
     }
@@ -5199,22 +5199,22 @@
 
 @-moz-keyframes meltDownDeathNoEnlarge {
     0% {
-        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
+        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(0);
         opacity: 1;
         -moz-filter: blur(0px);
     }
     60% {
-        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
+        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(10px);
         opacity: 0.85;
         -moz-filter: blur(1.5px);
     }
     80% {
-        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
+        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(40px);
         opacity: 0.5;
         -moz-filter: blur(3px);
     }
     100% {
-        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
+        -moz-transform: perspective(var(--portrait-perspective, 600px)) rotateY(var(--portrait-rotateY, 0deg)) translateX(var(--portrait-translateX, 0px)) scaleX(calc(var(--portrait-flip, 1) * var(--portrait-base-scale, 1) * 1)) scaleY(calc(var(--portrait-base-scale, 1) * 1)) translateY(80px);
         opacity: 0;
         -moz-filter: blur(8px);
     }
@@ -6165,4 +6165,11 @@
   100% {
     background-size: 200% 200%;
   }
+}
+
+@keyframes betrayalHitFade {
+  0% { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+  25% { transform: translate(-50%, -50%) scale(1.15); opacity: 1; }
+  75% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
 }

@@ -10,11 +10,11 @@ import DUST_TYPES from '../../utils/dusts';
 import LevelUpScreen from '../../components/LevelUpScreen';
 import skillsMatrix from '../../utils/skills-matrix';
 import { Redirect } from "react-router-dom";
-import {storeMeta, getMeta, getUserId} from '../../utils/session-handler';
+import { storeMeta, getMeta, getUserId } from '../../utils/session-handler';
 import {
-        updateUserRequest,
-        deleteDungeonRequest
-    } from '../../utils/api-handler';
+    updateUserRequest,
+    deleteDungeonRequest
+} from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
 // import Overlay from '../../components/Overlay'
 // import CanvasMagicMissile from '../../components/Canvas/canvas_magic_missile'
@@ -125,18 +125,18 @@ class MonsterBattle extends React.Component {
     }
     // ─────────────────────────────────────────────────────────────────────────
     removeDeadCombatantAfterDelay = (id) => {
-            if (this.props.combatManager && typeof this.props.combatManager.removeCombatant === 'function') {
-                this.props.combatManager.removeCombatant(id);
-            }
-            // Optionally, remove overlays for this id from overlayManager if present
-            if (this.props.overlayManager && typeof this.props.overlayManager.removeCombatant === 'function') {
-                this.props.overlayManager.removeCombatant(id);
-            } else if (this.props.overlayManager && this.props.overlayManager.overlays) {
-                // Fallback: delete overlays directly if no method
-                delete this.props.overlayManager.overlays[id];
-            }
+        if (this.props.combatManager && typeof this.props.combatManager.removeCombatant === 'function') {
+            this.props.combatManager.removeCombatant(id);
+        }
+        // Optionally, remove overlays for this id from overlayManager if present
+        if (this.props.overlayManager && typeof this.props.overlayManager.removeCombatant === 'function') {
+            this.props.overlayManager.removeCombatant(id);
+        } else if (this.props.overlayManager && this.props.overlayManager.overlays) {
+            // Fallback: delete overlays directly if no method
+            delete this.props.overlayManager.overlays[id];
+        }
     }
-    constructor(props){
+    constructor(props) {
         super(props)
         // mount flag to avoid setState on unmounted component warnings
         this._isMounted = false;
@@ -145,13 +145,13 @@ class MonsterBattle extends React.Component {
             activeSkillPopup: null,
             popupOpenedWhilePaused: false,
             message: '',
-            combatStarted : false,
+            combatStarted: false,
             source: null,
             indicatorsMatrix: {},
             attackType: '',
             target: null,
             battleData: {},
-            animationData: {tiles: []},
+            animationData: { tiles: [] },
             catcher: null,
             selectedFighter: null,
             selectedMonster: null,
@@ -189,7 +189,7 @@ class MonsterBattle extends React.Component {
             magicMissile_fire: false,
             magicMissile_connectParticles: true,
             magicMissile_targetDistance: 0,
-               magicMissile_targetLaneDiff: 0,
+            magicMissile_targetLaneDiff: 0,
             teleportingFighterId: null,
             // Active shield walls: array of wallData objects
             activeWalls: [],
@@ -212,8 +212,8 @@ class MonsterBattle extends React.Component {
         // Track timers/intervals created by this component so we can clear them on unmount
         this._timers = [];
         this._intervals = [];
-        this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch(e){}; return id };
-        this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch(e){}; return id };
+        this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch (e) { }; return id };
+        this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch (e) { }; return id };
     }
 
     // Public method to force sync battleData from combatManager (including VCT positions)
@@ -228,7 +228,7 @@ class MonsterBattle extends React.Component {
         }
     }
 
-    componentDidMount(){
+    componentDidMount() {
         // mark mounted so async callbacks can safely call setState
         this._isMounted = true;
         // Reset any previous group-death suppression flag and one-time guards
@@ -272,17 +272,17 @@ class MonsterBattle extends React.Component {
         }
 
         let arr = [], ghostPortraitMatrix = [];
-    for(let i = 0; i < MAX_ROWS*NUM_COLUMNS; i++){
-            let x = i%NUM_COLUMNS,
-            y = Math.floor(i/NUM_COLUMNS)
+        for (let i = 0; i < MAX_ROWS * NUM_COLUMNS; i++) {
+            let x = i % NUM_COLUMNS,
+                y = Math.floor(i / NUM_COLUMNS)
             arr.push({
                 id: i,
                 x,
-                y 
+                y
             })
             ghostPortraitMatrix.push(null)
         }
-        
+
         // const crewLeader = this.props.crew.find(e=>e.isLeader)
 
         // combat manager callbacks
@@ -311,29 +311,29 @@ class MonsterBattle extends React.Component {
                     try { return (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory)) ? this.props.inventoryManager.inventory : []; } catch (e) { return []; }
                 });
             }
-        } catch (e) {}
+        } catch (e) { }
         try {
             if (this.props.combatManager && typeof this.props.combatManager.establishUseConsumableCallback === 'function') {
                 this.props.combatManager.establishUseConsumableCallback((item) => {
                     try { if (this.props.useConsumableFromInventory) this.props.useConsumableFromInventory(item); } catch (e) { console.warn('useConsumableCallback failed', e); }
                 });
             }
-        } catch (e) {}
+        } catch (e) { }
         try {
             if (this.props.combatManager && typeof this.props.combatManager.establishStolenItemCallback === 'function') {
                 this._stolenItems = [];
                 this.props.combatManager.establishStolenItemCallback((itemKey, itemName, itemIconKey = null) => {
-                    try { if (this.props.inventoryManager) this.props.inventoryManager.removeItemByKey(itemKey); } catch (e) {}
+                    try { if (this.props.inventoryManager) this.props.inventoryManager.removeItemByKey(itemKey); } catch (e) { }
                     this._stolenItems = this._stolenItems || [];
                     this._stolenItems.push({ itemName, itemIconKey });
                 });
             }
-        } catch (e) {}
-        
+        } catch (e) { }
+
         //overlay manager callbacks
         // this.establishInitializeOverlayManagerCallback();
         this.establishBroadcastNewAnimationCallback();
-        
+
         // /animation CB
         this.establishUpdateAnimationDataCallback();
         // this.establishAnimationCallback();
@@ -356,7 +356,7 @@ class MonsterBattle extends React.Component {
         // For simulation battles: seed a tier-1 weapon into the group inventory so
         // goblin sticky-fingers has a valid item to steal during testing.
         if (this.props.isSimulation && this.props.inventoryManager &&
-                typeof this.props.inventoryManager.addItemsByName === 'function') {
+            typeof this.props.inventoryManager.addItemsByName === 'function') {
             this.props.inventoryManager.addItemsByName(['shortsword_sword']);
         }
 
@@ -411,7 +411,7 @@ class MonsterBattle extends React.Component {
         let arrowUp = new Image()
         arrowUp.src = images['arrowUp']
         let that = this;
-        arrowUp.onload = function(){
+        arrowUp.onload = function () {
             that.setState({
                 arrowUpImage: arrowUp
             })
@@ -451,7 +451,7 @@ class MonsterBattle extends React.Component {
                                     this.props.crewManager.clearLevelFlags(m);
                                 }
                                 // ensure UI updates
-                                try { this.forceUpdate(); } catch(e){}
+                                try { this.forceUpdate(); } catch (e) { }
                             } catch (err) {
                                 console.warn('Failed to clear level flags for member', m, err);
                             }
@@ -476,14 +476,14 @@ class MonsterBattle extends React.Component {
     }
     componentWillUnmount() {
         // mark unmounted to prevent async callbacks attempting setState
-        try { this._isMounted = false; } catch(e){}
+        try { this._isMounted = false; } catch (e) { }
         if (this._rafId) {
             cancelAnimationFrame(this._rafId);
         }
         // Detach callbacks first so in-flight manager timers cannot call setState.
         try {
             if (this.props && this.props.combatManager) {
-                const noop = () => {};
+                const noop = () => { };
                 if (typeof this.props.combatManager.establishMessageCallback === 'function') this.props.combatManager.establishMessageCallback(noop);
                 if (typeof this.props.combatManager.establishUpdateMatrixCallback === 'function') this.props.combatManager.establishUpdateMatrixCallback(noop);
                 if (typeof this.props.combatManager.establishUpdateActorCallback === 'function') this.props.combatManager.establishUpdateActorCallback(noop);
@@ -495,16 +495,16 @@ class MonsterBattle extends React.Component {
                 if (typeof this.props.combatManager.establishOnFighterDeathCallback === 'function') this.props.combatManager.establishOnFighterDeathCallback(noop);
                 if (typeof this.props.combatManager.establishMorphPortraitCallback === 'function') this.props.combatManager.establishMorphPortraitCallback(noop);
             }
-        } catch(e){}
+        } catch (e) { }
         // Best-effort: disconnect combat manager callbacks so no further calls come in
-        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.shutdown === 'function') this.props.combatManager.shutdown(); } catch(e){}
-        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.disconnectOverlayManager === 'function') this.props.combatManager.disconnectOverlayManager(); } catch(e){}
+        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.shutdown === 'function') this.props.combatManager.shutdown(); } catch (e) { }
+        try { if (this.props && this.props.combatManager && typeof this.props.combatManager.disconnectOverlayManager === 'function') this.props.combatManager.disconnectOverlayManager(); } catch (e) { }
         // Flush all canvas and tile animations immediately so in-flight missiles,
         // fireballs etc. can't appear at the start of the next combat session.
-        try { if (this.props && this.props.animationManager && typeof this.props.animationManager.reset === 'function') this.props.animationManager.reset(); } catch(e){}
+        try { if (this.props && this.props.animationManager && typeof this.props.animationManager.reset === 'function') this.props.animationManager.reset(); } catch (e) { }
         // Clear any timers/intervals this component created
-        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
-        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
+        try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch (e) { }
+        try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch (e) { }
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -516,20 +516,20 @@ class MonsterBattle extends React.Component {
     }
     targetOf = (caller) => {
         let c = this.state.battleData[caller.id],
-        target = c.targetId ? this.state.battleData[c.targetId] : null;
+            target = c.targetId ? this.state.battleData[c.targetId] : null;
         return target
     }
     monsterDirectionReversed = () => {
-        if(!this.monster()) return false
+        if (!this.monster()) return false
         return this.monster()?.coordinates.x < this.targetOf(this.monster())?.coordinates.x
     }
     minionDirectionReversed = (minionReference) => {
         const minion = this.state.battleData[minionReference.id]
-        if(!minion || !minion.targetId) return false
+        if (!minion || !minion.targetId) return false
         return minion?.coordinates?.x < this.targetOf(minion)?.coordinates.x
     }
     getHitAnimation = (combatant) => {
-        if(!combatant || !combatant.wounded) return '';
+        if (!combatant || !combatant.wounded) return '';
         return `hit-from-${combatant.wounded.sourceDirection}-${combatant.wounded.severity}`
     }
 
@@ -559,25 +559,25 @@ class MonsterBattle extends React.Component {
     // }
     milliDelay = (numMilliseconds) => {
         return new Promise((resolve) => {
-            this._setTimeout(()=>{
+            this._setTimeout(() => {
                 resolve(numMilliseconds, ' complete')
             }, numMilliseconds)
         })
     }
     morphPortrait = () => {
         let stringBase = 'witch_p1_', count = 1, string;
-        const morphInterval = this._setInterval(()=>{
-            string = stringBase+count;
+        const morphInterval = this._setInterval(() => {
+            string = stringBase + count;
             this.setState({
                 monsterPortrait: images[string]
             })
             count++
-            if(count > 8) clearInterval(morphInterval)
+            if (count > 8) clearInterval(morphInterval)
         }, 300)
     }
     greetingComplete = () => {
         this.combatBegins()
-        this.setState({greetingInProcess: false})
+        this.setState({ greetingInProcess: false })
     }
     tabToFighter = () => {
         const liveCrew = this.getSortedLiveCrew();
@@ -598,24 +598,24 @@ class MonsterBattle extends React.Component {
         })
     }
     tabToRetarget = () => {
-        if(!this.state.selectedFighter) return
+        if (!this.state.selectedFighter) return
         this.props.combatManager.manualRetarget(this.state.selectedFighter)
     }
     selectSpecial = () => {
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials;
         let consumableSpecials = selectedFighter?.specialActions;
-        let currentSpecialIndex = specials.findIndex(a=> a.selected)
-        specials.forEach(a=>a.selected = false)
-        if(consumableSpecials.length){
-            consumableSpecials.forEach(a=>a.selected = false) 
+        let currentSpecialIndex = specials.findIndex(a => a.selected)
+        specials.forEach(a => a.selected = false)
+        if (consumableSpecials.length) {
+            consumableSpecials.forEach(a => a.selected = false)
         }
 
 
 
-        if(currentSpecialIndex >= 0){
-            
-            if(specials[currentSpecialIndex + 1]){
+        if (currentSpecialIndex >= 0) {
+
+            if (specials[currentSpecialIndex + 1]) {
                 specials[currentSpecialIndex + 1].selected = true;
             } else {
                 // all cleared
@@ -628,14 +628,14 @@ class MonsterBattle extends React.Component {
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials;
         let consumableSpecials = selectedFighter?.specialActions;
-        
-        let currentSpecialIndex = consumableSpecials.findIndex(a=> a.selected);
-        consumableSpecials.forEach(a=>a.selected = false)
-        if(specials) specials.forEach(a=>a.selected = false)
-            // currentSpecialIndex available for diagnostics
+
+        let currentSpecialIndex = consumableSpecials.findIndex(a => a.selected);
+        consumableSpecials.forEach(a => a.selected = false)
+        if (specials) specials.forEach(a => a.selected = false)
+        // currentSpecialIndex available for diagnostics
         // console.log('consumableSpecials: ', consumableSpecials, 'currentindex: ', currentSpecialIndex);
-        if(currentSpecialIndex >= 0){
-            if(consumableSpecials[currentSpecialIndex + 1]){
+        if (currentSpecialIndex >= 0) {
+            if (consumableSpecials[currentSpecialIndex + 1]) {
                 consumableSpecials[currentSpecialIndex + 1].selected = true;
             } else {
                 // all cleared
@@ -645,18 +645,18 @@ class MonsterBattle extends React.Component {
         }
     }
     getActionBarLeftValForFighter = (id) => {
-    // Determine the left pixel position for the action bar. For vertical facings
-    // (up/down) we treat them like non-left-facing so the bar aligns over the
-    // fighter rather than shifting left by the range width.
-    const selectedFighter = this.state.battleData[id];
-    const details = this.getFighterDetails(selectedFighter);
-    const baseX = (details?.coordinates.x || 0) * 100;
-    // Use the fighter details when asking combatManager for the range width
-    const rangeWidth = this.props.combatManager.getRangeWidthVal(details) || 0;
-    // If the fighter is explicitly facing left, offset to the left by the range width;
-    // otherwise (right, up, down, or undefined) place the bar to the right.
-    const offset = (selectedFighter?.facing === 'left') ? (0 - (rangeWidth * 100)) : 100;
-    return baseX + offset;
+        // Determine the left pixel position for the action bar. For vertical facings
+        // (up/down) we treat them like non-left-facing so the bar aligns over the
+        // fighter rather than shifting left by the range width.
+        const selectedFighter = this.state.battleData[id];
+        const details = this.getFighterDetails(selectedFighter);
+        const baseX = (details?.coordinates.x || 0) * 100;
+        // Use the fighter details when asking combatManager for the range width
+        const rangeWidth = this.props.combatManager.getRangeWidthVal(details) || 0;
+        // If the fighter is explicitly facing left, offset to the left by the range width;
+        // otherwise (right, up, down, or undefined) place the bar to the right.
+        const offset = (selectedFighter?.facing === 'left') ? (0 - (rangeWidth * 100)) : 100;
+        return baseX + offset;
     }
     fighterPortraitClicked = (id) => {
         const selectedFighter = this.state.battleData[id];
@@ -664,7 +664,7 @@ class MonsterBattle extends React.Component {
         if (crewMember && crewMember.portrait) {
             selectedFighter.portrait = crewMember.portrait;
         }
-        if(this.state.showCrosshair){
+        if (this.state.showCrosshair) {
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
                 showCrosshair: false
@@ -684,11 +684,11 @@ class MonsterBattle extends React.Component {
     }
 
     getCrewLeader = () => {
-        return this.props.crew.find(e=>e.isLeader)
+        return this.props.crew.find(e => e.isLeader)
     }
 
     setMessage = (messageData) => {
-        const {message, source} = messageData;
+        const { message, source } = messageData;
         this.setState({
             message,
             source
@@ -705,7 +705,7 @@ class MonsterBattle extends React.Component {
     getAllOverlaysById = (id) => {
         const animationsMatrix = this.state.animationOverlays[id].animations;
         let finalVal = [];
-        Object.values(animationsMatrix).forEach(e=>{
+        Object.values(animationsMatrix).forEach(e => {
             finalVal = finalVal.concat(e);
         })
         return finalVal;
@@ -740,7 +740,7 @@ class MonsterBattle extends React.Component {
         // Mummy diagnostics
         const mummyBefore = Object.values(battleData || {}).find(c => c && (c.id === 'mummy' || c.type === 'mummy' || c.key === 'mummy' || String(c.id).includes('mummy')));
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
-        
+
         // Preserve dead crew members so they are kept in state and can be rendered
         // in the "Dead Crew" summary column, even after being deleted from combatants map.
         if (this.state.battleData && Object.keys(clonedBattleData).length > 0) {
@@ -754,29 +754,6 @@ class MonsterBattle extends React.Component {
                         };
                     }
                 }
-            });
-        }
-        
-        const mummyAfter = Object.values(clonedBattleData || {}).find(c => c && (c.id === 'mummy' || c.type === 'mummy' || c.key === 'mummy' || String(c.id).includes('mummy')));
-        
-        if (mummyBefore || mummyAfter) {
-            console.log('[MUMMY-DIAG][MonsterBattle] updateBattleData clone comparison:', {
-                beforeExists: !!mummyBefore,
-                afterExists: !!mummyAfter,
-                beforeHP: mummyBefore?.hp,
-                afterHP: mummyAfter?.hp,
-                beforeDebuffs: mummyBefore?.activeDebuffs?.map(d => ({ name: d.name, rounds: d.roundsLeft })),
-                afterDebuffs: mummyAfter?.activeDebuffs?.map(d => ({ name: d.name, rounds: d.roundsLeft })),
-                beforePoison: mummyBefore?.poison,
-                afterPoison: mummyAfter?.poison,
-                beforeFrozen: mummyBefore?.frozen,
-                afterFrozen: mummyAfter?.frozen,
-                beforeEnsnared: mummyBefore?.ensnared,
-                afterEnsnared: mummyAfter?.ensnared,
-                beforeMarked: mummyBefore?.marked,
-                afterMarked: mummyAfter?.marked,
-                beforeStunned: mummyBefore?.stunned,
-                afterStunned: mummyAfter?.stunned,
             });
         }
 
@@ -796,7 +773,7 @@ class MonsterBattle extends React.Component {
                     entry.portrait = images['avatar'];
                 }
                 if (!Array.isArray(entry.damageIndicators)) entry.damageIndicators = [];
-                            if (!Array.isArray(entry.damageIndicators)) console.log('[DIAG][MonsterBattle] Initialized entry.damageIndicators as empty array for', entry);
+                if (!Array.isArray(entry.damageIndicators)) console.log('[DIAG][MonsterBattle] Initialized entry.damageIndicators as empty array for', entry);
             });
         } catch (err) {
             console.warn('updateBattleData: normalization failed', err);
@@ -872,9 +849,9 @@ class MonsterBattle extends React.Component {
                 // update its own state/selectedCrewMember immediately.
                 try {
                     if (this.props && typeof this.props.onFighterUpdate === 'function') {
-                        try { this.props.onFighterUpdate(battleData[fighter.id]); } catch(e){}
+                        try { this.props.onFighterUpdate(battleData[fighter.id]); } catch (e) { }
                     }
-                } catch(e){}
+                } catch (e) { }
                 const meta = getMeta();
                 if (meta && Array.isArray(meta.crew)) {
                     const idx = meta.crew.findIndex(c => c && c.id === fighter.id);
@@ -883,7 +860,7 @@ class MonsterBattle extends React.Component {
                         meta.crew[idx].specialActions = JSON.parse(JSON.stringify(battleData[fighter.id].specialActions || []));
                         storeMeta(meta);
                         // fire-and-forget server update to persist the change
-                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e){}
+                        try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
                     }
                 }
             } catch (err) {
@@ -946,7 +923,7 @@ class MonsterBattle extends React.Component {
                         const cm = this.props && this.props.combatManager;
                         const def = cm && (
                             (cm.specialsMatrix && (cm.specialsMatrix['magic_missile'] || cm.specialsMatrix['major_magic_missile'] || cm.specialsMatrix['greater_magic_missile'])) ||
-                            (cm.attacksMatrix  && (cm.attacksMatrix['magic_missile']  || cm.attacksMatrix['major_magic_missile'] || cm.attacksMatrix['greater_magic_missile']))
+                            (cm.attacksMatrix && (cm.attacksMatrix['magic_missile'] || cm.attacksMatrix['major_magic_missile'] || cm.attacksMatrix['greater_magic_missile']))
                         );
                         if (def) {
                             ['energy_cost', 'cooldown', 'damage', 'effect', 'level', 'icon'].forEach(k => {
@@ -1010,7 +987,7 @@ class MonsterBattle extends React.Component {
         })
     }
     gameOver = (outcome) => {
-    // outcome received
+        // outcome received
 
         // Ensure gameOver runs only once per battle instance to avoid duplicate
         // awards or duplicated UI flows when multiple gameOver triggers fire.
@@ -1045,408 +1022,408 @@ class MonsterBattle extends React.Component {
         this._setTimeout(() => {
             executeTeardown();
 
-        let experienceGained,
-            goldGained,
-            foodGained = 0,
-            itemsGained,
-            crewWins = outcome === 'crewWins' || outcome === true,
-            summaryMessage, battleResult;
+            let experienceGained,
+                goldGained,
+                foodGained = 0,
+                itemsGained,
+                crewWins = outcome === 'crewWins' || outcome === true,
+                summaryMessage, battleResult;
 
-        // liveCrew should be derived from the freshest snapshot
-        let liveCrew = Object.values(latestBattleData).filter(e=>!e.dead && !e.isMinion && !e.isMonster);
-        if(crewWins){
-            battleResult = 'win';
-            summaryMessage = 'The enemy is no more!';
-            if(this.props.monster.drops){
-                itemsGained = [];
-                this.props.monster.drops.forEach(e=>{
-                    let d = Math.random();
-                    if(d < e.percentChance*.01){
-                        if(e.itemPool && Array.isArray(e.itemPool) && e.itemPool.length > 0){
-                            // Supports both flat pools and nested pools like [WEAPONS, ARMOR, MAGICAL]
-                            const pickFromPool = (pool) => {
-                                if(!Array.isArray(pool) || pool.length === 0) return null;
-                                const idx = Math.floor(Math.random() * pool.length);
-                                const picked = pool[idx];
-                                return Array.isArray(picked) ? pickFromPool(picked) : picked;
-                            };
-                            const itemFromPool = pickFromPool(e.itemPool);
-                            if(itemFromPool) itemsGained.push(itemFromPool);
-                        } else if(e.item){
-                            itemsGained.push(e.item);
+            // liveCrew should be derived from the freshest snapshot
+            let liveCrew = Object.values(latestBattleData).filter(e => !e.dead && !e.isMinion && !e.isMonster);
+            if (crewWins) {
+                battleResult = 'win';
+                summaryMessage = 'The enemy is no more!';
+                if (this.props.monster.drops) {
+                    itemsGained = [];
+                    this.props.monster.drops.forEach(e => {
+                        let d = Math.random();
+                        if (d < e.percentChance * .01) {
+                            if (e.itemPool && Array.isArray(e.itemPool) && e.itemPool.length > 0) {
+                                // Supports both flat pools and nested pools like [WEAPONS, ARMOR, MAGICAL]
+                                const pickFromPool = (pool) => {
+                                    if (!Array.isArray(pool) || pool.length === 0) return null;
+                                    const idx = Math.floor(Math.random() * pool.length);
+                                    const picked = pool[idx];
+                                    return Array.isArray(picked) ? pickFromPool(picked) : picked;
+                                };
+                                const itemFromPool = pickFromPool(e.itemPool);
+                                if (itemFromPool) itemsGained.push(itemFromPool);
+                            } else if (e.item) {
+                                itemsGained.push(e.item);
+                            }
                         }
-                    }
-                })
-                this.props.inventoryManager.addItemsByName(itemsGained)
-            }
-            experienceGained = this.props.monster.level * 10;
-            try {
-                let spiderKillsCount = 0;
-                Object.values(latestBattleData || {}).forEach(c => {
-                    if (c && c.type === 'spider_minion' && c.dead && c.hp <= 0 && !c.hasContacted) {
-                        spiderKillsCount++;
-                    }
-                });
-                if (spiderKillsCount > 0) {
-                    const spiderXp = spiderKillsCount * 10;
-                    experienceGained += spiderXp;
-                    console.log(`[Spider XP] Added ${spiderXp} XP for killing ${spiderKillsCount} spider(s) before contact.`);
+                    })
+                    this.props.inventoryManager.addItemsByName(itemsGained)
                 }
-            } catch(e) { console.warn('[Spider XP] calculation failed', e); }
-            // ── Battle Tactics: apply XP multiplier if an active tactic is in effect ──
-            try {
-                const soldierMember = (this.props.crew || []).find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
-                if (soldierMember) {
-                    const activeTactic = (soldierMember.specialActions || []).find(
-                        a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
-                    );
-                    if (activeTactic) {
-                        const tacticDef = BATTLE_TACTICS[activeTactic.tacticKey];
-                        if (tacticDef && tacticDef.xpMultiplier && tacticDef.xpMultiplier > 1) {
-                            const rawXp = experienceGained;
-                            experienceGained = Math.round(experienceGained * tacticDef.xpMultiplier);
-                            console.log(`[Battle Tactics] XP boosted by ${tacticDef.name}: ${rawXp} → ${experienceGained} (×${tacticDef.xpMultiplier})`);
+                experienceGained = this.props.monster.level * 10;
+                try {
+                    let spiderKillsCount = 0;
+                    Object.values(latestBattleData || {}).forEach(c => {
+                        if (c && c.type === 'spider_minion' && c.dead && c.hp <= 0 && !c.hasContacted) {
+                            spiderKillsCount++;
                         }
-                    }
-                }
-            } catch(e) { console.warn('[Battle Tactics] XP multiplier failed', e); }
-            goldGained = Math.floor(Math.random() * experienceGained);
-            // Defensive: log inventory/gold state before adding to help trace duplicate updates
-            try { /* inventory snapshot suppressed */ } catch(e){}
-            // Food reward: 20% chance 5-15, 10% chance 20-30, 5% chance 40-60
-            try {
-                const foodRoll = Math.random();
-                let foodRolled = 0;
-                if (foodRoll < 0.05) {
-                    foodRolled = Math.floor(Math.random() * 21) + 40; // 40-60
-                } else if (foodRoll < 0.15) {
-                    foodRolled = Math.floor(Math.random() * 11) + 20; // 20-30
-                } else if (foodRoll < 0.35) {
-                    foodRolled = Math.floor(Math.random() * 11) + 5;  // 5-15
-                }
-                if (foodRolled > 0) {
-                    foodGained = foodRolled;
-                    const metaFood = getMeta() || {};
-                    metaFood.food = (typeof metaFood.food === 'number' ? metaFood.food : 55) + foodGained;
-                    try { storeMeta(metaFood); } catch(e) {}
-                    console.log(`[Combat] food reward: +${foodGained} (total: ${metaFood.food})`);
-                }
-            } catch(e) { console.warn('food reward failed', e); }
-            // Ensure we only award gold once per battle
-                    if (!this._goldAwarded) {
-                try {
-                    this.props.inventoryManager.addCurrency({type: 'gold', amount: goldGained})
-                    this._goldAwarded = true;
-                } catch (err) {
-                    console.warn('gameOver: addCurrency failed', err);
-                }
-            } else {
-                // gold already awarded, skipping
-            }
-            // ── Reagent loot drop: 15% chance per combat victory ─────────────
-            try {
-                if (Math.random() < 0.15) {
-                    const pickedKey = REAGENT_KEYS[Math.floor(Math.random() * REAGENT_KEYS.length)];
-                    const reagentDef = REAGENTS[pickedKey];
-                    if (reagentDef && this.props.inventoryManager) {
-                        this.props.inventoryManager.addItem({ ...reagentDef });
-                        // Trigger the loot arc overlay if parent exposes it
-                        try {
-                            if (typeof this.props.onTriggerLootArc === 'function') {
-                                this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[reagentDef.icon], name: reagentDef.name });
-                            }
-                        } catch(e) {}
-                    }
-                }
-            } catch(e) { console.warn('reagent loot drop failed', e); }
-
-            // ── Brew ingredient loot drop: 15% chance per combat victory if Barbarian is in party ─────────────
-            try {
-                const hasBarbarian = (this.props.crew || []).some(m => m && m.type === 'barbarian');
-                if (hasBarbarian && Math.random() < 0.15) {
-                    const pickedKey = BREW_INGREDIENT_KEYS[Math.floor(Math.random() * BREW_INGREDIENT_KEYS.length)];
-                    const ingredientDef = BREW_INGREDIENTS[pickedKey];
-                    if (ingredientDef && this.props.inventoryManager) {
-                        this.props.inventoryManager.addItem({ ...ingredientDef });
-                        try {
-                            if (typeof this.props.onTriggerLootArc === 'function') {
-                                this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[ingredientDef.icon], name: ingredientDef.name });
-                            }
-                        } catch(e) {}
-                    }
-                }
-            } catch(e) { console.warn('brew ingredient loot drop failed', e); }
-
-            // ── Dust loot drop: 10% chance per combat victory ─────────────
-            try {
-                if (Math.random() < 0.10) {
-                    const dustRoll = Math.random();
-                    let pickedKey = 'rubedo_dust';
-                    if (dustRoll < 0.05) {
-                        pickedKey = 'monadic_nugget';
-                    } else if (dustRoll < 0.20) {
-                        pickedKey = 'monadic_dust';
-                    } else if (dustRoll < 0.60) {
-                        pickedKey = 'spectral_dust';
-                    } else {
-                        pickedKey = 'rubedo_dust';
-                    }
-                    const dustDef = DUST_TYPES[pickedKey];
-                    if (dustDef && this.props.inventoryManager) {
-                        this.props.inventoryManager.addItem({ ...dustDef });
-                        try {
-                            if (typeof this.props.onTriggerLootArc === 'function') {
-                                this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[dustDef.icon], name: dustDef.name });
-                            }
-                        } catch(e) {}
-                    }
-                }
-            } catch(e) { console.warn('dust loot drop failed', e); }
-
-            this._setTimeout(()=>{
-                // Snapshot levels before awarding XP so we can show before→after
-                const levelsBefore = {};
-                try {
-                    (this.props.crewManager.crew || []).forEach(c => {
-                        if (c && c.id) levelsBefore[c.id] = typeof c.level === 'number' ? c.level : 0;
                     });
-                } catch(e) {}
-                // Use latest liveCrew snapshot when awarding experience
-                try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch(e) { console.warn('addExperience failed', e); }
-                // ── Battle Tactics: decrement combatsRemaining after this victory ──
+                    if (spiderKillsCount > 0) {
+                        const spiderXp = spiderKillsCount * 10;
+                        experienceGained += spiderXp;
+                        console.log(`[Spider XP] Added ${spiderXp} XP for killing ${spiderKillsCount} spider(s) before contact.`);
+                    }
+                } catch (e) { console.warn('[Spider XP] calculation failed', e); }
+                // ── Battle Tactics: apply XP multiplier if an active tactic is in effect ──
                 try {
-                    const meta = getMeta() || {};
-                    const metaCrew = Array.isArray(meta.crew) ? meta.crew : (this.props.crewManager.crew || []);
-                    const soldierInMeta = metaCrew.find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
-                    if (soldierInMeta) {
-                        const tacticAction = (soldierInMeta.specialActions || []).find(
+                    const soldierMember = (this.props.crew || []).find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
+                    if (soldierMember) {
+                        const activeTactic = (soldierMember.specialActions || []).find(
                             a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
                         );
-                        if (tacticAction) {
-                            tacticAction.combatsRemaining = Math.max(0, (tacticAction.combatsRemaining || 1) - 1);
-                            if (tacticAction.combatsRemaining === 0) {
-                                // Tactic fully consumed — clear it
-                                soldierInMeta.specialActions = (soldierInMeta.specialActions || []).filter(a => a !== tacticAction);
-                                console.log(`[Battle Tactics] "${tacticAction.name}" fully consumed after this combat.`);
-                            } else {
-                                console.log(`[Battle Tactics] "${tacticAction.name}" — ${tacticAction.combatsRemaining} combat(s) remaining.`);
+                        if (activeTactic) {
+                            const tacticDef = BATTLE_TACTICS[activeTactic.tacticKey];
+                            if (tacticDef && tacticDef.xpMultiplier && tacticDef.xpMultiplier > 1) {
+                                const rawXp = experienceGained;
+                                experienceGained = Math.round(experienceGained * tacticDef.xpMultiplier);
+                                console.log(`[Battle Tactics] XP boosted by ${tacticDef.name}: ${rawXp} → ${experienceGained} (×${tacticDef.xpMultiplier})`);
                             }
-                            // Sync back to live crewManager
-                            const liveSoldier = (this.props.crewManager.crew || []).find(m => m && m.id === soldierInMeta.id);
-                            if (liveSoldier) {
-                                liveSoldier.specialActions = soldierInMeta.specialActions;
-                            }
-                            meta.crew = metaCrew;
-                            try { storeMeta(meta); } catch(e) {}
                         }
                     }
-                } catch(e) { console.warn('[Battle Tactics] combatsRemaining decrement failed', e); }
-                // Build level transitions map for display
-                const levelTransitions = {};
+                } catch (e) { console.warn('[Battle Tactics] XP multiplier failed', e); }
+                goldGained = Math.floor(Math.random() * experienceGained);
+                // Defensive: log inventory/gold state before adding to help trace duplicate updates
+                try { /* inventory snapshot suppressed */ } catch (e) { }
+                // Food reward: 20% chance 5-15, 10% chance 20-30, 5% chance 40-60
                 try {
-                    (this.props.crewManager.crew || []).forEach(c => {
-                        if (!c || !c.id) return;
-                        const before = levelsBefore[c.id];
-                        const after = typeof c.level === 'number' ? c.level : 0;
-                        if (typeof before === 'number' && after > before) {
-                            levelTransitions[c.id] = { from: before, to: after };
-                        }
-                    });
-                } catch(e) {}
-                let meta = getMeta();
-                meta.crew = this.props.crewManager.crew;
-                storeMeta(meta)
-                updateUserRequest();
-                this.setState({ levelTransitions });
-                this.forceUpdate();
-            },1000)
-
-            
-        } else {
-            battleResult = 'loss'
-            summaryMessage = 'Death has come for you and yours.'
-            // Implement group-death handling: track group deaths in meta.deathTracker.
-            // On non-final deaths: increment counter, restore crew HP to 1, respawn at dungeon spawn,
-            // and show the summary panel (do NOT navigate to the death scene).
-            // On the third full-group death: clear dungeon and crew, persist, then run the final death sequence.
-            try {
-                const meta = getMeta();
-                let deaths = meta.deathTracker || 0;
-                deaths = deaths + 1;
-                meta.deathTracker = deaths;
-                try { storeMeta(meta); } catch(e) {}
-                try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
-                    // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
-                    try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch(e) {}
-                // deaths count incremented
-                if (deaths >= 3) {
-                    // ── FINAL DEATH ──────────────────────────────────────────────────
-                    // Show "this is the end" summary for 3 seconds, then wipe the
-                    // player's dungeon profile and launch the death sequence.
-
-                    // Wipe dungeon profile immediately so it's clean before the
-                    // narrative plays (profile reset is invisible behind the summary).
+                    const foodRoll = Math.random();
+                    let foodRolled = 0;
+                    if (foodRoll < 0.05) {
+                        foodRolled = Math.floor(Math.random() * 21) + 40; // 40-60
+                    } else if (foodRoll < 0.15) {
+                        foodRolled = Math.floor(Math.random() * 11) + 20; // 20-30
+                    } else if (foodRoll < 0.35) {
+                        foodRolled = Math.floor(Math.random() * 11) + 5;  // 5-15
+                    }
+                    if (foodRolled > 0) {
+                        foodGained = foodRolled;
+                        const metaFood = getMeta() || {};
+                        metaFood.food = (typeof metaFood.food === 'number' ? metaFood.food : 55) + foodGained;
+                        try { storeMeta(metaFood); } catch (e) { }
+                        console.log(`[Combat] food reward: +${foodGained} (total: ${metaFood.food})`);
+                    }
+                } catch (e) { console.warn('food reward failed', e); }
+                // Ensure we only award gold once per battle
+                if (!this._goldAwarded) {
                     try {
-                        if (meta.dungeonId) {
-                            try { deleteDungeonRequest(meta.dungeonId).catch(()=>{}); } catch(e) {}
-                        }
-                    } catch (inner) {}
-                    try { this.props.boardManager.dungeon.id = null; } catch(e) {}
-                    try { this.props.inventoryManager.inventory = []; } catch(e) {}
-                    meta.dungeonId = null;
-                    meta.location = null;
-                    meta.inventory = { items: [], gold: 0, shimmering_dust: 0, totems: 0 };
-                    meta.crew = [];
-                    meta.deathTracker = 0;
-                    try { storeMeta(meta); } catch(e) {}
-                    try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
-                    try { this.props.crewManager.initializeCrew([]); } catch(e) {}
-
-                    // Show the final-death summary (no OK button) then auto-launch
-                    this._suppressPersistFinalHP = true;
-                    try {
-                        if (this._isMounted) this.setState({
-                            showSummaryPanel: true,
-                            suppressSummaryPortraits: false,
-                            isFinalDeath: true,
-                            summaryMessage: 'This is the end.',
-                            battleResult: 'loss',
-                        });
-                    } catch(e) {}
-
-                    this._setTimeout(() => {
-                        this._suppressPersistFinalHP = false;
-                        this.launchDeathSequence();
-                    }, 3000);
-
+                        this.props.inventoryManager.addCurrency({ type: 'gold', amount: goldGained })
+                        this._goldAwarded = true;
+                    } catch (err) {
+                        console.warn('gameOver: addCurrency failed', err);
+                    }
                 } else {
-                    // We will show the battle summary (without portraits), wait 3s, then launch
-                    // the death narrative and perform the respawn & restore so the narrative
-                    // plays before the crew are moved/cleared in the UI.
-                    try {
-                        // persist the incremented death tracker now
-                        try { storeMeta(meta); } catch(e) {}
-                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
-                    } catch (inner) {}
-
-                    // Suppress the later "persist final HP" block so it does not overwrite our planned restore
-                    this._suppressPersistFinalHP = true;
-
-                    // Set a state flag so the summary-panel rendering shows portraits
-                    try { if (this._isMounted) this.setState({ suppressSummaryPortraits: false }); } catch(e) {}
-
-                    // After a short delay, close summary, restore crew and respawn (do NOT navigate to death scene for non-final deaths)
-                    this._setTimeout(async () => {
-                        try { if (this._isMounted) this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch(e) {}
-
-                    this.props.battleOver('respawn');
-                          
-
-                        // allow later persistence block to run normally again
-                        this._suppressPersistFinalHP = false;
-                    }, 3000);
-                    // Show the summary panel now (it will be visible until the timeout closes it)
-                    try { if (this._isMounted) this.setState({ showSummaryPanel: true }); } catch(e) {}
+                    // gold already awarded, skipping
                 }
-            } catch (err) {
-                console.warn('group-death handler failed, falling back to death scene', err);
-                this.launchDeathSequence();
-            }
-        }
+                // ── Reagent loot drop: 15% chance per combat victory ─────────────
+                try {
+                    if (Math.random() < 0.15) {
+                        const pickedKey = REAGENT_KEYS[Math.floor(Math.random() * REAGENT_KEYS.length)];
+                        const reagentDef = REAGENTS[pickedKey];
+                        if (reagentDef && this.props.inventoryManager) {
+                            this.props.inventoryManager.addItem({ ...reagentDef });
+                            // Trigger the loot arc overlay if parent exposes it
+                            try {
+                                if (typeof this.props.onTriggerLootArc === 'function') {
+                                    this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[reagentDef.icon], name: reagentDef.name });
+                                }
+                            } catch (e) { }
+                        }
+                    }
+                } catch (e) { console.warn('reagent loot drop failed', e); }
 
-        // Persist final HP and dead state for crew once when combat ends
-        try {
-            // If a group-death flow is in-progress, skip persisting final HP (we'll restore later)
-            if (this._suppressPersistFinalHP) {
-                // do nothing
-            } else {
-                const meta = getMeta();
-                if (meta && Array.isArray(meta.crew)) {
-                    let modified = false;
-                    const battleEntries = this.state.battleData || {};
-                    Object.values(battleEntries).forEach(entry => {
-                        try {
-                            if (!entry) return;
-                            if (entry.isMonster || entry.isMinion) return;
-                            const idx = meta.crew.findIndex(c => c && c.id === entry.id);
-                            if (idx !== -1) {
-                                if (typeof entry.hp !== 'undefined' && meta.crew[idx].hp !== entry.hp) {
-                                    meta.crew[idx].hp = entry.hp;
-                                    modified = true;
+                // ── Brew ingredient loot drop: 15% chance per combat victory if Barbarian is in party ─────────────
+                try {
+                    const hasBarbarian = (this.props.crew || []).some(m => m && m.type === 'barbarian');
+                    if (hasBarbarian && Math.random() < 0.15) {
+                        const pickedKey = BREW_INGREDIENT_KEYS[Math.floor(Math.random() * BREW_INGREDIENT_KEYS.length)];
+                        const ingredientDef = BREW_INGREDIENTS[pickedKey];
+                        if (ingredientDef && this.props.inventoryManager) {
+                            this.props.inventoryManager.addItem({ ...ingredientDef });
+                            try {
+                                if (typeof this.props.onTriggerLootArc === 'function') {
+                                    this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[ingredientDef.icon], name: ingredientDef.name });
                                 }
-                                if (typeof entry.dead !== 'undefined' && meta.crew[idx].dead !== entry.dead) {
-                                    meta.crew[idx].dead = !!entry.dead;
-                                    modified = true;
+                            } catch (e) { }
+                        }
+                    }
+                } catch (e) { console.warn('brew ingredient loot drop failed', e); }
+
+                // ── Dust loot drop: 10% chance per combat victory ─────────────
+                try {
+                    if (Math.random() < 0.10) {
+                        const dustRoll = Math.random();
+                        let pickedKey = 'rubedo_dust';
+                        if (dustRoll < 0.05) {
+                            pickedKey = 'monadic_nugget';
+                        } else if (dustRoll < 0.20) {
+                            pickedKey = 'monadic_dust';
+                        } else if (dustRoll < 0.60) {
+                            pickedKey = 'spectral_dust';
+                        } else {
+                            pickedKey = 'rubedo_dust';
+                        }
+                        const dustDef = DUST_TYPES[pickedKey];
+                        if (dustDef && this.props.inventoryManager) {
+                            this.props.inventoryManager.addItem({ ...dustDef });
+                            try {
+                                if (typeof this.props.onTriggerLootArc === 'function') {
+                                    this.props.onTriggerLootArc({ type: 'reagent', id: pickedKey + Math.random(), icon: images[dustDef.icon], name: dustDef.name });
                                 }
+                            } catch (e) { }
+                        }
+                    }
+                } catch (e) { console.warn('dust loot drop failed', e); }
+
+                this._setTimeout(() => {
+                    // Snapshot levels before awarding XP so we can show before→after
+                    const levelsBefore = {};
+                    try {
+                        (this.props.crewManager.crew || []).forEach(c => {
+                            if (c && c.id) levelsBefore[c.id] = typeof c.level === 'number' ? c.level : 0;
+                        });
+                    } catch (e) { }
+                    // Use latest liveCrew snapshot when awarding experience
+                    try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch (e) { console.warn('addExperience failed', e); }
+                    // ── Battle Tactics: decrement combatsRemaining after this victory ──
+                    try {
+                        const meta = getMeta() || {};
+                        const metaCrew = Array.isArray(meta.crew) ? meta.crew : (this.props.crewManager.crew || []);
+                        const soldierInMeta = metaCrew.find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
+                        if (soldierInMeta) {
+                            const tacticAction = (soldierInMeta.specialActions || []).find(
+                                a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
+                            );
+                            if (tacticAction) {
+                                tacticAction.combatsRemaining = Math.max(0, (tacticAction.combatsRemaining || 1) - 1);
+                                if (tacticAction.combatsRemaining === 0) {
+                                    // Tactic fully consumed — clear it
+                                    soldierInMeta.specialActions = (soldierInMeta.specialActions || []).filter(a => a !== tacticAction);
+                                    console.log(`[Battle Tactics] "${tacticAction.name}" fully consumed after this combat.`);
+                                } else {
+                                    console.log(`[Battle Tactics] "${tacticAction.name}" — ${tacticAction.combatsRemaining} combat(s) remaining.`);
+                                }
+                                // Sync back to live crewManager
+                                const liveSoldier = (this.props.crewManager.crew || []).find(m => m && m.id === soldierInMeta.id);
+                                if (liveSoldier) {
+                                    liveSoldier.specialActions = soldierInMeta.specialActions;
+                                }
+                                meta.crew = metaCrew;
+                                try { storeMeta(meta); } catch (e) { }
                             }
-                            // notify parent so DungeonPage immediately reflects final HP/dead
-                            try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
-                        } catch (inner) {}
-                    });
-                    if (modified) {
-                        try { storeMeta(meta); } catch (e) {}
-                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
-                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                        }
+                    } catch (e) { console.warn('[Battle Tactics] combatsRemaining decrement failed', e); }
+                    // Build level transitions map for display
+                    const levelTransitions = {};
+                    try {
+                        (this.props.crewManager.crew || []).forEach(c => {
+                            if (!c || !c.id) return;
+                            const before = levelsBefore[c.id];
+                            const after = typeof c.level === 'number' ? c.level : 0;
+                            if (typeof before === 'number' && after > before) {
+                                levelTransitions[c.id] = { from: before, to: after };
+                            }
+                        });
+                    } catch (e) { }
+                    let meta = getMeta();
+                    meta.crew = this.props.crewManager.crew;
+                    storeMeta(meta)
+                    updateUserRequest();
+                    this.setState({ levelTransitions });
+                    this.forceUpdate();
+                }, 1000)
 
-                        // ── Battle Tactics: soldier death wipes stored tactics ──
+
+            } else {
+                battleResult = 'loss'
+                summaryMessage = 'Death has come for you and yours.'
+                // Implement group-death handling: track group deaths in meta.deathTracker.
+                // On non-final deaths: increment counter, restore crew HP to 1, respawn at dungeon spawn,
+                // and show the summary panel (do NOT navigate to the death scene).
+                // On the third full-group death: clear dungeon and crew, persist, then run the final death sequence.
+                try {
+                    const meta = getMeta();
+                    let deaths = meta.deathTracker || 0;
+                    deaths = deaths + 1;
+                    meta.deathTracker = deaths;
+                    try { storeMeta(meta); } catch (e) { }
+                    try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
+                    // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
+                    try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch (e) { }
+                    // deaths count incremented
+                    if (deaths >= 3) {
+                        // ── FINAL DEATH ──────────────────────────────────────────────────
+                        // Show "this is the end" summary for 3 seconds, then wipe the
+                        // player's dungeon profile and launch the death sequence.
+
+                        // Wipe dungeon profile immediately so it's clean before the
+                        // narrative plays (profile reset is invisible behind the summary).
                         try {
-                            meta.crew.forEach(member => {
-                                if (!member) return;
-                                const isSoldier = member.type === 'soldier' || member.image === 'soldier';
-                                if (isSoldier && member.dead) {
-                                    const hadTactics = (member.specialActions || []).some(a => a && a.type === 'tactics');
-                                    if (hadTactics) {
-                                        member.specialActions = (member.specialActions || []).filter(a => !a || a.type !== 'tactics');
-                                        // Sync to live crewManager
-                                        const liveSoldier = (this.props.crewManager?.crew || []).find(m => m && m.id === member.id);
-                                        if (liveSoldier) liveSoldier.specialActions = member.specialActions;
-                                        console.log('[Battle Tactics] Soldier died — tactics cleared.');
-                                        try { storeMeta(meta); } catch(e) {}
+                            if (meta.dungeonId) {
+                                try { deleteDungeonRequest(meta.dungeonId).catch(() => { }); } catch (e) { }
+                            }
+                        } catch (inner) { }
+                        try { this.props.boardManager.dungeon.id = null; } catch (e) { }
+                        try { this.props.inventoryManager.inventory = []; } catch (e) { }
+                        meta.dungeonId = null;
+                        meta.location = null;
+                        meta.inventory = { items: [], gold: 0, shimmering_dust: 0, totems: 0 };
+                        meta.crew = [];
+                        meta.deathTracker = 0;
+                        try { storeMeta(meta); } catch (e) { }
+                        try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
+                        try { this.props.crewManager.initializeCrew([]); } catch (e) { }
+
+                        // Show the final-death summary (no OK button) then auto-launch
+                        this._suppressPersistFinalHP = true;
+                        try {
+                            if (this._isMounted) this.setState({
+                                showSummaryPanel: true,
+                                suppressSummaryPortraits: false,
+                                isFinalDeath: true,
+                                summaryMessage: 'This is the end.',
+                                battleResult: 'loss',
+                            });
+                        } catch (e) { }
+
+                        this._setTimeout(() => {
+                            this._suppressPersistFinalHP = false;
+                            this.launchDeathSequence();
+                        }, 3000);
+
+                    } else {
+                        // We will show the battle summary (without portraits), wait 3s, then launch
+                        // the death narrative and perform the respawn & restore so the narrative
+                        // plays before the crew are moved/cleared in the UI.
+                        try {
+                            // persist the incremented death tracker now
+                            try { storeMeta(meta); } catch (e) { }
+                            try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
+                        } catch (inner) { }
+
+                        // Suppress the later "persist final HP" block so it does not overwrite our planned restore
+                        this._suppressPersistFinalHP = true;
+
+                        // Set a state flag so the summary-panel rendering shows portraits
+                        try { if (this._isMounted) this.setState({ suppressSummaryPortraits: false }); } catch (e) { }
+
+                        // After a short delay, close summary, restore crew and respawn (do NOT navigate to death scene for non-final deaths)
+                        this._setTimeout(async () => {
+                            try { if (this._isMounted) this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch (e) { }
+
+                            this.props.battleOver('respawn');
+
+
+                            // allow later persistence block to run normally again
+                            this._suppressPersistFinalHP = false;
+                        }, 3000);
+                        // Show the summary panel now (it will be visible until the timeout closes it)
+                        try { if (this._isMounted) this.setState({ showSummaryPanel: true }); } catch (e) { }
+                    }
+                } catch (err) {
+                    console.warn('group-death handler failed, falling back to death scene', err);
+                    this.launchDeathSequence();
+                }
+            }
+
+            // Persist final HP and dead state for crew once when combat ends
+            try {
+                // If a group-death flow is in-progress, skip persisting final HP (we'll restore later)
+                if (this._suppressPersistFinalHP) {
+                    // do nothing
+                } else {
+                    const meta = getMeta();
+                    if (meta && Array.isArray(meta.crew)) {
+                        let modified = false;
+                        const battleEntries = this.state.battleData || {};
+                        Object.values(battleEntries).forEach(entry => {
+                            try {
+                                if (!entry) return;
+                                if (entry.isMonster || entry.isMinion) return;
+                                const idx = meta.crew.findIndex(c => c && c.id === entry.id);
+                                if (idx !== -1) {
+                                    if (typeof entry.hp !== 'undefined' && meta.crew[idx].hp !== entry.hp) {
+                                        meta.crew[idx].hp = entry.hp;
+                                        modified = true;
+                                    }
+                                    if (typeof entry.dead !== 'undefined' && meta.crew[idx].dead !== entry.dead) {
+                                        meta.crew[idx].dead = !!entry.dead;
+                                        modified = true;
                                     }
                                 }
-                            });
-                        } catch(e) { console.warn('[Battle Tactics] soldier-death clear failed', e); }
+                                // notify parent so DungeonPage immediately reflects final HP/dead
+                                try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch (e) { }
+                            } catch (inner) { }
+                        });
+                        if (modified) {
+                            try { storeMeta(meta); } catch (e) { }
+                            try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
+                            try { if (this.props.saveUserData) this.props.saveUserData(); } catch (e) { }
+
+                            // ── Battle Tactics: soldier death wipes stored tactics ──
+                            try {
+                                meta.crew.forEach(member => {
+                                    if (!member) return;
+                                    const isSoldier = member.type === 'soldier' || member.image === 'soldier';
+                                    if (isSoldier && member.dead) {
+                                        const hadTactics = (member.specialActions || []).some(a => a && a.type === 'tactics');
+                                        if (hadTactics) {
+                                            member.specialActions = (member.specialActions || []).filter(a => !a || a.type !== 'tactics');
+                                            // Sync to live crewManager
+                                            const liveSoldier = (this.props.crewManager?.crew || []).find(m => m && m.id === member.id);
+                                            if (liveSoldier) liveSoldier.specialActions = member.specialActions;
+                                            console.log('[Battle Tactics] Soldier died — tactics cleared.');
+                                            try { storeMeta(meta); } catch (e) { }
+                                        }
+                                    }
+                                });
+                            } catch (e) { console.warn('[Battle Tactics] soldier-death clear failed', e); }
+                        }
                     }
                 }
+            } catch (err) {
+                console.warn('Failed to persist final battle HP to meta', err);
             }
-        } catch (err) {
-            console.warn('Failed to persist final battle HP to meta', err);
-        }
 
 
-        // Ensure suppressSummaryPortraits is only true for the special group-death flow
-        // (that flow sets this._suppressPersistFinalHP and this.state.suppressSummaryPortraits
-        //  earlier). For all other outcomes make sure portraits are shown.
-        // Add debug logging to help trace missing portraits and repeated gold updates.
-        try {
-            // debug: _suppressPersistFinalHP state
-            // Print brief portrait info from battleData for inspection
+            // Ensure suppressSummaryPortraits is only true for the special group-death flow
+            // (that flow sets this._suppressPersistFinalHP and this.state.suppressSummaryPortraits
+            //  earlier). For all other outcomes make sure portraits are shown.
+            // Add debug logging to help trace missing portraits and repeated gold updates.
             try {
-                // portrait snapshot suppressed
-                void Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
-            } catch (inner) { console.warn('gameOver: failed to snapshot battleData portraits', inner); }
-        } catch (e) {}
+                // debug: _suppressPersistFinalHP state
+                // Print brief portrait info from battleData for inspection
+                try {
+                    // portrait snapshot suppressed
+                    void Object.values(this.state.battleData || {}).map(b => ({ id: b && b.id, portrait: b && b.portrait }));
+                } catch (inner) { console.warn('gameOver: failed to snapshot battleData portraits', inner); }
+            } catch (e) { }
 
-        this.setState({
-            showSummaryPanel: true,
-            goldGained,
-            foodGained,
-            experienceGained,
-            itemsGained,
-            stolenItems: this._stolenItems && this._stolenItems.length ? [...this._stolenItems] : [],
-            summaryMessage,
-            battleResult,
-            suppressSummaryPortraits: false,
-            isFinalDeath: false,
-            battleData: latestBattleData,
-        })
+            this.setState({
+                showSummaryPanel: true,
+                goldGained,
+                foodGained,
+                experienceGained,
+                itemsGained,
+                stolenItems: this._stolenItems && this._stolenItems.length ? [...this._stolenItems] : [],
+                summaryMessage,
+                battleResult,
+                suppressSummaryPortraits: false,
+                isFinalDeath: false,
+                battleData: latestBattleData,
+            })
         }, 1500);
     }
     launchDeathSequence = () => {
-            this.props.setNarrativeSequence('death')
-            this.setState({
-                navToDeathScene: true
-            })
+        this.props.setNarrativeSequence('death')
+        this.setState({
+            navToDeathScene: true
+        })
     }
     establishAnimationCallback = () => {
         this.props.animationManager.establishAnimationCallback(this.renderAnimation)
@@ -1500,13 +1477,13 @@ class MonsterBattle extends React.Component {
     // }
 
     handleFighterDeath = (id) => {
-        if(id === 'all enemies dead'){
+        if (id === 'all enemies dead') {
             this.setState({
                 selectedFighter: null
             })
             return
         }
-        if(id === 'all fighters dead'){
+        if (id === 'all fighters dead') {
             this.setState({
                 selectedFighter: null
             })
@@ -1527,22 +1504,22 @@ class MonsterBattle extends React.Component {
                     if (idx !== -1) {
                         meta.crew[idx].hp = 0;
                         meta.crew[idx].dead = true;
-                        try { storeMeta(meta); } catch (e) {}
-                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e) {}
-                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                        try { storeMeta(meta); } catch (e) { }
+                        try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
+                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch (e) { }
                     }
                 }
             } catch (inner) {
                 console.warn('handleFighterDeath: failed to persist meta', inner);
             }
             // notify parent immediately so UI updates
-            try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch(e) {}
+            try { if (this.props && typeof this.props.onFighterUpdate === 'function') this.props.onFighterUpdate(entry); } catch (e) { }
         } catch (err) {
             console.warn('handleFighterDeath persistence failed', err);
         }
-        if(this.state.selectedFighter && this.state.selectedFighter.id === id){
+        if (this.state.selectedFighter && this.state.selectedFighter.id === id) {
             const liveFighters = this.props.combatManager.getLiveFighters();
-            if(liveFighters.length){
+            if (liveFighters.length) {
                 this.fighterPortraitClicked(liveFighters[0].id)
             } else {
                 this.setState({
@@ -1555,12 +1532,12 @@ class MonsterBattle extends React.Component {
 
     getDistanceToTarget = (id) => {
         let source = this.state.battleData[id];
-        if(!source) return 0;
+        if (!source) return 0;
         let targetId = this.state.battleData[id].targetId,
-        target = this.state.battleData[targetId],
-        returnVal = 50;
-        if(!target) return 0;
-        if(target.isMonster){
+            target = this.state.battleData[targetId],
+            returnVal = 50;
+        if (!target) return 0;
+        if (target.isMonster) {
             //nothin 
         }
         return returnVal;
@@ -1611,8 +1588,8 @@ class MonsterBattle extends React.Component {
 
         this.setState({
             showCrosshair: true,
-            selectedAttack: (this.props.combatManager && this.props.combatManager.attacksMatrix) 
-                ? (this.props.combatManager.attacksMatrix[formatted_val] || this.props.combatManager.attacksMatrix[val.name] || val) 
+            selectedAttack: (this.props.combatManager && this.props.combatManager.attacksMatrix)
+                ? (this.props.combatManager.attacksMatrix[formatted_val] || this.props.combatManager.attacksMatrix[val.name] || val)
                 : val
         })
     }
@@ -1628,12 +1605,12 @@ class MonsterBattle extends React.Component {
     }
     combatInventoryTileClicked = (val) => {
         this.props.combatManager.itemUsed(val, this.state.selectedFighter)
-    // simulation flag inspected
+        // simulation flag inspected
         // if(!this.props.isSimulation) this.props.useConsumableFromInventory(val);
         this.props.useConsumableFromInventory(val);
     }
     specialTileClicked = (val) => {
-    // special tile clicked
+        // special tile clicked
         const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
         if (selectedUnit?.isMonster || selectedUnit?.isMinion) {
             console.log('[SpecialClickDiag][MonsterBattle] specialTileClicked ignored: monster/minion selected.');
@@ -1644,15 +1621,15 @@ class MonsterBattle extends React.Component {
             selectedFighterId: this.state.selectedFighter?.id,
             selectedFighterType: this.state.selectedFighter?.type,
         });
-        if(val !== null && typeof val === 'string'){
+        if (val !== null && typeof val === 'string') {
             val = val.replaceAll('_', ' ')
         }
         try {
             if (this.state.selectedFighter && this.props.combatManager && typeof this.props.combatManager.setSelectedFighter === 'function') {
                 this.props.combatManager.setSelectedFighter(this.state.selectedFighter);
             }
-        } catch (err) {}
-    // special tile value
+        } catch (err) { }
+        // special tile value
         this.fireSpecial(val)
 
         // if(val === 'glyph'){
@@ -1663,29 +1640,29 @@ class MonsterBattle extends React.Component {
         // }
     }
     manualFire = () => {
-        if(!this.state.selectedFighter) return
-    // manual fire invoked
+        if (!this.state.selectedFighter) return
+        // manual fire invoked
 
         let selectedFighter = this.state.selectedFighter;
         let specials = selectedFighter?.specials,
-        consumableSpecials = selectedFighter?.specialActions,
-        selectedSpecial = specials.find(a=> a.selected),
-        selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
+            consumableSpecials = selectedFighter?.specialActions,
+            selectedSpecial = specials.find(a => a.selected),
+            selectedConsumableSpecial = consumableSpecials.find(a => a.selected);
 
-        if(selectedSpecial){
+        if (selectedSpecial) {
             const requiredEnergy = Number(selectedSpecial.energy_cost) || 0;
-            if((this.state.selectedFighter.energy || 0) < requiredEnergy){
+            if ((this.state.selectedFighter.energy || 0) < requiredEnergy) {
                 // not enough energy
                 return
             }
             // (Teleport effect will now be triggered only on actual teleport, not on special selection)
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)
-            specials.forEach(e=>e.selected=false)
-        } else if (selectedConsumableSpecial){
-            if(selectedConsumableSpecial.type === 'spell'){
+            specials.forEach(e => e.selected = false)
+        } else if (selectedConsumableSpecial) {
+            if (selectedConsumableSpecial.type === 'spell') {
                 this.fireSpell(selectedConsumableSpecial)
             }
-            consumableSpecials.forEach(a=>a.selected=false)
+            consumableSpecials.forEach(a => a.selected = false)
         } else {
             // manual attack: ensure the authoritative combatant has an activeAbility selected
             try {
@@ -1735,11 +1712,11 @@ class MonsterBattle extends React.Component {
         }
     }
     fireSpecial = (special) => {
-        if(!this.state.selectedFighter) {
+        if (!this.state.selectedFighter) {
             console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: no selected fighter', { special });
             return
         }
-    // firing special
+        // firing special
         // debugger
 
         let selectedFighter = this.state.selectedFighter;
@@ -1748,9 +1725,9 @@ class MonsterBattle extends React.Component {
             : null;
         const fighterRef = cmFighter || selectedFighter;
         let specials = fighterRef?.specials || [],
-        consumableSpecials = fighterRef?.specialActions || [],
-        selectedSpecial = specials.find(a=> a.selected),
-        selectedConsumableSpecial = consumableSpecials.find(a=> a.selected);
+            consumableSpecials = fighterRef?.specialActions || [],
+            selectedSpecial = specials.find(a => a.selected),
+            selectedConsumableSpecial = consumableSpecials.find(a => a.selected);
 
         if (special) {
             if (typeof special === 'object' && special.type === 'glyph') {
@@ -1782,7 +1759,7 @@ class MonsterBattle extends React.Component {
                 });
                 return;
             }
-                        const hasCooldown = fighterRef?.cooldowns?.[clickedSpecial.id] > 0 || fighterRef?.cooldowns?.[clickedSpecial.id?.replace('barbarian_leap_attack', 'leap_attack')?.replace('barbarian_berserker', 'berserker')] > 0;
+            const hasCooldown = fighterRef?.cooldowns?.[clickedSpecial.id] > 0 || fighterRef?.cooldowns?.[clickedSpecial.id?.replace('barbarian_leap_attack', 'leap_attack')?.replace('barbarian_berserker', 'berserker')] > 0;
             if (hasCooldown) {
                 console.log('[SpecialClickDiag][MonsterBattle] fireSpecial aborted: cooldown not ready', {
                     clickedSpecial: clickedSpecial.name,
@@ -1820,26 +1797,26 @@ class MonsterBattle extends React.Component {
                 targetId: fighterRef?.targetId,
             });
             this.props.combatManager.fighterSpecialAttack(clickedSpecial)
-            specials.forEach(e=>e.selected=false)
-            consumableSpecials.forEach(a=>a.selected=false)
+            specials.forEach(e => e.selected = false)
+            consumableSpecials.forEach(a => a.selected = false)
             return;
         }
 
-        if(selectedSpecial){
+        if (selectedSpecial) {
             this.props.combatManager.fighterSpecialAttack(selectedSpecial)
-            specials.forEach(e=>e.selected=false)
-        } else if (selectedConsumableSpecial){
-            if(selectedConsumableSpecial.type === 'spell'){
+            specials.forEach(e => e.selected = false)
+        } else if (selectedConsumableSpecial) {
+            if (selectedConsumableSpecial.type === 'spell') {
                 this.fireSpell(selectedConsumableSpecial)
             }
-            consumableSpecials.forEach(a=>a.selected=false)
+            consumableSpecials.forEach(a => a.selected = false)
         } else {
             this.props.combatManager.fighterManualAttack()
         }
     }
     // Accept optional fighter argument for AI path
     fireGlyph = (glyph, fighterOverride = null) => {
-    // glyph firing
+        // glyph firing
         // Use override if provided (AI), else fall back to selectedFighter (manual)
         const selectedFighter = fighterOverride || this.state.selectedFighter;
 
@@ -1877,7 +1854,7 @@ class MonsterBattle extends React.Component {
                         `${attackerName} unleashes ${glyph.name || 'Glyph'} (${spellNames}) at ${targetName}!`
                     );
                 }
-            } catch (e) {}
+            } catch (e) { }
 
             glyph.spells.forEach((spellKey, index) => {
                 setTimeout(() => {
@@ -1889,14 +1866,14 @@ class MonsterBattle extends React.Component {
                         const specialsMatrix = this.props.combatManager?.specialsMatrix || {};
                         const spellDef = specialsMatrix[spellKey] || { id: spellKey, name: spellKey, type: 'damage', selected: true };
                         const spellWithSelected = { ...spellDef, selected: true };
-                        
+
                         // Bypass action restrictions for barrage spells
                         const cmFighter = this.props.combatManager.getCombatant(selectedFighter.id);
                         const prevActions = cmFighter ? cmFighter.actionsTakenThisRound : 0;
                         if (cmFighter) cmFighter.actionsTakenThisRound = 0;
-                        
+
                         this.props.combatManager.fighterSpecialAttack(spellWithSelected);
-                        
+
                         // Restore so we don't grant free standard actions
                         if (cmFighter) cmFighter.actionsTakenThisRound = prevActions;
                         const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
@@ -1912,15 +1889,15 @@ class MonsterBattle extends React.Component {
         }
 
         // ── Legacy: magic missile (backward compat for old persisted specialActions) ──────
-        switch(glyph.subtype){
+        switch (glyph.subtype) {
             case 'magic missile': {
                 let specials = selectedFighter?.specials;
                 let consumableSpecials = selectedFighter?.specialActions;
-                if (consumableSpecials) consumableSpecials.forEach(a=>a.selected = false)
-                if (specials) specials.forEach(a=>a.selected = false)
+                if (consumableSpecials) consumableSpecials.forEach(a => a.selected = false)
+                if (specials) specials.forEach(a => a.selected = false)
 
                 let target = this.props.combatManager.getCombatant(selectedFighter.targetId)
-                if(!target) return
+                if (!target) return
                 try {
                     if (this.props.combatManager && typeof this.props.combatManager.appendCombatLog === 'function') {
                         const attackerName = (typeof this.props.combatManager.getCombatantLogName === 'function')
@@ -1931,7 +1908,7 @@ class MonsterBattle extends React.Component {
                             : (target.name || target.type || 'target');
                         this.props.combatManager.appendCombatLog(`${attackerName} casts magic missile at ${targetName}`);
                     }
-                } catch (e) {}
+                } catch (e) { }
                 const travelTime = 1500
                 this.props.combatManager.fighterAI.roster['wizard'].triggerMagicMissile(selectedFighter, target, travelTime)
                 const combatLog = this.props.combatManager && typeof this.props.combatManager.getCombatLog === 'function'
@@ -1939,9 +1916,9 @@ class MonsterBattle extends React.Component {
                     : [];
                 this.setState({ combatLog });
             }
-            break;
+                break;
             default:
-                // unknown glyph subtype
+            // unknown glyph subtype
         }
     }
     specialTileHovered = (val) => {
@@ -1949,11 +1926,11 @@ class MonsterBattle extends React.Component {
             hoveredSpecialTile: val ? val.name : null
         })
     }
-    
+
     // Minimal handler for spell hover to avoid missing-method runtime errors.
     // Logs a small message and updates hoveredSpellTile for the tooltip.
     spellTileHovered = (val) => {
-    // spell hovered
+        // spell hovered
         this.setState({ hoveredSpellTile: val ? (val.subtype || val.name) : null });
     }
     glyphTileHovered = (val) => {
@@ -1962,19 +1939,19 @@ class MonsterBattle extends React.Component {
         })
     }
     portraitHovered = (id) => {
-        this.setState({portraitHoveredId: id})
+        this.setState({ portraitHoveredId: id })
     }
     getManualMovementArc = (fighter) => {
-        if(!fighter) return 0
+        if (!fighter) return 0
         // console.log('fighter: ', fighter);
         // console.log('manual moves for ', fighter.name, 'is ', fighter.manualMovesCurrent / fighter.manualMovesTotal * 3.6);
         const percentage = (fighter.manualMovesCurrent / fighter.manualMovesTotal) * 100;
         const arc = percentage * 3.6
-        return  arc
+        return arc
     }
     getManualMovementArcColor = (fighter) => {
-        if(!fighter) return 'black'
-        if(fighter.manualMovesCurrent<1) return '#818d6e'
+        if (!fighter) return 'black'
+        if (fighter.manualMovesCurrent < 1) return '#818d6e'
         return 'greenyellow'
     }
     monsterCombatPortraitClicked = (id) => {
@@ -1982,10 +1959,10 @@ class MonsterBattle extends React.Component {
         // console.log('images[this.state.battleData[e]?.portrait]', this.state.battleData[id].targettedBy);
         // let targettedBy = this.state.battleData[id].targettedBy;
         // console.log('should be Sadronis: ', this.state.battleData[targettedBy]);\
-        
+
         const selectedMonster = this.state.battleData[id];
-    // monster selected
-        if(this.state.showCrosshair){
+        // monster selected
+        if (this.state.showCrosshair) {
             this.props.combatManager.queueAction(this.state.selectedFighter.id, id, this.state.selectedAttack)
             this.setState({
                 showCrosshair: false
@@ -1998,12 +1975,12 @@ class MonsterBattle extends React.Component {
             })
         }
         // selectedMonster.portrait = this.props.crew.find(e=>e.id === id).portrait
-        
-        
+
+
     }
     targetTileClicked = (tile) => {
         this.props.combatManager.setTargetFromClick(this.state.selectedFighter.id, tile.id)
-        if(this.state.showCrosshair){
+        if (this.state.showCrosshair) {
             this.props.combatManager.queueAction(this.state.selectedFighter.id, tile.id, this.state.selectedAttack)
         }
         this.setState({
@@ -2018,28 +1995,28 @@ class MonsterBattle extends React.Component {
         })
     }
     queueTileHovered = (tile) => {
-        if(tile === null){
+        if (tile === null) {
             this.setState({
                 draggedOverCombatTileId: null
             })
             return
         }
-        switch(tile.instruction.type){
+        switch (tile.instruction.type) {
             case 'move':
-                let correspondingTile = this.state.combatTiles.find(e=> e.x === tile.instruction.destinationCoordinates.x && e.y === tile.instruction.destinationCoordinates.y)
+                let correspondingTile = this.state.combatTiles.find(e => e.x === tile.instruction.destinationCoordinates.x && e.y === tile.instruction.destinationCoordinates.y)
                 this.setState({
                     draggedOverCombatTileId: correspondingTile.id
                 })
-            break;
+                break;
             default:
-            break;
+                break;
         }
         // this.setState({
         //     draggedOverCombatTileId: tileIndex
         // })
     }
     onFighterMovedToDestination = (coordinates) => {
-        const tile = this.state.combatTiles.find(t=> t.x === coordinates.x && t.y === coordinates.y)
+        const tile = this.state.combatTiles.find(t => t.x === coordinates.x && t.y === coordinates.y)
         let arr = this.state.ghostPortraitMatrix;
         arr[tile.id] = null;
         this.setState({
@@ -2054,7 +2031,7 @@ class MonsterBattle extends React.Component {
     }
     onDragOver = (event, tileIndex) => {
         event.preventDefault();
-        if(tileIndex === this.state.draggedOverCombatTileId) return
+        if (tileIndex === this.state.draggedOverCombatTileId) return
         this.setState({
             draggedOverCombatTileId: tileIndex
         })
@@ -2062,7 +2039,7 @@ class MonsterBattle extends React.Component {
     onDrop = (tileIndex) => {
         const selectedFighter = this.state.battleData[this.state.draggingFighter.id];
         const tile = this.state.combatTiles[tileIndex]
-        this.props.combatManager.setFighterDestination(selectedFighter.id, {x: tile.x, y: tile.y});
+        this.props.combatManager.setFighterDestination(selectedFighter.id, { x: tile.x, y: tile.y });
         let arr = this.state.ghostPortraitMatrix;
         arr[tileIndex] = selectedFighter.portrait;
         this.setState({
@@ -2070,24 +2047,24 @@ class MonsterBattle extends React.Component {
             draggingFighter: null,
             ghostPortraitMatrix: arr
         })
-        
+
     }
     getMonsterWeaponAnimation = (monster) => {
-        if(!monster.attacking || !monster.activeAbility) return ''
-        switch(monster.activeAbility.name){
+        if (!monster.attacking || !monster.activeAbility) return ''
+        switch (monster.activeAbility.name) {
             case 'magic missile':
                 // return 'spinning'
                 return 'spin-left'
             case 'void lance':
                 return 'swinging-left'
             default:
-            break;
+                break;
         }
-        if(monster.activeAbility.name === 'magic missile'){
+        if (monster.activeAbility.name === 'magic missile') {
             // unexpected path reached
             debugger
         }
-        switch(monster.activeAbility.range){
+        switch (monster.activeAbility.range) {
             case 'close':
                 return 'swinging-left'
             case 'medium':
@@ -2095,18 +2072,18 @@ class MonsterBattle extends React.Component {
             case 'far':
                 return 'shooting';
             default:
-            break;
+                break;
         }
     }
 
     draw = (ctx, frameCount) => {
         const that = this,
-            size = 20 + Math.sin(frameCount * 0.04)**2 * 5;
+            size = 20 + Math.sin(frameCount * 0.04) ** 2 * 5;
         ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height)
         ctx.drawImage(that.state.arrowUpImage, 5, 5, size, size);
     }
 
-    render(){
+    render() {
         const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
         const liveSelectedFighter = selectedUnit
             ? (this.state.battleData[selectedUnit.id] || selectedUnit)
@@ -2126,20 +2103,20 @@ class MonsterBattle extends React.Component {
             ? Math.max(0, Math.min(100, ((Date.now() - cooldownStarted) / cooldownMs) * 100))
             : 100;
         const cooldownRemainingAngle = `${Math.max(0, Math.min(360, (1 - (cooldownElapsedPct / 100)) * 360))}deg`;
-                   
+
         return (
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 {/* Monster name in upper left */}
-                <div style={{position: 'absolute', top: -35, left: 20, color: 'white', fontSize: '18px', zIndex: 1000}}>
+                <div style={{ position: 'absolute', top: -35, left: 20, color: 'white', fontSize: '18px', zIndex: 1000 }}>
                     {this.props.monster && this.props.monster.name ? `Fighting: ${this.props.monster.name}` : 'Fighting: Unknown'}
                 </div>
                 {/* Game speed / Round clock readout in upper right */}
-                <div style={{position: 'absolute', top: -45, right: 20, display: 'flex', alignItems: 'center', gap: '15px', color: 'white', fontSize: '14px', zIndex: 1000}}>
+                <div style={{ position: 'absolute', top: -45, right: 20, display: 'flex', alignItems: 'center', gap: '15px', color: 'white', fontSize: '14px', zIndex: 1000 }}>
                     {this.props.combatManager && this.props.combatManager.round !== undefined ? (
                         <>
                             {/* Fast/Slow selector */}
                             <div style={{ display: 'flex', gap: '5px' }}>
-                                <button 
+                                <button
                                     onClick={() => this.setGameSpeed(INTERVALS[0])}
                                     style={{
                                         backgroundColor: this.props.combatManager.gameSpeed === 'slowest' ? '#ffffff' : 'rgba(255,255,255,0.1)',
@@ -2155,7 +2132,7 @@ class MonsterBattle extends React.Component {
                                 >
                                     Slowest
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => this.setGameSpeed(INTERVALS[1])}
                                     style={{
                                         backgroundColor: this.props.combatManager.gameSpeed === 'slow' ? '#ffffff' : 'rgba(255,255,255,0.1)',
@@ -2171,7 +2148,7 @@ class MonsterBattle extends React.Component {
                                 >
                                     Slow
                                 </button>
-                                <button 
+                                <button
                                     onClick={() => this.setGameSpeed(INTERVALS[2])}
                                     style={{
                                         backgroundColor: this.props.combatManager.gameSpeed === 'fast' ? '#ffffff' : 'rgba(255,255,255,0.1)',
@@ -2188,9 +2165,9 @@ class MonsterBattle extends React.Component {
                                     Fast
                                 </button>
                             </div>
-                            
+
                             {/* Round Clock Widget */}
-                            <div 
+                            <div
                                 style={{
                                     position: 'relative',
                                     width: '40px',
@@ -2203,7 +2180,7 @@ class MonsterBattle extends React.Component {
                                     boxShadow: '0 0 8px rgba(0,0,0,0.5)',
                                 }}
                             >
-                                <div 
+                                <div
                                     style={{
                                         width: '32px',
                                         height: '32px',
@@ -2295,7 +2272,7 @@ class MonsterBattle extends React.Component {
                     })()}
 
                 </div>
-                { this.state.navToDeathScene && <Redirect to='/death'/>}
+                {this.state.navToDeathScene && <Redirect to='/death' />}
                 <div className="combat-grid-container"
                     style={{
                         position: 'relative',
@@ -2407,7 +2384,7 @@ class MonsterBattle extends React.Component {
                                                     const cmMember = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew.find(c => c && (c.id === crewMember.id || c.name === crewMember.name)) : null;
                                                     const percent = this.props.crewManager.calculateExpPercentage(crewMember);
                                                     const shouldShowArrow = (cmMember && cmMember.justLeveled) || percent >= 100;
-                                                    
+
                                                     let gainsAgg = null;
                                                     try {
                                                         if (cmMember && Array.isArray(cmMember._recentLevelGains) && cmMember._recentLevelGains.length) {
@@ -2425,7 +2402,7 @@ class MonsterBattle extends React.Component {
                                                             <div className="crew-portrait-box">
                                                                 <div className="crew-portrait-img" style={{ backgroundImage: `url(${portraitUrl})` }} />
                                                                 {shouldShowArrow && (
-                                                                    <Canvas 
+                                                                    <Canvas
                                                                         className="level-up-canvas"
                                                                         width={80}
                                                                         height={80}
@@ -2444,7 +2421,7 @@ class MonsterBattle extends React.Component {
                                                                         <span className="crew-level-badge">Lvl {crewMember.stats?.level || 1}</span>
                                                                     )}
                                                                 </div>
-                                                                
+
                                                                 {/* XP Bar */}
                                                                 <div className="crew-xp-container">
                                                                     <div className="crew-xp-bg">
@@ -2511,8 +2488,8 @@ class MonsterBattle extends React.Component {
                                     const portraitUrl = images[member.portrait] || member.portrait;
                                     return (
                                         <div className='crew-panel' key={member.id || idx}>
-                                            <div className='crew-portrait' style={{backgroundImage: `url(${portraitUrl})`}}></div>
-                                            <div className='crew-body' style={{backgroundImage: `url(${images.body_male})`}}></div>
+                                            <div className='crew-portrait' style={{ backgroundImage: `url(${portraitUrl})` }}></div>
+                                            <div className='crew-body' style={{ backgroundImage: `url(${images.body_male})` }}></div>
                                         </div>
                                     )
                                 })}
@@ -2522,7 +2499,7 @@ class MonsterBattle extends React.Component {
 
                     {(() => {
                         if (!this.state.message) return null;
-                        
+
                         // Find the main monster (isMonster = true, not a minion)
                         const mainMonster = this.state.battleData && Object.values(this.state.battleData).find(c => c && c.isMonster && !c.isMinion);
                         if (mainMonster && mainMonster.coordinates) {
@@ -2531,18 +2508,18 @@ class MonsterBattle extends React.Component {
                             // Anchor coordinates:
                             const mx = mainMonster.coordinates.x;
                             const my = mainMonster.coordinates.y;
-                            
+
                             const isHuge = mainMonster.type === 'dragon' || mainMonster.key === 'dragon' || mainMonster.size === 3 || mainMonster.huge === true;
-                            
+
                             let bubbleCenterX = 0;
                             let bubbleCenterY = 0;
-                            
+
                             if (isHuge) {
                                 // 3x3 footprint: top row is my - 2, middle column is mx + hDir
                                 const hDir = (mx >= 4) ? -1 : 1;
                                 const middleCol = mx + hDir;
                                 const topRow = my - 2;
-                                
+
                                 bubbleCenterX = middleCol * TILE_SIZE + TILE_SIZE / 2;
                                 bubbleCenterY = topRow * TILE_SIZE;
                             } else {
@@ -2550,13 +2527,13 @@ class MonsterBattle extends React.Component {
                                 const hOffset = (mx >= 4) ? -TILE_SIZE : 0;
                                 const leftPos = mx * TILE_SIZE + hOffset;
                                 const topPos = my * TILE_SIZE - TILE_SIZE; // Top row of the 2x2
-                                
+
                                 bubbleCenterX = leftPos + TILE_SIZE;
                                 bubbleCenterY = topPos; // Directly above the top row
                             }
-                            
+
                             return (
-                                <div 
+                                <div
                                     className="message-container speech-bubble"
                                     style={{
                                         position: 'absolute',
@@ -2612,7 +2589,7 @@ class MonsterBattle extends React.Component {
                                 </div>
                             );
                         }
-                        
+
                         // Fallback default message styling if no monster is active
                         return (
                             <div className="message-container">
@@ -2638,8 +2615,8 @@ class MonsterBattle extends React.Component {
                                 <div
                                     key={i}
                                     className="combat-tile"
-                                    onDragOver={(event)=>this.onDragOver(event, i)}
-                                    onDrop={()=>{this.onDrop(i)}}
+                                    onDragOver={(event) => this.onDragOver(event, i)}
+                                    onDrop={() => { this.onDrop(i) }}
                                     style={{
                                         border: isSelectedFighter
                                             ? '1px dashed rgba(255, 183, 3, 0.25)'
@@ -2665,107 +2642,107 @@ class MonsterBattle extends React.Component {
                                         {t.x},{t.y}
                                     </div>
                                     {this.state.ghostPortraitMatrix[i] && <div className="ghost-portrait"
-                                    style={{
-                                        backgroundImage: "url(" + this.state.ghostPortraitMatrix[i] + ")"
-                                    }}>
+                                        style={{
+                                            backgroundImage: "url(" + this.state.ghostPortraitMatrix[i] + ")"
+                                        }}>
                                     </div>}
                                 </div>
                             );
                         })}
-                    
 
-                    {/* /// SHIELD WALL OVERLAYS */}
-                    {(() => {
-                        const reduxWalls = [];
-                        if (this.state.battleData) {
-                            Object.values(this.state.battleData).forEach(c => {
-                                if (c && !c.dead && c.shieldWallActive) {
-                                    const wallX = (c.facing !== 'left') ? c.coordinates.x + 1 : c.coordinates.x - 1;
-                                    const centerY = c.coordinates.y;
-                                    const lanesAffected = [];
-                                    for (let dy = -2; dy <= 2; dy++) {
-                                        const lane = centerY + dy;
-                                        if (lane >= 0 && lane < 5) {
-                                            lanesAffected.push(lane);
+
+                        {/* /// SHIELD WALL OVERLAYS */}
+                        {(() => {
+                            const reduxWalls = [];
+                            if (this.state.battleData) {
+                                Object.values(this.state.battleData).forEach(c => {
+                                    if (c && !c.dead && c.shieldWallActive) {
+                                        const wallX = (c.facing !== 'left') ? c.coordinates.x + 1 : c.coordinates.x - 1;
+                                        const centerY = c.coordinates.y;
+                                        const lanesAffected = [];
+                                        for (let dy = -2; dy <= 2; dy++) {
+                                            const lane = centerY + dy;
+                                            if (lane >= 0 && lane < 5) {
+                                                lanesAffected.push(lane);
+                                            }
                                         }
+                                        reduxWalls.push({
+                                            id: `wall_${c.id}_redux`,
+                                            x: wallX,
+                                            lanesAffected,
+                                            isFacingRight: (c.facing !== 'left'),
+                                            callerId: c.id
+                                        });
                                     }
-                                    reduxWalls.push({
-                                        id: `wall_${c.id}_redux`,
-                                        x: wallX,
-                                        lanesAffected,
-                                        isFacingRight: (c.facing !== 'left'),
-                                        callerId: c.id
-                                    });
-                                }
+                                });
+                            }
+                            const allWalls = [...(this.state.activeWalls || []), ...reduxWalls];
+                            return allWalls.map((wall) => {
+                                if (!wall.lanesAffected || !wall.lanesAffected.length) return null;
+                                const minLane = Math.min(...wall.lanesAffected);
+                                const topPx = minLane * TILE_SIZE;
+                                const heightPx = wall.lanesAffected.length * TILE_SIZE;
+                                const leftPx = wall.isFacingRight
+                                    ? wall.x * TILE_SIZE - 3
+                                    : (wall.x + 1) * TILE_SIZE - 3;
+                                return (
+                                    <div
+                                        key={wall.id}
+                                        className="shield-wall-overlay"
+                                        style={{
+                                            position: 'absolute',
+                                            left: leftPx + 'px',
+                                            top: topPx + 'px',
+                                            width: '6px',
+                                            height: heightPx + 'px',
+                                            zIndex: 20,
+                                            pointerEvents: 'none'
+                                        }}
+                                    />
+                                );
                             });
-                        }
-                        const allWalls = [...(this.state.activeWalls || []), ...reduxWalls];
-                        return allWalls.map((wall) => {
-                            if (!wall.lanesAffected || !wall.lanesAffected.length) return null;
-                            const minLane = Math.min(...wall.lanesAffected);
-                            const topPx = minLane * TILE_SIZE;
-                            const heightPx = wall.lanesAffected.length * TILE_SIZE;
-                            const leftPx = wall.isFacingRight
-                                ? wall.x * TILE_SIZE - 3
-                                : (wall.x + 1) * TILE_SIZE - 3;
-                            return (
-                                <div
-                                    key={wall.id}
-                                    className="shield-wall-overlay"
-                                    style={{
-                                        position: 'absolute',
-                                        left: leftPx + 'px',
-                                        top: topPx + 'px',
-                                        width: '6px',
-                                        height: heightPx + 'px',
-                                        zIndex: 20,
-                                        pointerEvents: 'none'
-                                    }}
-                                />
-                            );
-                        });
-                    })()}
+                        })()}
 
-                    {/* /// FEAR OVERLAY — board-wide shroud when induce_fear is active */}
-                    {this.state.boardFearActive && (
-                        <div className="fear-overlay" />
-                    )}
+                        {/* /// FEAR OVERLAY — board-wide shroud when induce_fear is active */}
+                        {this.state.boardFearActive && (
+                            <div className="fear-overlay" />
+                        )}
 
-                    {/* /// UNIFIED COMBAT GRID — fighters, monsters & minions share the same board */}
-                    <CombatGrid
-                        crew={this.props.crew}
-                        combatManager={this.props.combatManager}
-                        battleData={this.state.battleData}
-                        selectedFighter={this.state.selectedFighter}
-                        selectedMonster={this.state.selectedMonster}
-                        portraitHoveredId={this.state.portraitHoveredId}
-                        animationOverlays={this.state.animationOverlays}
-                        getAllOverlaysById={this.getAllOverlaysById}
-                        portraitHovered={this.portraitHovered}
-                        fighterPortraitClicked={this.fighterPortraitClicked}
-                        monsterCombatPortraitClicked={this.monsterCombatPortraitClicked}
-                        onDragStart={this.onDragStart}
-                        getActionBarLeftValForFighter={this.getActionBarLeftValForFighter}
-                        getManualMovementArc={this.getManualMovementArc}
-                        getManualMovementArcColor={this.getManualMovementArcColor}
-                        getFighterDetails={this.getFighterDetails}
-                        getMonsterWeaponAnimation={this.getMonsterWeaponAnimation}
-                        getHitAnimation={this.getHitAnimation}
-                        teleportingFighterId={this.state.teleportingFighterId}
-                        fearCastingActive={this.state.fearCastingActive}
-                        greetingInProcess={this.state.greetingInProcess}
-                        SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
-                        activeAnimations={this.state.activeAnimations}
-                        TILE_SIZE={TILE_SIZE}
-                        SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
-                    />
+                        {/* /// UNIFIED COMBAT GRID — fighters, monsters & minions share the same board */}
+                        <CombatGrid
+                            crew={this.props.crew}
+                            combatManager={this.props.combatManager}
+                            battleData={this.state.battleData}
+                            selectedFighter={this.state.selectedFighter}
+                            selectedMonster={this.state.selectedMonster}
+                            portraitHoveredId={this.state.portraitHoveredId}
+                            animationOverlays={this.state.animationOverlays}
+                            getAllOverlaysById={this.getAllOverlaysById}
+                            portraitHovered={this.portraitHovered}
+                            fighterPortraitClicked={this.fighterPortraitClicked}
+                            monsterCombatPortraitClicked={this.monsterCombatPortraitClicked}
+                            onDragStart={this.onDragStart}
+                            getActionBarLeftValForFighter={this.getActionBarLeftValForFighter}
+                            getManualMovementArc={this.getManualMovementArc}
+                            getManualMovementArcColor={this.getManualMovementArcColor}
+                            getFighterDetails={this.getFighterDetails}
+                            getMonsterWeaponAnimation={this.getMonsterWeaponAnimation}
+                            getHitAnimation={this.getHitAnimation}
+                            teleportingFighterId={this.state.teleportingFighterId}
+                            fearCastingActive={this.state.fearCastingActive}
+                            greetingInProcess={this.state.greetingInProcess}
+                            SHOW_MONSTER_IDS={SHOW_MONSTER_IDS}
+                            activeAnimations={this.state.activeAnimations}
+                            TILE_SIZE={TILE_SIZE}
+                            SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
+                        />
+                    </div>
                 </div>
-            </div>
 
                 {/* // INTERACTION PANE */}
-                { SHOW_INTERACTION_PANE && <div className={`mb-interaction-pane ${!this.state.greetingInProcess ? 'visible' : ''} `}>
+                {SHOW_INTERACTION_PANE && <div className={`mb-interaction-pane ${!this.state.greetingInProcess ? 'visible' : ''} `}>
                     <div className="header-row">
-                        <div className="portrait" style={{backgroundImage: `url(${selectedPortraitUrl})`}}>
+                        <div className="portrait" style={{ backgroundImage: `url(${selectedPortraitUrl})` }}>
                             {cooldownActive && (
                                 <div
                                     className="manual-cooldown-mask"
@@ -2918,7 +2895,7 @@ class MonsterBattle extends React.Component {
                                                         const roundsLeft = eff.roundsLeft || 0;
                                                         const total = eff.totalDuration || 4;
                                                         const roundDurationMs = this.props.combatManager?.roundDurationMs || (this.props.combatManager?.gameSpeed === 'fast' ? 1000 : 2000);
-                                                        
+
                                                         let preciseRoundsLeft = 0;
                                                         if (eff.endTimeMs && eff.totalDurationMs && eff.totalDurationMs > 0) {
                                                             const now = Date.now();
@@ -2951,14 +2928,14 @@ class MonsterBattle extends React.Component {
                                                         const showBadge = eff.alwaysShowBadge ? (eff.stacks || 0) > 0 : (eff.stacks || 0) > 1;
 
                                                         return (
-                                                            <div 
-                                                                key={eff.key || i} 
-                                                                className="effect-icon-clickable" 
+                                                            <div
+                                                                key={eff.key || i}
+                                                                className="effect-icon-clickable"
                                                                 style={{
-                                                                    width: '28px', 
-                                                                    height: '28px', 
+                                                                    width: '28px',
+                                                                    height: '28px',
                                                                     borderRadius: '50%',
-                                                                    backgroundColor: '#111', 
+                                                                    backgroundColor: '#111',
                                                                     border: `2px solid ${eff.border || '#f39c12'}`,
                                                                     boxShadow: '0 2px 4px rgba(0,0,0,0.5)',
                                                                     position: 'relative',
@@ -2967,7 +2944,7 @@ class MonsterBattle extends React.Component {
                                                                 }}
                                                                 onClick={() => {
                                                                     const initiallyPaused = !!(this.props.paused || this.props.combatManager?.combatPaused);
-                                                                    this.setState({ 
+                                                                    this.setState({
                                                                         activeEffectPopup: eff,
                                                                         popupOpenedWhilePaused: initiallyPaused
                                                                     });
@@ -2990,7 +2967,7 @@ class MonsterBattle extends React.Component {
                                                                     backgroundPosition: 'center'
                                                                 }} />
                                                                 {preciseRoundsLeft > 0 && (
-                                                                    <svg 
+                                                                    <svg
                                                                         style={{
                                                                             position: 'absolute',
                                                                             top: 0,
@@ -3102,7 +3079,7 @@ class MonsterBattle extends React.Component {
                                             const normalizedSourceKey = String(sourceKey).toLowerCase().replaceAll(' ', '_');
                                             const canonicalSpecial = cm
                                                 ? ((cm.specialsMatrix && (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[normalizedSourceKey])) ||
-                                                   (cm.attacksMatrix && (cm.attacksMatrix[sourceKey] || cm.attacksMatrix[normalizedSourceKey])) || {})
+                                                    (cm.attacksMatrix && (cm.attacksMatrix[sourceKey] || cm.attacksMatrix[normalizedSourceKey])) || {})
                                                 : {};
                                             const runtimeSpecial = (cm?.resolveSpecial && liveSelectedFighter)
                                                 ? (cm.resolveSpecial(liveSelectedFighter, sourceKey) || {})
@@ -3142,7 +3119,7 @@ class MonsterBattle extends React.Component {
                                                         title={spec.name || sourceKey}
                                                         onClick={() => {
                                                             const initiallyPaused = !!(this.props.paused || this.props.combatManager?.combatPaused);
-                                                            this.setState({ 
+                                                            this.setState({
                                                                 activeSkillPopup: spec,
                                                                 popupOpenedWhilePaused: initiallyPaused
                                                             });
@@ -3152,30 +3129,30 @@ class MonsterBattle extends React.Component {
                                                         }}
                                                     />
                                                     {cooldownPct > 0 && (
-                                                         <svg 
-                                                             style={{
-                                                                 position: 'absolute',
-                                                                 top: 0,
-                                                                 left: 0,
-                                                                 width: '100%',
-                                                                 height: '100%',
-                                                                 transform: 'rotate(-90deg)',
-                                                                 pointerEvents: 'none',
-                                                                 zIndex: 10
-                                                             }}
-                                                             viewBox="0 0 20 20"
-                                                         >
-                                                             <circle
-                                                                 cx="10"
-                                                                 cy="10"
-                                                                 r="10"
-                                                                 fill="none"
-                                                                 stroke="rgba(0, 0, 0, 0.75)"
-                                                                 strokeWidth="20"
-                                                                 strokeDasharray="62.83"
-                                                                 strokeDashoffset={(1 - (cooldownPct / 100)) * 62.83}
-                                                             />
-                                                         </svg>
+                                                        <svg
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                transform: 'rotate(-90deg)',
+                                                                pointerEvents: 'none',
+                                                                zIndex: 10
+                                                            }}
+                                                            viewBox="0 0 20 20"
+                                                        >
+                                                            <circle
+                                                                cx="10"
+                                                                cy="10"
+                                                                r="10"
+                                                                fill="none"
+                                                                stroke="rgba(0, 0, 0, 0.75)"
+                                                                strokeWidth="20"
+                                                                strokeDasharray="62.83"
+                                                                strokeDashoffset={(1 - (cooldownPct / 100)) * 62.83}
+                                                            />
+                                                        </svg>
                                                     )}
                                                     {!isReady && (
                                                         <div className="redux-cd-badge">{Math.ceil(smoothRemaining)}</div>
@@ -3248,175 +3225,175 @@ class MonsterBattle extends React.Component {
                         </div>
                     ) : (
 
-                    /* ── Legacy Manual Mode ─────────────────────────────────────────── */
-                    <div className="interaction-row">
-                        <div className="inventory-col">
-                            <div className="interaction-header">Consumables</div>
-                            <div className="interaction-tooltip" style={{fontSize: this.state.hoveredInventoryTile?.length > 8 ? '10px': 'inherit'}}>{this.state.hoveredInventoryTile}</div>
-                            <div className="interaction-tile-container">
-                                {this.state.selectedFighter && (() => {
-                                    const consumables = this.props.inventoryManager?.inventory.filter(e => e.type === 'consumable') || [];
-                                    if (!consumables.length) return null;
-                                    const grouped = {};
-                                    consumables.forEach(unit => {
-                                        if (!unit) return;
-                                        const key = unit.name;
-                                        if (!grouped[key]) grouped[key] = [];
-                                        grouped[key].push(unit);
-                                    });
-                                    return Object.keys(grouped).map((name) => {
-                                        const group = grouped[name];
-                                        const unit = group[0];
-                                        const count = group.length;
-                                        const iconUrl = unit && unit.icon && typeof unit.icon === 'string'
-                                            ? ((unit.icon.includes('/') || unit.icon.startsWith('http') || unit.icon.startsWith('data:'))
-                                                ? unit.icon
-                                                : images[unit.icon])
-                                            : null;
-                                        const cooldownPct = typeof unit?.cooldown_position === 'number' ? unit.cooldown_position : null;
-                                        return (
-                                            <div key={name} className='interaction-tile-wrapper' style={{position: 'relative'}}>
-                                                <div
-                                                    className={`interaction-tile consumable`}
-                                                    style={{
-                                                        backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
-                                                        backgroundColor: iconUrl ? 'transparent' : 'whitesmoke',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                    onClick={() => this.combatInventoryTileClicked(unit)}
-                                                    onMouseEnter={() => this.inventoryTileHovered(unit.name)}
-                                                    onMouseLeave={() => this.inventoryTileHovered(null)}
-                                                >
+                        /* ── Legacy Manual Mode ─────────────────────────────────────────── */
+                        <div className="interaction-row">
+                            <div className="inventory-col">
+                                <div className="interaction-header">Consumables</div>
+                                <div className="interaction-tooltip" style={{ fontSize: this.state.hoveredInventoryTile?.length > 8 ? '10px' : 'inherit' }}>{this.state.hoveredInventoryTile}</div>
+                                <div className="interaction-tile-container">
+                                    {this.state.selectedFighter && (() => {
+                                        const consumables = this.props.inventoryManager?.inventory.filter(e => e.type === 'consumable') || [];
+                                        if (!consumables.length) return null;
+                                        const grouped = {};
+                                        consumables.forEach(unit => {
+                                            if (!unit) return;
+                                            const key = unit.name;
+                                            if (!grouped[key]) grouped[key] = [];
+                                            grouped[key].push(unit);
+                                        });
+                                        return Object.keys(grouped).map((name) => {
+                                            const group = grouped[name];
+                                            const unit = group[0];
+                                            const count = group.length;
+                                            const iconUrl = unit && unit.icon && typeof unit.icon === 'string'
+                                                ? ((unit.icon.includes('/') || unit.icon.startsWith('http') || unit.icon.startsWith('data:'))
+                                                    ? unit.icon
+                                                    : images[unit.icon])
+                                                : null;
+                                            const cooldownPct = typeof unit?.cooldown_position === 'number' ? unit.cooldown_position : null;
+                                            return (
+                                                <div key={name} className='interaction-tile-wrapper' style={{ position: 'relative' }}>
+                                                    <div
+                                                        className={`interaction-tile consumable`}
+                                                        style={{
+                                                            backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
+                                                            backgroundColor: iconUrl ? 'transparent' : 'whitesmoke',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => this.combatInventoryTileClicked(unit)}
+                                                        onMouseEnter={() => this.inventoryTileHovered(unit.name)}
+                                                        onMouseLeave={() => this.inventoryTileHovered(null)}
+                                                    >
+                                                    </div>
+                                                    {cooldownPct !== null && (
+                                                        <div className="interaction-tile-overlay" style={{ width: `${cooldownPct}%`, transition: cooldownPct === 0 ? '0s' : '0.2s' }}></div>
+                                                    )}
+                                                    {count > 1 && (
+                                                        <div className="stack-badge">{this.romanNumeral(count)}</div>
+                                                    )}
                                                 </div>
-                                                {cooldownPct !== null && (
-                                                    <div className="interaction-tile-overlay" style={{width: `${cooldownPct}%`, transition: cooldownPct === 0 ? '0s' : '0.2s'}}></div>
-                                                )}
-                                                {count > 1 && (
-                                                    <div className="stack-badge">{this.romanNumeral(count)}</div>
-                                                )}
-                                            </div>
-                                        );
-                                    });
-                                })()}
+                                            );
+                                        });
+                                    })()}
+                                </div>
                             </div>
-                        </div>
-                        <div className="specials-col">
-                            <div className="interaction-header">Specials</div>
-                            <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
-                            <div className="interaction-tile-container">
-                                {(() => {
-                                    const rawSpecials = [
-                                        ...(this.state.selectedFighter?.specials || []),
-                                        ...(this.state.selectedFighter?.attacks || [])
-                                    ];
-                                    const seenSpecials = new Set();
-                                    const uniqueSpecials = rawSpecials.filter((entry) => {
-                                        const rawKey = typeof entry === 'string' ? entry : (entry?.key || entry?.name || '');
-                                        const normalizedKey = String(rawKey || '').trim().toLowerCase().replaceAll(' ', '_');
-                                        if (!normalizedKey) return false;
-                                        if (seenSpecials.has(normalizedKey)) return false;
-                                        seenSpecials.add(normalizedKey);
-                                        return true;
-                                    });
+                            <div className="specials-col">
+                                <div className="interaction-header">Specials</div>
+                                <div className="interaction-tooltip">{this.state.hoveredSpecialTile}</div>
+                                <div className="interaction-tile-container">
+                                    {(() => {
+                                        const rawSpecials = [
+                                            ...(this.state.selectedFighter?.specials || []),
+                                            ...(this.state.selectedFighter?.attacks || [])
+                                        ];
+                                        const seenSpecials = new Set();
+                                        const uniqueSpecials = rawSpecials.filter((entry) => {
+                                            const rawKey = typeof entry === 'string' ? entry : (entry?.key || entry?.name || '');
+                                            const normalizedKey = String(rawKey || '').trim().toLowerCase().replaceAll(' ', '_');
+                                            if (!normalizedKey) return false;
+                                            if (seenSpecials.has(normalizedKey)) return false;
+                                            seenSpecials.add(normalizedKey);
+                                            return true;
+                                        });
 
-                                    return uniqueSpecials.map((a, i)=>{
-                                    const cm = this.props.combatManager;
-                                    const toSpecialKey = (value) => String(value || '').toLowerCase().replaceAll(' ', '_');
-                                    const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
-                                    const canonicalSpecial = (cm && cm.specialsMatrix)
-                                        ? (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[toSpecialKey(sourceKey)] || null)
-                                        : null;
-                                    const runtimeSpecial = (cm?.resolveSpecial && this.state.selectedFighter)
-                                        ? cm.resolveSpecial(this.state.selectedFighter, sourceKey)
-                                        : null;
-                                    const normalizedSpecial = {
-                                        ...(canonicalSpecial || {}),
-                                        ...(typeof a === 'object' ? a : {}),
-                                        ...(runtimeSpecial || {}),
-                                    };
-                                    if (!normalizedSpecial.name) {
-                                        normalizedSpecial.name = typeof a === 'string' ? a.replaceAll('_', ' ') : '';
-                                    }
-                                    const iconCandidate = normalizedSpecial?.iconUrl || normalizedSpecial?.icon;
-                                    const resolveIconSource = (candidate) => {
-                                        if (!candidate) return '';
-                                        if (typeof candidate === 'string') {
-                                            const trimmed = candidate.trim();
-                                            if (!trimmed) return '';
-                                            if (trimmed.startsWith('url(')) {
-                                                return trimmed.replace(/^url\((.*)\)$/i, '$1').replace(/^['"]|['"]$/g, '');
+                                        return uniqueSpecials.map((a, i) => {
+                                            const cm = this.props.combatManager;
+                                            const toSpecialKey = (value) => String(value || '').toLowerCase().replaceAll(' ', '_');
+                                            const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
+                                            const canonicalSpecial = (cm && cm.specialsMatrix)
+                                                ? (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[toSpecialKey(sourceKey)] || null)
+                                                : null;
+                                            const runtimeSpecial = (cm?.resolveSpecial && this.state.selectedFighter)
+                                                ? cm.resolveSpecial(this.state.selectedFighter, sourceKey)
+                                                : null;
+                                            const normalizedSpecial = {
+                                                ...(canonicalSpecial || {}),
+                                                ...(typeof a === 'object' ? a : {}),
+                                                ...(runtimeSpecial || {}),
+                                            };
+                                            if (!normalizedSpecial.name) {
+                                                normalizedSpecial.name = typeof a === 'string' ? a.replaceAll('_', ' ') : '';
                                             }
-                                            const mapped = images[trimmed];
-                                            if (mapped) return mapped.default || mapped;
-                                            return trimmed;
-                                        }
-                                        if (typeof candidate === 'object' && candidate.default) return candidate.default;
-                                        return '';
-                                    };
-                                    const cssUrl = (value) => {
-                                        if (!value) return '';
-                                        const normalizedValue = String(value).trim().replace(/^['"]|['"]$/g, '');
-                                        return `url("${encodeURI(normalizedValue)}")`;
-                                    };
-                                    const specialIcon = resolveIconSource(iconCandidate);
-                                    const specialBackgroundImage = specialIcon
-                                        ? `${cssUrl(specialIcon)}`
-                                        : 'none';
-                                     let specialCooldownRemaining = 0;
-                                     const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
-                                     if (this.props.combatManager && this.props.combatManager.round !== undefined) {
-                                         const remainingSec = liveSelectedFighter?.cooldowns?.[normalizedSpecial.id] || liveSelectedFighter?.cooldowns?.[normalizedSpecial.key] || liveSelectedFighter?.cooldowns?.[sourceKey] || 0;
-                                         if (remainingSec > 0) {
-                                             const baseCooldown = normalizedSpecial.cooldown || 5;
-                                             const smoothRemaining = Math.max(0, remainingSec - (1 - ratio));
-                                             specialCooldownRemaining = (smoothRemaining / baseCooldown) * 100;
-                                         }
-                                     } else {
-                                        const specialCooldownPosition = typeof normalizedSpecial.cooldown_position === 'number'
-                                            ? normalizedSpecial.cooldown_position
-                                            : 100;
-                                        specialCooldownRemaining = Math.max(0, Math.min(100, 100 - specialCooldownPosition));
-                                    }
-                                    const specialEnergyCost = Number(normalizedSpecial.energy_cost) || 0;
-                                    const currentEnergy = Number(liveSelectedFighter?.energy || this.state.selectedFighter?.energy || 0);
-                                    const specialEnergyFillPct = specialEnergyCost > 0
-                                        ? Math.min(100, Math.floor((currentEnergy / specialEnergyCost) * 100))
-                                        : 100;
-                                    const showSpecialEnergyRing = specialEnergyCost > 0;
-                                    return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
-                                                <div 
-                                                style={{backgroundImage: specialBackgroundImage, cursor: 'pointer'}} 
-                                                className={`interaction-tile special ${specialCooldownRemaining <= 0 ? 'available' : ''} ${normalizedSpecial.selected ? 'selected' : ''}`}
-                                                onClick={() => this.specialTileClicked(normalizedSpecial)} 
-                                                onMouseEnter={() => this.specialTileHovered(normalizedSpecial)} 
-                                                onMouseLeave={() => this.specialTileHovered(null)}>
+                                            const iconCandidate = normalizedSpecial?.iconUrl || normalizedSpecial?.icon;
+                                            const resolveIconSource = (candidate) => {
+                                                if (!candidate) return '';
+                                                if (typeof candidate === 'string') {
+                                                    const trimmed = candidate.trim();
+                                                    if (!trimmed) return '';
+                                                    if (trimmed.startsWith('url(')) {
+                                                        return trimmed.replace(/^url\((.*)\)$/i, '$1').replace(/^['"]|['"]$/g, '');
+                                                    }
+                                                    const mapped = images[trimmed];
+                                                    if (mapped) return mapped.default || mapped;
+                                                    return trimmed;
+                                                }
+                                                if (typeof candidate === 'object' && candidate.default) return candidate.default;
+                                                return '';
+                                            };
+                                            const cssUrl = (value) => {
+                                                if (!value) return '';
+                                                const normalizedValue = String(value).trim().replace(/^['"]|['"]$/g, '');
+                                                return `url("${encodeURI(normalizedValue)}")`;
+                                            };
+                                            const specialIcon = resolveIconSource(iconCandidate);
+                                            const specialBackgroundImage = specialIcon
+                                                ? `${cssUrl(specialIcon)}`
+                                                : 'none';
+                                            let specialCooldownRemaining = 0;
+                                            const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
+                                            if (this.props.combatManager && this.props.combatManager.round !== undefined) {
+                                                const remainingSec = liveSelectedFighter?.cooldowns?.[normalizedSpecial.id] || liveSelectedFighter?.cooldowns?.[normalizedSpecial.key] || liveSelectedFighter?.cooldowns?.[sourceKey] || 0;
+                                                if (remainingSec > 0) {
+                                                    const baseCooldown = normalizedSpecial.cooldown || 5;
+                                                    const smoothRemaining = Math.max(0, remainingSec - (1 - ratio));
+                                                    specialCooldownRemaining = (smoothRemaining / baseCooldown) * 100;
+                                                }
+                                            } else {
+                                                const specialCooldownPosition = typeof normalizedSpecial.cooldown_position === 'number'
+                                                    ? normalizedSpecial.cooldown_position
+                                                    : 100;
+                                                specialCooldownRemaining = Math.max(0, Math.min(100, 100 - specialCooldownPosition));
+                                            }
+                                            const specialEnergyCost = Number(normalizedSpecial.energy_cost) || 0;
+                                            const currentEnergy = Number(liveSelectedFighter?.energy || this.state.selectedFighter?.energy || 0);
+                                            const specialEnergyFillPct = specialEnergyCost > 0
+                                                ? Math.min(100, Math.floor((currentEnergy / specialEnergyCost) * 100))
+                                                : 100;
+                                            const showSpecialEnergyRing = specialEnergyCost > 0;
+                                            return normalizedSpecial && <div key={i} className='interaction-tile-wrapper'>
+                                                <div
+                                                    style={{ backgroundImage: specialBackgroundImage, cursor: 'pointer' }}
+                                                    className={`interaction-tile special ${specialCooldownRemaining <= 0 ? 'available' : ''} ${normalizedSpecial.selected ? 'selected' : ''}`}
+                                                    onClick={() => this.specialTileClicked(normalizedSpecial)}
+                                                    onMouseEnter={() => this.specialTileHovered(normalizedSpecial)}
+                                                    onMouseLeave={() => this.specialTileHovered(null)}>
                                                 </div>
                                                 {specialCooldownRemaining > 0 && (
-                                                     <svg 
-                                                         style={{
-                                                             position: 'absolute',
-                                                             top: 0,
-                                                             left: 0,
-                                                             width: '100%',
-                                                             height: '100%',
-                                                             transform: 'rotate(-90deg)',
-                                                             pointerEvents: 'none',
-                                                             zIndex: 10
-                                                         }}
-                                                         viewBox="0 0 20 20"
-                                                     >
-                                                         <circle
-                                                             cx="10"
-                                                             cy="10"
-                                                             r="10"
-                                                             fill="none"
-                                                             stroke="rgba(0, 0, 0, 0.75)"
-                                                             strokeWidth="20"
-                                                             strokeDasharray="62.83"
-                                                             strokeDashoffset={(1 - (specialCooldownRemaining / 100)) * 62.83}
-                                                         />
-                                                     </svg>
-                                                 )}
+                                                    <svg
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: 0,
+                                                            left: 0,
+                                                            width: '100%',
+                                                            height: '100%',
+                                                            transform: 'rotate(-90deg)',
+                                                            pointerEvents: 'none',
+                                                            zIndex: 10
+                                                        }}
+                                                        viewBox="0 0 20 20"
+                                                    >
+                                                        <circle
+                                                            cx="10"
+                                                            cy="10"
+                                                            r="10"
+                                                            fill="none"
+                                                            stroke="rgba(0, 0, 0, 0.75)"
+                                                            strokeWidth="20"
+                                                            strokeDasharray="62.83"
+                                                            strokeDashoffset={(1 - (specialCooldownRemaining / 100)) * 62.83}
+                                                        />
+                                                    </svg>
+                                                )}
                                                 {showSpecialEnergyRing && specialCooldownRemaining <= 0 && (
                                                     <div
                                                         className="interaction-tile-overlay energy-ring"
@@ -3425,299 +3402,299 @@ class MonsterBattle extends React.Component {
                                                 )}
 
                                             </div>
-                                })
-                                })()}
+                                        })
+                                    })()}
+                                </div>
                             </div>
-                        </div>
-                        <div className="spells-col" style={{width: this.state.glyphTrayExpanded ? '100px' : '0px'}}>
-                            <div className="interaction-header">Spells</div>
-                            <div className="interaction-tooltip">{this.state.hoveredSpellTile}</div>
-                            <div className="interaction-tile-container">
-                                {(() => {
-                                    const specialActions = this.state.selectedFighter?.specialActions || [];
+                            <div className="spells-col" style={{ width: this.state.glyphTrayExpanded ? '100px' : '0px' }}>
+                                <div className="interaction-header">Spells</div>
+                                <div className="interaction-tooltip">{this.state.hoveredSpellTile}</div>
+                                <div className="interaction-tile-container">
+                                    {(() => {
+                                        const specialActions = this.state.selectedFighter?.specialActions || [];
 
-                                    // Legacy spell entries (type:'spell', e.g. old magic missile)
-                                    const legacySpells = specialActions.filter(a => a.type === 'spell' && a.available);
-                                    // New tiered glyphs (type:'glyph', available)
-                                    const readyGlyphs = specialActions.filter(a => a.type === 'glyph' && a.available);
+                                        // Legacy spell entries (type:'spell', e.g. old magic missile)
+                                        const legacySpells = specialActions.filter(a => a.type === 'spell' && a.available);
+                                        // New tiered glyphs (type:'glyph', available)
+                                        const readyGlyphs = specialActions.filter(a => a.type === 'glyph' && a.available);
 
-                                    if (!legacySpells.length && !readyGlyphs.length) return null;
+                                        if (!legacySpells.length && !readyGlyphs.length) return null;
 
-                                    const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V'];
+                                        const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V'];
 
-                                    // ── Legacy spell tiles ──────────────────────────────────────
-                                    const legacyGrouped = {};
-                                    legacySpells.forEach(spellUnit => {
-                                        if (!spellUnit) return;
-                                        const spellType = spellUnit.subtype;
-                                        if (!legacyGrouped[spellType]) legacyGrouped[spellType] = [];
-                                        legacyGrouped[spellType].push(spellUnit);
-                                    });
-                                    const legacyTiles = Object.keys(legacyGrouped).map((type, idx) => {
-                                        const group = legacyGrouped[type];
-                                        const spellUnit = group[0];
-                                        const count = group.length;
-                                        const rawIcon = spellUnit.iconUrl || spellUnit.icon;
-                                        let resolvedIconUrl = '';
-                                        if (rawIcon) {
-                                            if (typeof rawIcon === 'string') {
-                                                const mapped = images[rawIcon.trim()];
-                                                resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
-                                            } else if (typeof rawIcon === 'object') {
-                                                resolvedIconUrl = rawIcon.default || rawIcon;
+                                        // ── Legacy spell tiles ──────────────────────────────────────
+                                        const legacyGrouped = {};
+                                        legacySpells.forEach(spellUnit => {
+                                            if (!spellUnit) return;
+                                            const spellType = spellUnit.subtype;
+                                            if (!legacyGrouped[spellType]) legacyGrouped[spellType] = [];
+                                            legacyGrouped[spellType].push(spellUnit);
+                                        });
+                                        const legacyTiles = Object.keys(legacyGrouped).map((type, idx) => {
+                                            const group = legacyGrouped[type];
+                                            const spellUnit = group[0];
+                                            const count = group.length;
+                                            const rawIcon = spellUnit.iconUrl || spellUnit.icon;
+                                            let resolvedIconUrl = '';
+                                            if (rawIcon) {
+                                                if (typeof rawIcon === 'string') {
+                                                    const mapped = images[rawIcon.trim()];
+                                                    resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                                } else if (typeof rawIcon === 'object') {
+                                                    resolvedIconUrl = rawIcon.default || rawIcon;
+                                                }
                                             }
-                                        }
-                                        return (
-                                            <div key={`legacy-${type}`} className='interaction-tile-wrapper' style={{position: 'relative'}}>
-                                                <div
-                                                    style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
-                                                    className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
-                                                    onClick={() => this.fireSpell(spellUnit)}
-                                                    onMouseEnter={() => this.spellTileHovered(spellUnit)}
-                                                    onMouseLeave={() => this.spellTileHovered(null)}>
+                                            return (
+                                                <div key={`legacy-${type}`} className='interaction-tile-wrapper' style={{ position: 'relative' }}>
+                                                    <div
+                                                        style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
+                                                        className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
+                                                        onClick={() => this.fireSpell(spellUnit)}
+                                                        onMouseEnter={() => this.spellTileHovered(spellUnit)}
+                                                        onMouseLeave={() => this.spellTileHovered(null)}>
+                                                    </div>
+                                                    {count > 0 && (
+                                                        <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
+                                                    )}
                                                 </div>
-                                                {count > 0 && (
-                                                    <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
-                                                )}
-                                            </div>
-                                        );
-                                    });
+                                            );
+                                        });
 
-                                    // ── New tiered glyph tiles ──────────────────────────────
-                                    // Group by tier so each tier gets one tile with a count badge
-                                    const glyphGrouped = {};
-                                    readyGlyphs.forEach(g => {
-                                        const tier = g.glyphTier || 'minor';
-                                        if (!glyphGrouped[tier]) glyphGrouped[tier] = [];
-                                        glyphGrouped[tier].push(g);
-                                    });
-                                    const glyphTiles = Object.keys(glyphGrouped).map((tier, idx) => {
-                                        const group = glyphGrouped[tier];
-                                        const representative = group[0];
-                                        const count = group.length;
-                                        const rawIcon = representative.iconUrl || images[`${tier}_glyph`] || images['glyph_inverted'] || '';
-                                        let resolvedIconUrl = '';
-                                        if (rawIcon) {
-                                            if (typeof rawIcon === 'string') {
-                                                const mapped = images[rawIcon.trim()];
-                                                resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
-                                            } else if (typeof rawIcon === 'object') {
-                                                resolvedIconUrl = rawIcon.default || String(rawIcon);
+                                        // ── New tiered glyph tiles ──────────────────────────────
+                                        // Group by tier so each tier gets one tile with a count badge
+                                        const glyphGrouped = {};
+                                        readyGlyphs.forEach(g => {
+                                            const tier = g.glyphTier || 'minor';
+                                            if (!glyphGrouped[tier]) glyphGrouped[tier] = [];
+                                            glyphGrouped[tier].push(g);
+                                        });
+                                        const glyphTiles = Object.keys(glyphGrouped).map((tier, idx) => {
+                                            const group = glyphGrouped[tier];
+                                            const representative = group[0];
+                                            const count = group.length;
+                                            const rawIcon = representative.iconUrl || images[`${tier}_glyph`] || images['glyph_inverted'] || '';
+                                            let resolvedIconUrl = '';
+                                            if (rawIcon) {
+                                                if (typeof rawIcon === 'string') {
+                                                    const mapped = images[rawIcon.trim()];
+                                                    resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                                } else if (typeof rawIcon === 'object') {
+                                                    resolvedIconUrl = rawIcon.default || String(rawIcon);
+                                                }
                                             }
-                                        }
-                                        const spellNames = (representative.spellDefs || []).map(s => s.name).join(', ');
-                                        const tooltip = `${representative.name}${spellNames ? ': ' + spellNames : ''}`;
-                                        return (
-                                            <div key={`glyph-${tier}`} className='interaction-tile-wrapper' style={{position: 'relative'}}>
-                                                <div
-                                                    style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
-                                                    className={`interaction-tile special glyph-tile glyph-tile--${tier}`}
-                                                    onClick={() => this.fireGlyph(representative)}
-                                                    onMouseEnter={() => this.spellTileHovered({ subtype: tier, name: tooltip })}
-                                                    onMouseLeave={() => this.spellTileHovered(null)}
-                                                    title={tooltip}>
+                                            const spellNames = (representative.spellDefs || []).map(s => s.name).join(', ');
+                                            const tooltip = `${representative.name}${spellNames ? ': ' + spellNames : ''}`;
+                                            return (
+                                                <div key={`glyph-${tier}`} className='interaction-tile-wrapper' style={{ position: 'relative' }}>
+                                                    <div
+                                                        style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
+                                                        className={`interaction-tile special glyph-tile glyph-tile--${tier}`}
+                                                        onClick={() => this.fireGlyph(representative)}
+                                                        onMouseEnter={() => this.spellTileHovered({ subtype: tier, name: tooltip })}
+                                                        onMouseLeave={() => this.spellTileHovered(null)}
+                                                        title={tooltip}>
+                                                    </div>
+                                                    {count > 0 && (
+                                                        <div className={`stack-badge small glyph-badge--${tier}`}>{romanNumerals[Math.min(count, 5)]}</div>
+                                                    )}
                                                 </div>
-                                                {count > 0 && (
-                                                    <div className={`stack-badge small glyph-badge--${tier}`}>{romanNumerals[Math.min(count, 5)]}</div>
-                                                )}
-                                            </div>
-                                        );
-                                    });
+                                            );
+                                        });
 
-                                    return [...legacyTiles, ...glyphTiles];
-                                })()}
+                                        return [...legacyTiles, ...glyphTiles];
+                                    })()}
+                                </div>
                             </div>
-                        </div>
-                        <div className="attacks-col">
-                            <div className="interaction-header">Attacks</div>
-                            <div className="interaction-tooltip">{this.state.hoveredAttackTile}</div>
-                            <div className="interaction-tile-container">
-                                {(() => {
-                                    const grouped = {};
-                                    (this.state.selectedFighter?.attacks || []).forEach((attack) => {
-                                        if (!attack) return;
-                                        const key = `${attack.name || attack.key || 'attack'}__${attack.icon || ''}__${attack.range || ''}`;
-                                        if (!grouped[key]) grouped[key] = [];
-                                        grouped[key].push(attack);
-                                    });
+                            <div className="attacks-col">
+                                <div className="interaction-header">Attacks</div>
+                                <div className="interaction-tooltip">{this.state.hoveredAttackTile}</div>
+                                <div className="interaction-tile-container">
+                                    {(() => {
+                                        const grouped = {};
+                                        (this.state.selectedFighter?.attacks || []).forEach((attack) => {
+                                            if (!attack) return;
+                                            const key = `${attack.name || attack.key || 'attack'}__${attack.icon || ''}__${attack.range || ''}`;
+                                            if (!grouped[key]) grouped[key] = [];
+                                            grouped[key].push(attack);
+                                        });
 
-                                    return Object.keys(grouped).map((groupKey) => {
-                                        const group = grouped[groupKey];
-                                        if (!group || group.length === 0) return null;
-                                        const displayAttack = group.find((unit) => unit && unit.cooldown_position === 100) || group[0];
-                                        if (!displayAttack) return null;
+                                        return Object.keys(grouped).map((groupKey) => {
+                                            const group = grouped[groupKey];
+                                            if (!group || group.length === 0) return null;
+                                            const displayAttack = group.find((unit) => unit && unit.cooldown_position === 100) || group[0];
+                                            if (!displayAttack) return null;
 
-                                        const cooldownPosition = typeof displayAttack.cooldown_position === 'number'
-                                            ? displayAttack.cooldown_position
-                                            : 100;
+                                            const cooldownPosition = typeof displayAttack.cooldown_position === 'number'
+                                                ? displayAttack.cooldown_position
+                                                : 100;
 
-                                        let cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
-                                        if (this.props.combatManager && this.props.combatManager.round !== undefined) {
-                                            const fKey = String(displayAttack.key || displayAttack.name || '').trim().toLowerCase().replaceAll(' ', '_');
-                                            const remainingSec = liveSelectedFighter?.cooldowns?.[displayAttack.id] || liveSelectedFighter?.cooldowns?.[displayAttack.key] || liveSelectedFighter?.cooldowns?.[fKey] || 0;
-                                            if (remainingSec > 0) {
-                                                const baseCooldown = displayAttack.cooldown || 3;
-                                                const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
-                                                const smoothRemaining = Math.max(0, remainingSec - (1 - ratio));
-                                                cooldownRemaining = (smoothRemaining / baseCooldown) * 100;
-                                            } else {
-                                                cooldownRemaining = 0;
+                                            let cooldownRemaining = Math.max(0, Math.min(100, 100 - cooldownPosition));
+                                            if (this.props.combatManager && this.props.combatManager.round !== undefined) {
+                                                const fKey = String(displayAttack.key || displayAttack.name || '').trim().toLowerCase().replaceAll(' ', '_');
+                                                const remainingSec = liveSelectedFighter?.cooldowns?.[displayAttack.id] || liveSelectedFighter?.cooldowns?.[displayAttack.key] || liveSelectedFighter?.cooldowns?.[fKey] || 0;
+                                                if (remainingSec > 0) {
+                                                    const baseCooldown = displayAttack.cooldown || 3;
+                                                    const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
+                                                    const smoothRemaining = Math.max(0, remainingSec - (1 - ratio));
+                                                    cooldownRemaining = (smoothRemaining / baseCooldown) * 100;
+                                                } else {
+                                                    cooldownRemaining = 0;
+                                                }
                                             }
-                                        }
-                                        const normalizedAttackName = String(displayAttack.name || '').replaceAll('_', ' ').trim().toLowerCase();
-                                        const isAxeThrowTile = normalizedAttackName === 'axe throw';
-                                        const iconCandidate = displayAttack.icon;
-                                        const directIcon = (typeof iconCandidate === 'string')
-                                            ? iconCandidate
-                                            : (iconCandidate && typeof iconCandidate === 'object')
-                                                ? (iconCandidate.default || iconCandidate.src || '')
-                                                : '';
-                                        const fallbackKey = String(displayAttack.key || displayAttack.name || '')
-                                            .trim()
-                                            .toLowerCase()
-                                            .replaceAll(' ', '_');
-                                        const fallbackIconCandidate = images[fallbackKey];
-                                        const fallbackIcon = (typeof fallbackIconCandidate === 'string')
-                                            ? fallbackIconCandidate
-                                            : (fallbackIconCandidate && typeof fallbackIconCandidate === 'object')
-                                                ? (fallbackIconCandidate.default || fallbackIconCandidate.src || '')
-                                                : '';
-                                        const resolvedAttackIcon = directIcon || fallbackIcon;
+                                            const normalizedAttackName = String(displayAttack.name || '').replaceAll('_', ' ').trim().toLowerCase();
+                                            const isAxeThrowTile = normalizedAttackName === 'axe throw';
+                                            const iconCandidate = displayAttack.icon;
+                                            const directIcon = (typeof iconCandidate === 'string')
+                                                ? iconCandidate
+                                                : (iconCandidate && typeof iconCandidate === 'object')
+                                                    ? (iconCandidate.default || iconCandidate.src || '')
+                                                    : '';
+                                            const fallbackKey = String(displayAttack.key || displayAttack.name || '')
+                                                .trim()
+                                                .toLowerCase()
+                                                .replaceAll(' ', '_');
+                                            const fallbackIconCandidate = images[fallbackKey];
+                                            const fallbackIcon = (typeof fallbackIconCandidate === 'string')
+                                                ? fallbackIconCandidate
+                                                : (fallbackIconCandidate && typeof fallbackIconCandidate === 'object')
+                                                    ? (fallbackIconCandidate.default || fallbackIconCandidate.src || '')
+                                                    : '';
+                                            const resolvedAttackIcon = directIcon || fallbackIcon;
 
-                                        return <div key={groupKey} className='interaction-tile-wrapper'>
-                                                    <div 
-                                                    className={`interaction-tile ${cooldownPosition === 100 ? 'available' : ''} ${isAxeThrowTile ? 'attack-axe-throw' : ''}`} 
+                                            return <div key={groupKey} className='interaction-tile-wrapper'>
+                                                <div
+                                                    className={`interaction-tile ${cooldownPosition === 100 ? 'available' : ''} ${isAxeThrowTile ? 'attack-axe-throw' : ''}`}
                                                     style={{
                                                         backgroundImage: resolvedAttackIcon ? `url(${resolvedAttackIcon})` : 'none',
                                                         '--attack-icon-url': resolvedAttackIcon ? `url(${resolvedAttackIcon})` : 'none',
                                                         cursor: this.state.showCrosshair ? 'crosshair' : (cooldownPosition === 100 ? 'pointer' : '')
-                                                    }} 
-                                                    onClick={() => this.attackTileClicked(displayAttack)} 
-                                                    onMouseEnter={() => this.attackTileHovered(displayAttack.name)} 
+                                                    }}
+                                                    onClick={() => this.attackTileClicked(displayAttack)}
+                                                    onMouseEnter={() => this.attackTileHovered(displayAttack.name)}
                                                     onMouseLeave={() => this.attackTileHovered(null)}
-                                                    >
+                                                >
                                                     {cooldownRemaining > 0 && (
-                                                         <svg 
-                                                             style={{
-                                                                 position: 'absolute',
-                                                                 top: 0,
-                                                                 left: 0,
-                                                                 width: '100%',
-                                                                 height: '100%',
-                                                                 transform: 'rotate(-90deg)',
-                                                                 pointerEvents: 'none',
-                                                                 zIndex: 10
-                                                             }}
-                                                             viewBox="0 0 20 20"
-                                                         >
-                                                             <circle
-                                                                 cx="10"
-                                                                 cy="10"
-                                                                 r="10"
-                                                                 fill="none"
-                                                                 stroke="rgba(0, 0, 0, 0.75)"
-                                                                 strokeWidth="20"
-                                                                 strokeDasharray="62.83"
-                                                                 strokeDashoffset={(1 - (cooldownRemaining / 100)) * 62.83}
-                                                             />
-                                                         </svg>
-                                                     )}
-                                                    </div>
-                                                    {group.length > 1 && <div className="stack-badge">{this.romanNumeral(group.length)}</div>}
+                                                        <svg
+                                                            style={{
+                                                                position: 'absolute',
+                                                                top: 0,
+                                                                left: 0,
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                transform: 'rotate(-90deg)',
+                                                                pointerEvents: 'none',
+                                                                zIndex: 10
+                                                            }}
+                                                            viewBox="0 0 20 20"
+                                                        >
+                                                            <circle
+                                                                cx="10"
+                                                                cy="10"
+                                                                r="10"
+                                                                fill="none"
+                                                                stroke="rgba(0, 0, 0, 0.75)"
+                                                                strokeWidth="20"
+                                                                strokeDasharray="62.83"
+                                                                strokeDashoffset={(1 - (cooldownRemaining / 100)) * 62.83}
+                                                            />
+                                                        </svg>
+                                                    )}
                                                 </div>
-                                    });
-                                })()}
-                            </div>
-                        </div>
-                        <div className="target-col">
-                            <div className="interaction-header">Target</div>
-                            <div className="interaction-tooltip"> </div>
-                            <div className="interaction-tile-container">
-                                {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible && !e.isVCT).map((a)=>{
-                                    return <div key={a.id} className='interaction-tile-wrapper'>
-                                                <div 
-                                                    style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                                    className={`interaction-tile target ${activeTargetId === a.id ? 'active-target' : ''} ${this.state.portraitHoveredId === a.id ? 'hover-linked-target' : ''}`} 
-                                                    onClick={() => this.targetTileClicked(a)} 
-                                                    onMouseEnter={() => this.targetTileHovered(a)} 
-                                                    onMouseLeave={() => this.targetTileHovered(null)}>
-                                                </div>
+                                                {group.length > 1 && <div className="stack-badge">{this.romanNumeral(group.length)}</div>}
                                             </div>
-                                })}
-
-                                {this.state.selectedFighter && this.state.selectedFighter.name === 'Loryastes' && Object.values(this.state.battleData).filter(e => !e.isMonster && !e.isMinion && e.name !== 'Loryastes' && !e.dead && !e.invisible).map((a)=>{
-                                return <div 
-                                    key={a.id}
-                                    style={{backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : ''}} 
-                                    className={`interaction-tile target ${activeTargetId === a.id ? 'active-target' : ''} ${this.state.portraitHoveredId === a.id ? 'hover-linked-target' : ''}`} 
-                                    onClick={() => this.targetTileClicked(a)} 
-                                    onMouseEnter={() => this.targetTileHovered(a)} 
-                                    onMouseLeave={() => this.targetTileHovered(null)}
-                                    >
-                                    </div>
-                                })}
-                            </div>
-                        </div>
-                        <div className="combo-col">
-
-                        </div>
-                        <div className="queue-col">
-                            <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                <span>Event Log</span>
-                                <div className="log-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#aaa', cursor: 'pointer', userSelect: 'none' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={this.state.logFilterSelectedFighter}
-                                            onChange={(e) => this.setState({ logFilterSelectedFighter: e.target.checked })}
-                                            style={{ cursor: 'pointer' }}
-                                        />
-                                        Filter Selected
-                                    </label>
-                                    <div style={{ display: 'flex', gap: '2px' }}>
-                                        <button
-                                            onClick={() => this.setState(prev => ({ logFontSize: Math.max(8, prev.logFontSize - 1) }))}
-                                            style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
-                                            title="Decrease Font Size"
-                                        >
-                                            −
-                                        </button>
-                                        <button
-                                            onClick={() => this.setState(prev => ({ logFontSize: Math.min(24, prev.logFontSize + 1) }))}
-                                            style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
-                                            title="Increase Font Size"
-                                        >
-                                            +
-                                        </button>
-                                    </div>
+                                        });
+                                    })()}
                                 </div>
                             </div>
-                            <div className="event-log-container" ref={this.combatLogContainerRef}>
-                                {this.state.combatLog
-                                    .filter((entry) => {
-                                        const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
-                                        if (!this.state.logFilterSelectedFighter || !selectedUnit) return true;
-                                        const uName = String(selectedUnit.name || '').toLowerCase();
-                                        const uType = String(selectedUnit.type || '').toLowerCase();
-                                        const msg = String(entry.message || '').toLowerCase();
-                                        return msg.includes(uName) || msg.includes(uType);
-                                    })
-                                    .map((entry, index, filteredArray) => {
-                                        const isLatest = index === filteredArray.length - 1;
-                                        return (
+                            <div className="target-col">
+                                <div className="interaction-header">Target</div>
+                                <div className="interaction-tooltip"> </div>
+                                <div className="interaction-tile-container">
+                                    {this.state.selectedFighter && this.state.selectedFighter.name !== 'Loryastes' && Object.values(this.state.battleData).filter(e => (e.isMonster || e.isMinion) && !e.dead && !e.invisible && !e.isVCT).map((a) => {
+                                        return <div key={a.id} className='interaction-tile-wrapper'>
                                             <div
-                                                key={entry.id || index}
-                                                ref={isLatest ? this.latestCombatLogEntryRef : null}
-                                                className="event-log-entry"
-                                                style={{ fontSize: `${this.state.logFontSize}px` }}
-                                            >
-                                                {entry.message}
+                                                style={{ backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : '' }}
+                                                className={`interaction-tile target ${activeTargetId === a.id ? 'active-target' : ''} ${this.state.portraitHoveredId === a.id ? 'hover-linked-target' : ''}`}
+                                                onClick={() => this.targetTileClicked(a)}
+                                                onMouseEnter={() => this.targetTileHovered(a)}
+                                                onMouseLeave={() => this.targetTileHovered(null)}>
                                             </div>
-                                        );
+                                        </div>
                                     })}
+
+                                    {this.state.selectedFighter && this.state.selectedFighter.name === 'Loryastes' && Object.values(this.state.battleData).filter(e => !e.isMonster && !e.isMinion && e.name !== 'Loryastes' && !e.dead && !e.invisible).map((a) => {
+                                        return <div
+                                            key={a.id}
+                                            style={{ backgroundImage: "url(" + a.portrait + ")", cursor: this.state.showCrosshair ? 'crosshair' : '' }}
+                                            className={`interaction-tile target ${activeTargetId === a.id ? 'active-target' : ''} ${this.state.portraitHoveredId === a.id ? 'hover-linked-target' : ''}`}
+                                            onClick={() => this.targetTileClicked(a)}
+                                            onMouseEnter={() => this.targetTileHovered(a)}
+                                            onMouseLeave={() => this.targetTileHovered(null)}
+                                        >
+                                        </div>
+                                    })}
+                                </div>
+                            </div>
+                            <div className="combo-col">
+
+                            </div>
+                            <div className="queue-col">
+                                <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                                    <span>Event Log</span>
+                                    <div className="log-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#aaa', cursor: 'pointer', userSelect: 'none' }}>
+                                            <input
+                                                type="checkbox"
+                                                checked={this.state.logFilterSelectedFighter}
+                                                onChange={(e) => this.setState({ logFilterSelectedFighter: e.target.checked })}
+                                                style={{ cursor: 'pointer' }}
+                                            />
+                                            Filter Selected
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '2px' }}>
+                                            <button
+                                                onClick={() => this.setState(prev => ({ logFontSize: Math.max(8, prev.logFontSize - 1) }))}
+                                                style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
+                                                title="Decrease Font Size"
+                                            >
+                                                −
+                                            </button>
+                                            <button
+                                                onClick={() => this.setState(prev => ({ logFontSize: Math.min(24, prev.logFontSize + 1) }))}
+                                                style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
+                                                title="Increase Font Size"
+                                            >
+                                                +
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="event-log-container" ref={this.combatLogContainerRef}>
+                                    {this.state.combatLog
+                                        .filter((entry) => {
+                                            const selectedUnit = this.state.selectedFighter || this.state.selectedMonster;
+                                            if (!this.state.logFilterSelectedFighter || !selectedUnit) return true;
+                                            const uName = String(selectedUnit.name || '').toLowerCase();
+                                            const uType = String(selectedUnit.type || '').toLowerCase();
+                                            const msg = String(entry.message || '').toLowerCase();
+                                            return msg.includes(uName) || msg.includes(uType);
+                                        })
+                                        .map((entry, index, filteredArray) => {
+                                            const isLatest = index === filteredArray.length - 1;
+                                            return (
+                                                <div
+                                                    key={entry.id || index}
+                                                    ref={isLatest ? this.latestCombatLogEntryRef : null}
+                                                    className="event-log-entry"
+                                                    style={{ fontSize: `${this.state.logFontSize}px` }}
+                                                >
+                                                    {entry.message}
+                                                </div>
+                                            );
+                                        })}
+                                </div>
                             </div>
                         </div>
-                    </div>
                     )}
                 </div>}
 
@@ -3927,7 +3904,7 @@ class MonsterBattle extends React.Component {
                         inventoryManager={this.props.inventoryManager}
                         skillsMatrix={skillsMatrix}
                         onComplete={this.handleLevelUpComplete}
-                        onSave={() => { try { this.props.saveUserData && this.props.saveUserData(); } catch(e) {} }}
+                        onSave={() => { try { this.props.saveUserData && this.props.saveUserData(); } catch (e) { } }}
                     />
                 )}
             </div>

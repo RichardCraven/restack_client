@@ -45,6 +45,44 @@ const filterSpecialsByTier = (specials, selectedTier) => {
     return result.map(s => s.original);
 };
 
+const WEAKNESS_SYMBOLS = {
+    holy: '☀️',
+    fire: '🔥',
+    ice: '❄️',
+    electricity: '⚡',
+    arcane: '🔮',
+    psionic: '🧠',
+    physical: '🛡️',
+    crushing: '🔨',
+    cutting: '⚔️',
+    blood_magic: '🩸',
+    curse: '💀'
+};
+
+const renderWeaknessSymbols = (weaknesses) => {
+    if (!weaknesses || !Array.isArray(weaknesses)) return null;
+    return weaknesses.map((w, idx) => {
+        const type = typeof w === 'object' && w !== null ? (w.id || w.name || '') : w;
+        const normalized = type.toLowerCase().replace('-', '_');
+        const symbol = WEAKNESS_SYMBOLS[normalized] || WEAKNESS_SYMBOLS[type] || '❓';
+        const label = type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        return (
+            <span 
+                key={idx} 
+                title={label} 
+                style={{ 
+                    marginRight: '6px', 
+                    fontSize: '1.2em', 
+                    cursor: 'help', 
+                    display: 'inline-block' 
+                }}
+            >
+                {symbol}
+            </span>
+        );
+    });
+};
+
 
 // import useScript from '../hooks/useScript.js'
 
@@ -793,11 +831,8 @@ class CrewManagerPage extends React.Component {
                                             return <div key={i}>{name}{i !== this.state.selectedCrewMember.passives.length - 1 ? ',' : ''} &nbsp; </div>
                                         })}
                                     </div>
-                                    <div className="weaknesses">Weaknesses: &nbsp;
-                                        {this.state.selectedCrewMember.weaknesses.map((e, i) => {
-                                            const name = typeof e === 'object' && e !== null ? e.name : e;
-                                            return <div key={i}>{name}{i !== this.state.selectedCrewMember.weaknesses.length - 1 ? ',' : ''} &nbsp; </div>
-                                        })}
+                                    <div className="weaknesses" style={{ display: 'flex', alignItems: 'center' }}>Weaknesses: &nbsp;
+                                        {renderWeaknessSymbols(this.state.selectedCrewMember.weaknesses)}
                                     </div>
                                 </div>}
                             </div>
@@ -936,7 +971,7 @@ class CrewManagerPage extends React.Component {
                                                  <div className="enemy-info-stat">Skills: {((this.state.selectedEnemyForInfo.skills || this.state.selectedEnemyForInfo.specials) || []).map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
                                              )}
                                             {this.state.selectedEnemyForInfo.weaknesses?.length > 0 && (
-                                                <div className="enemy-info-stat">Weaknesses: {this.state.selectedEnemyForInfo.weaknesses.map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
+                                                <div className="enemy-info-stat" style={{ display: 'flex', alignItems: 'center' }}>Weaknesses: &nbsp; {renderWeaknessSymbols(this.state.selectedEnemyForInfo.weaknesses)}</div>
                                             )}
                                         </div>
                                     </div>

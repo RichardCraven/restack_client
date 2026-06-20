@@ -116,7 +116,7 @@ export function MonsterManager() {
             deathCries: ['No! Impossible!'],
             skills: ['void_lance', 'major_magic_missile', 'obliterate', 'invisibility'],
             passives: ['flying'],
-            weaknesses: ['arcane', 'holy-aura'],
+            weaknesses: ['arcane', 'holy'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 35 },
@@ -149,7 +149,7 @@ export function MonsterManager() {
             deathCries: ['Urdu meklak milnauru...'],
             skills: ['claw_strike', 'bifurcate', 'minor_magic_missile'],
             passives: ['flying'],
-            weaknesses: ['arcane', 'holy-aura'],
+            weaknesses: ['arcane', 'holy'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 35 },
@@ -179,7 +179,7 @@ export function MonsterManager() {
             greetings: ['*growls and flares its horns*', '*snarls fiercely*'],
             deathCries: ['*whines and collapses*'],
             skills: ['rake', 'bite', 'head_butt'],
-            weaknesses: ['holy', 'holy-aura'],
+            weaknesses: ['holy'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 35 },
@@ -442,7 +442,7 @@ export function MonsterManager() {
             greetings: ['My hunger sees you'],
             deathCries: ['Peace at last...'],
             skills: ['vampiric_bite', 'claw_strike', 'bat_fly', 'crimson_sight', 'soul_suck'],
-            weaknesses: ['arcane', 'holy-aura'],
+            weaknesses: ['arcane', 'holy'],
             minions: ['goblin', 'goblin'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
@@ -535,7 +535,7 @@ export function MonsterManager() {
             greetings: ['Thy blood is quickening'],
             deathCries: ['Mercy'],
             skills: ['greater_magic_missile', 'hex', 'shadow_curse', 'spiderweb', 'summon_spiders', 'dispell', 'demonic_whispers', 'transform'],
-            weaknesses: ['arcane', 'holy-aura'],
+            weaknesses: ['arcane', 'holy'],
             drops: [
                 { item: TIER3_POTION, percentChance: 35 },
                 { itemPool: TIER3_ITEM, percentChance: 35 },
@@ -559,7 +559,7 @@ export function MonsterManager() {
         //     deathCries: ['ahhh'],
         //     specials: ['obliterate', 'flying', 'invisibility'],
         //     attacks: ['major_magic_missile'],
-        //     weaknesses: ['arcane', 'holy-aura'],
+        //     weaknesses: ['arcane', 'holy'],
         //     drops: [
         //         { item: TIER2_POTION, percentChance: 35 },
         //         { itemPool: TIER2_WEAPONS, percentChance: 35 },
@@ -589,7 +589,7 @@ export function MonsterManager() {
             greetings: ['Vukudaj kolo gurdu'],
             deathCries: ['Urdu meklak milnaurku...'],
             skills: ['void_lance', 'obliterate', 'energy_burn', 'petrify', 'invisibility', 'major_magic_missile'],
-            weaknesses: ['arcane', 'holy-aura'],
+            weaknesses: ['arcane', 'holy'],
             minions: ['beholder_minion', 'beholder_minion'],
             drops: [
                 { item: TIER2_POTION, percentChance: 60 },
@@ -616,7 +616,7 @@ export function MonsterManager() {
         //     deathCries: ['Urdu meklak milnaurku...'],
         //     specials: ['obliterate', 'flying', 'invisibility'],
         //     attacks: ['void_lance', 'major_magic_missile'],
-        //     weaknesses: ['arcane', 'holy-aura'],
+        //     weaknesses: ['arcane', 'holy'],
         //     minions: ['golem'],
         //     drops: [
         //         { item: TIER2_POTION, percentChance: 35 },
@@ -648,7 +648,7 @@ export function MonsterManager() {
             deathCries: ['No! Impossible!'],
             skills: ['void_lance', 'claws', 'obliterate', 'invisibility', 'major_magic_missile'],
             passives: ['flying'],
-            weaknesses: ['arcane', 'holy-aura'],
+            weaknesses: ['arcane', 'holy'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },

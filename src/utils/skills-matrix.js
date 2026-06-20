@@ -615,7 +615,7 @@ const skillsMatrix = {
         atkPercentage: 100,
         type: 'debuff damage',
         flatDamage: 10,
-        effect: { type: 'frozen', chance: 100, duration: 'short' }
+        effect: { type: 'frozen', chance: 80, duration: 'short' }
     },
     magic_missile: {
         class: 'wizard',
@@ -1598,12 +1598,13 @@ const skillsMatrix = {
         id: 'arcane_barrier',
         tier: 1,
         name: 'Arcane Barrier',
-        desc: 'Shield in pure arcane force.',
+        desc: 'Shield in pure arcane force. Active for 4 rounds, any spells or projectiles targeting the unit have a 50% chance to fail completely (checked before all other checks).',
         icon: images['arcane_barrier'],
         cooldown: 10,
         duration: 'long',
         range: 'self',
-        type: 'buff'
+        type: 'buff',
+        effect: { type: 'arcane_barrier', duration: 'long' }
     },
     death_missile: {
         id: 'death_missile',

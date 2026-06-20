@@ -261,7 +261,7 @@ const toggleMenuTray = () => {
           
           <Route exact path="/usermanager" render={() => (
             !loggedIn ? <Redirect to="/login" /> :
-            <UserManagerPage {...props} />
+            <UserManagerPage {...props} navToLanding={navToLanding} />
             )}/>
           <Route exact path="/mapmaker" render={() => (
             !loggedIn ? <Redirect to="/login" /> :

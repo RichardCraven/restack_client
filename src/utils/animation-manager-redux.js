@@ -85,17 +85,21 @@ export class AnimationManagerRedux {
    * @param {object} targetCoords  { x, y }
    * @param {string} abilityName   e.g. 'claw_strike', 'energy_drain'
    */
-   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null, hitResults = null, sphereCoords = null) {
+   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null, hitResults = null, sphereCoords = null, negatedByBarrier = false) {
     if (!sourceCoords || !targetCoords) return;
     const name = String(abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
     this._isTargetLarge = isTargetLarge;
     this._currentTargetOccupiedCoords = Array.isArray(targetOccupiedCoords) ? targetOccupiedCoords : null;
     this._currentAbilityName = name;
+    this._negatedByBarrier = negatedByBarrier;
 
     const spherePx = sphereCoords ? this._px(sphereCoords) : null;
 
     switch (name) {
+      case 'betrayal_success':
+        this._betrayalSuccess(targetCoords, sourceUnitId);
+        break;
       case 'dragon_whirlwind':
         this._dragonWhirlwind(sourceCoords);
         break;
@@ -355,6 +359,41 @@ export class AnimationManagerRedux {
     return this._px(tgt);
   }
 
+  _adjustTgtPxForArcaneBarrier(srcPx, tgtPx) {
+    if (!this._negatedByBarrier || !srcPx || !tgtPx) return tgtPx;
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist <= 0) return tgtPx;
+    const ux = dx / dist;
+    const uy = dy / dist;
+    
+    let R = 58.5;
+    if (this._isTargetLarge) {
+      const occupiedLength = Array.isArray(this._currentTargetOccupiedCoords) ? this._currentTargetOccupiedCoords.length : 0;
+      if (occupiedLength >= 9) {
+        R = 175.5;
+      } else {
+        R = 117;
+      }
+    }
+    
+    return {
+      x: tgtPx.x - R * ux,
+      y: tgtPx.y - R * uy
+    };
+  }
+
+  _betrayalSuccess(targetCoords, targetUnitId) {
+    const tgtPx = this._px(targetCoords);
+    this._emit({
+      type: 'betrayal_success_overlay',
+      tgtPx,
+      targetUnitId,
+      duration: 1200
+    });
+  }
+
   // ─── Animation implementations ───────────────────────────────────────────────
 
   _clawStrike(src, tgt, sourceUnitId = null) {
@@ -503,7 +542,8 @@ export class AnimationManagerRedux {
 
   _fireball(src, tgt, hitResults = null) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    let tgtPx = this._getImpactTargetPx(tgt);
+    tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -545,13 +585,14 @@ export class AnimationManagerRedux {
           x: currentTgtPx.x,
           y: currentTgtPx.y + offsetY
         };
-        const dx = finalTgtPx.x - srcPx.x;
-        const dy = finalTgtPx.y - srcPx.y;
+        const adjustedTgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, finalTgtPx);
+        const dx = adjustedTgtPx.x - srcPx.x;
+        const dy = adjustedTgtPx.y - srcPx.y;
         const angle = Math.atan2(dy, dx) * (180 / Math.PI);
         this._emit({
           type: 'magic_missile_projectile',
           srcPx,
-          tgtPx: finalTgtPx,
+          tgtPx: adjustedTgtPx,
           angle,
           duration: 400,
           spherePx,
@@ -562,10 +603,10 @@ export class AnimationManagerRedux {
 
         // Emit hit sigil at impact (400ms later)
         setTimeout(() => {
-          if (isHit) {
+          if (isHit && !this._negatedByBarrier) {
             this._emit({
               type: 'magic_missile_hit_sigil',
-              tgtPx: finalTgtPx,
+              tgtPx: adjustedTgtPx,
               duration: 350
             });
           } else {
@@ -614,7 +655,8 @@ export class AnimationManagerRedux {
 
   _iceBlast(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    let tgtPx = this._getImpactTargetPx(tgt);
+    tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -632,7 +674,8 @@ export class AnimationManagerRedux {
 
   _acidBlast(src, tgt, hitResults = null) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    let tgtPx = this._getImpactTargetPx(tgt);
+    tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -752,7 +795,8 @@ export class AnimationManagerRedux {
 
   _projectileThrow(src, tgt, name, arrowType = null, spherePx = null, sourceUnitId = null) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    let tgtPx = this._getImpactTargetPx(tgt);
+    tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -785,7 +829,8 @@ export class AnimationManagerRedux {
 
   _ensnareNet(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    let tgtPx = this._getImpactTargetPx(tgt);
+    tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -803,7 +848,8 @@ export class AnimationManagerRedux {
 
   _executeMultiShots(src, tgt, name, arrowType = null, spherePx = null) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    let tgtPx = this._getImpactTargetPx(tgt);
+    tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
@@ -1184,7 +1230,8 @@ export class AnimationManagerRedux {
 
   _deathMissile(src, tgt) {
     const srcPx = this._px(src);
-    const tgtPx = this._getImpactTargetPx(tgt);
+    let tgtPx = this._getImpactTargetPx(tgt);
+    tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
     const dx = tgtPx.x - srcPx.x;
     const dy = tgtPx.y - srcPx.y;
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);

@@ -81,6 +81,7 @@ describe('Fireball Splash & Generic AI Basic Attack Range', () => {
     // Primary target should take full damage (20)
     expect(target.hp).toBe(80);
     // Large monster should take splash damage (10, which is Math.round(20 * 0.5))
+    expect(largeMonster.hp).toBe(90);
   });
 
   test('Fireball splash damage correctly handles Virtual Collision Tiles (VCTs) without breaking main unit HP', () => {

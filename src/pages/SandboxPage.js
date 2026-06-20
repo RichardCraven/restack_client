@@ -5764,20 +5764,25 @@ const SandboxPage = () => {
         }
         @keyframes weaponSwingArc {
           0% {
-            transform: rotate(60deg);
+            transform: rotate(-60deg);
             opacity: 0;
           }
           10% {
-            transform: rotate(60deg);
+            transform: rotate(-60deg);
             opacity: 1;
           }
           90% {
-            transform: rotate(-60deg);
+            transform: rotate(60deg);
             opacity: 1;
           }
           100% {
-            transform: rotate(-60deg);
+            transform: rotate(60deg);
             opacity: 0;
+          }
+        }
+        @keyframes drawRopes {
+          to {
+            stroke-dashoffset: 0;
           }
         }
         @keyframes leftFacingClawArc {
@@ -8251,6 +8256,33 @@ const SandboxPage = () => {
                       ? 'stunWobble 0.6s ease-in-out infinite'
                       : 'none'
                 }}>
+                  {djinnBindActive && (
+                    <div style={{
+                      position: 'absolute',
+                      left: 0, top: 0, width: '100%', height: '100%',
+                      pointerEvents: 'none',
+                      zIndex: 13,
+                    }}>
+                      <svg style={{
+                        position: 'absolute',
+                        left: 0, top: 0, width: '100%', height: '100%',
+                      }} viewBox="0 0 100 100">
+                        <path d="M 10,25 C 30,15 70,35 90,25 M 5,50 C 25,65 75,35 95,50 M 10,75 C 30,65 70,85 90,75 M 20,10 C 10,40 40,60 30,90 M 80,10 C 90,40 60,60 70,90" 
+                              fill="none" 
+                              stroke="#ffffff" 
+                              strokeWidth="5" 
+                              strokeLinecap="round"
+                              style={{ 
+                                  filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(0,0,0,0.8))',
+                                  strokeDasharray: '300',
+                                  strokeDashoffset: '300',
+                                  animation: 'drawRopes 0.8s ease-out forwards'
+                              }} 
+                        />
+                      </svg>
+                    </div>
+                  )}
+
                   {/* Djinn Death Missile Hit instance icon */}
                   {djinnDeathMissileHitActive && (
                     <div style={{

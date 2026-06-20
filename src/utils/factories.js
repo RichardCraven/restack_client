@@ -237,7 +237,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         color: fighter.color,
         facing: initialFacing, // persistent facing property
         attack: function(){
-            if (this.invisible || this.petrified || this.asleep || this.betrayed) return;
+            if (this.invisible || this.petrified || this.asleep) return;
             if (this.manualCommandCooldownUntil && Date.now() < this.manualCommandCooldownUntil) return;
             const target = getCombatant(this.targetId);
             if(!target) return;
@@ -257,7 +257,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
             initiateAttack(this);
         },
         manualAttack: function(){
-            if (this.invisible || this.petrified || this.asleep || this.betrayed) return;
+            if (this.invisible || this.petrified || this.asleep) return;
             this.manualMovesCurrent-= 2
             initiateAttack(this, true);
         },
@@ -738,7 +738,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
                 }
 
                 const eraMove = () => {
-                    if(this.stunned || this.petrified || this.asleep || this.betrayed) return; // cannot move or attack
+                    if(this.stunned || this.petrified || this.asleep) return; // cannot move or attack
                     if(this.ensnared) return; // ensnared: cannot move (attack is handled in processMove)
                     if(!era.moved && !this.onMoveCooldown){
                         this.retargetToCloserEnemyIfNeeded();

@@ -265,8 +265,38 @@ export function CombatManager() {
     };
     this.combatPaused = false;
     this.pauseCombat = (val) => {
-        this.combatPaused = val
-        Object.values(this.combatants).forEach(e => e.combatPaused = val)
+        this.combatPaused = val;
+        Object.values(this.combatants).forEach(e => e.combatPaused = val);
+
+        if (val === true) {
+            this.pauseStartTimestamp = Date.now();
+        } else if (val === false && this.pauseStartTimestamp) {
+            const pausedDuration = Date.now() - this.pauseStartTimestamp;
+            const END_TIME_KEYS = [
+                'sleepEndTimeMs', 'stunnedEndTimeMs', 'frozenEndTimeMs', 'fearEndTimeMs',
+                'ensnaredEndTimeMs', 'markedEndTimeMs', 'hexEndTimeMs',
+                'weaknessRevealedEndTimeMs', 'bonesEndTimeMs', 'astralBeingEndTimeMs',
+                'etherealSpeedEndTimeMs', 'thirdEyeEndTimeMs', 'arcaneBarrierEndTimeMs',
+                'shieldWallEndTimeMs', 'poisonEndTimeMs', 'bleedEndTimeMs',
+            ];
+            Object.values(this.combatants).forEach(unit => {
+                if (!unit) return;
+                END_TIME_KEYS.forEach(key => {
+                    if (unit[key] && unit[key] > 0) unit[key] += pausedDuration;
+                });
+                if (Array.isArray(unit.activeBuffs)) {
+                    unit.activeBuffs.forEach(b => {
+                        if (b && b.endTimeMs && b.endTimeMs > 0) b.endTimeMs += pausedDuration;
+                    });
+                }
+                if (Array.isArray(unit.activeDebuffs)) {
+                    unit.activeDebuffs.forEach(d => {
+                        if (d && d.endTimeMs && d.endTimeMs > 0) d.endTimeMs += pausedDuration;
+                    });
+                }
+            });
+            this.pauseStartTimestamp = null;
+        }
     }
     this.reset = () => {
         this.combatPaused = false;
@@ -2711,7 +2741,7 @@ export function CombatManager() {
 
         let isPhysical = true;
         const damageType = (caller && caller.pendingAttack && caller.pendingAttack.type) || null;
-        if (damageType && ['arcane', 'ice', 'fire', 'holy', 'psionic', 'holy-aura'].includes(damageType)) {
+        if (damageType && ['arcane', 'ice', 'fire', 'holy', 'psionic'].includes(damageType)) {
             isPhysical = false;
         }
         const hasShadowArmor = target.specials && target.specials.some(s => s.id === 'shadow_armor' || s.name === 'Shadow Armor');

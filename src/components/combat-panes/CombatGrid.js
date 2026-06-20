@@ -479,6 +479,18 @@ export const getActiveEffects = (combatant, combatManager) => {
             }
         }
     }
+    const arcaneBarrierBuff = getBuff('Arcane Barrier');
+    if (liveUnit.arcaneBarrierActive || arcaneBarrierBuff) {
+        list.push({
+            key: 'arcane_barrier',
+            icon: images.arcane_barrier,
+            border: '#ff5400',
+            roundsLeft: liveUnit.arcaneBarrierRoundsLeft || arcaneBarrierBuff?.roundsLeft || 0,
+            totalDuration: liveUnit.arcaneBarrierTotalRounds || liveUnit.arcaneBarrierRoundsLeft || arcaneBarrierBuff?.totalRounds || 4,
+            endTimeMs: liveUnit.arcaneBarrierEndTimeMs,
+            totalDurationMs: liveUnit.arcaneBarrierTotalDurationMs
+        });
+    }
 
     return list.filter((eff, index, arr) => arr.findIndex(candidate => candidate.key === eff.key) === index);
 };
@@ -886,7 +898,10 @@ export default function CombatGrid(props) {
                 
                 let preciseRoundsLeft = 0;
                 if (eff.endTimeMs && eff.totalDurationMs && eff.totalDurationMs > 0) {
-                    const now = Date.now();
+                    // When paused, freeze the sweep at the moment combat was paused
+                    const now = (combatManager?.combatPaused && combatManager?.pauseStartTimestamp)
+                        ? combatManager.pauseStartTimestamp
+                        : Date.now();
                     const timeLeftMs = eff.endTimeMs - now;
                     preciseRoundsLeft = Math.max(0, (timeLeftMs / eff.totalDurationMs) * total);
                 } else {
@@ -1261,33 +1276,60 @@ export default function CombatGrid(props) {
                     {details?.wounded && <div className="hit-flash-overlay" />}
                     {/* Ensnare Visual Overlay – green vine corners matching Sandbox */}
                     {details?.ensnared && !details?.dead && (
-                        <div style={{
-                            boxSizing: 'border-box',
-                            position: 'absolute',
-                            top: 0, left: 0, width: '100%', height: '100%',
-                            border: '3px solid #8bc34a',
-                            borderRadius: '6px',
-                            boxShadow: '0 0 18px rgba(139, 195, 74, 0.9), inset 0 0 10px rgba(139, 195, 74, 0.4)',
-                            pointerEvents: 'none',
-                            zIndex: 315
-                        }}>
-                            {[
-                                { left: 0, top: 0, borderRadius: '0 0 100% 0' },
-                                { right: 0, top: 0, borderRadius: '0 0 0 100%' },
-                                { left: 0, bottom: 0, borderRadius: '0 100% 0 0' },
-                                { right: 0, bottom: 0, borderRadius: '100% 0 0 0' }
-                            ].map((pos, i) => (
-                                <div key={i} style={{
+                        details.ensnaredSourceAbility === 'bind' ? (
+                            <div style={{
+                                position: 'absolute',
+                                left: 0, top: 0, width: '100%', height: '100%',
+                                pointerEvents: 'none',
+                                zIndex: 315,
+                            }}>
+                                <svg style={{
                                     position: 'absolute',
-                                    ...pos,
-                                    width: '18px', height: '18px',
-                                    border: '3.5px solid #558b2f',
-                                    boxShadow: '0 0 8px rgba(85,139,47,0.8)',
-                                    animation: `ensnarePulse 0.8s ease-in-out infinite ${i * 0.2}s`,
-                                    boxSizing: 'border-box'
-                                }} />
-                            ))}
-                        </div>
+                                    left: 0, top: 0, width: '100%', height: '100%',
+                                }} viewBox="0 0 100 100">
+                                    <path d="M 10,25 C 30,15 70,35 90,25 M 5,50 C 25,65 75,35 95,50 M 10,75 C 30,65 70,85 90,75 M 20,10 C 10,40 40,60 30,90 M 80,10 C 90,40 60,60 70,90" 
+                                          fill="none" 
+                                          stroke="#ffffff" 
+                                          strokeWidth="5" 
+                                          strokeLinecap="round"
+                                          style={{ 
+                                              filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(0,0,0,0.8))',
+                                              strokeDasharray: '300',
+                                              strokeDashoffset: '300',
+                                              animation: 'drawRopes 0.8s ease-out forwards'
+                                          }} 
+                                    />
+                                </svg>
+                            </div>
+                        ) : (
+                            <div style={{
+                                boxSizing: 'border-box',
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                border: '3px solid #8bc34a',
+                                borderRadius: '6px',
+                                boxShadow: '0 0 18px rgba(139, 195, 74, 0.9), inset 0 0 10px rgba(139, 195, 74, 0.4)',
+                                pointerEvents: 'none',
+                                zIndex: 315
+                            }}>
+                                {[
+                                    { left: 0, top: 0, borderRadius: '0 0 100% 0' },
+                                    { right: 0, top: 0, borderRadius: '0 0 0 100%' },
+                                    { left: 0, bottom: 0, borderRadius: '0 100% 0 0' },
+                                    { right: 0, bottom: 0, borderRadius: '100% 0 0 0' }
+                                ].map((pos, i) => (
+                                    <div key={i} style={{
+                                        position: 'absolute',
+                                        ...pos,
+                                        width: '18px', height: '18px',
+                                        border: '3.5px solid #558b2f',
+                                        boxShadow: '0 0 8px rgba(85,139,47,0.8)',
+                                        animation: `ensnarePulse 0.8s ease-in-out infinite ${i * 0.2}s`,
+                                        boxSizing: 'border-box'
+                                    }} />
+                                ))}
+                            </div>
+                        )
                     )}
                     {/* Poison Overlay (pulsing green glow) */}
                     {details?.poison && !details?.dead && (
@@ -1461,6 +1503,62 @@ export default function CombatGrid(props) {
                                 userSelect: 'none'
                             }}>
                                 ✦
+                            </div>
+                        </div>
+                    )}
+                    {combatManager.getCombatant(fighter.id)?.arcaneBarrierActive && (
+                        <div style={{
+                            position: 'absolute',
+                            width: '130%',
+                            height: '130%',
+                            left: '-15%',
+                            top: '-15%',
+                            zIndex: 340,
+                            pointerEvents: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                border: '3px solid rgba(255, 84, 0, 0.85)',
+                                boxShadow: '0 0 25px rgba(255, 84, 0, 0.7), inset 0 0 15px rgba(255, 84, 0, 0.4)',
+                                position: 'relative',
+                                animation: 'spin-slow 20s linear infinite',
+                            }}>
+                                {['\u16A0', '\u16A2', '\u16A6', '\u16A8', '\u16B1', '\u16B2', '\u16B7', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                                    const angle = (i / 12) * 360;
+                                    const radius = 42;
+                                    const rad = (angle - 90) * (Math.PI / 180);
+                                    return (
+                                        <span
+                                            key={i}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${50 + radius * Math.cos(rad)}%`,
+                                                top: `${50 + radius * Math.sin(rad)}%`,
+                                                transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                                                color: 'rgba(255, 84, 0, 0.95)',
+                                                fontSize: '21px',
+                                                textShadow: '0 0 8px rgba(255, 84, 0, 1)',
+                                                userSelect: 'none',
+                                            }}
+                                        >
+                                            {rune}
+                                        </span>
+                                    );
+                                })}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '15%',
+                                    left: '15%',
+                                    width: '70%',
+                                    height: '70%',
+                                    borderRadius: '50%',
+                                    border: '1px solid rgba(255, 84, 0, 0.3)',
+                                }} />
                             </div>
                         </div>
                     )}
@@ -1911,33 +2009,60 @@ export default function CombatGrid(props) {
                     )}
                     {/* Ensnare Visual Overlay – green vine corners matching Sandbox */}
                     {liveMonster?.ensnared && !isDead && (
-                        <div style={{
-                            boxSizing: 'border-box',
-                            position: 'absolute',
-                            top: 0, left: 0, width: '100%', height: '100%',
-                            border: '3px solid #8bc34a',
-                            borderRadius: '6px',
-                            boxShadow: '0 0 18px rgba(139, 195, 74, 0.9), inset 0 0 10px rgba(139, 195, 74, 0.4)',
-                            pointerEvents: 'none',
-                            zIndex: 13
-                        }}>
-                            {[
-                                { left: 0, top: 0, borderRadius: '0 0 100% 0' },
-                                { right: 0, top: 0, borderRadius: '0 0 0 100%' },
-                                { left: 0, bottom: 0, borderRadius: '0 100% 0 0' },
-                                { right: 0, bottom: 0, borderRadius: '100% 0 0 0' }
-                            ].map((pos, i) => (
-                                <div key={i} style={{
+                        liveMonster.ensnaredSourceAbility === 'bind' ? (
+                            <div style={{
+                                position: 'absolute',
+                                left: 0, top: 0, width: '100%', height: '100%',
+                                pointerEvents: 'none',
+                                zIndex: 13,
+                            }}>
+                                <svg style={{
                                     position: 'absolute',
-                                    ...pos,
-                                    width: '18px', height: '18px',
-                                    border: '3.5px solid #558b2f',
-                                    boxShadow: '0 0 8px rgba(85,139,47,0.8)',
-                                    animation: `ensnarePulse 0.8s ease-in-out infinite ${i * 0.2}s`,
-                                    boxSizing: 'border-box'
-                                }} />
-                            ))}
-                        </div>
+                                    left: 0, top: 0, width: '100%', height: '100%',
+                                }} viewBox="0 0 100 100">
+                                    <path d="M 10,25 C 30,15 70,35 90,25 M 5,50 C 25,65 75,35 95,50 M 10,75 C 30,65 70,85 90,75 M 20,10 C 10,40 40,60 30,90 M 80,10 C 90,40 60,60 70,90" 
+                                          fill="none" 
+                                          stroke="#ffffff" 
+                                          strokeWidth="5" 
+                                          strokeLinecap="round"
+                                          style={{ 
+                                              filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.8)) drop-shadow(0 0 2px rgba(0,0,0,0.8))',
+                                              strokeDasharray: '300',
+                                              strokeDashoffset: '300',
+                                              animation: 'drawRopes 0.8s ease-out forwards'
+                                          }} 
+                                    />
+                                </svg>
+                            </div>
+                        ) : (
+                            <div style={{
+                                boxSizing: 'border-box',
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                border: '3px solid #8bc34a',
+                                borderRadius: '6px',
+                                boxShadow: '0 0 18px rgba(139, 195, 74, 0.9), inset 0 0 10px rgba(139, 195, 74, 0.4)',
+                                pointerEvents: 'none',
+                                zIndex: 13
+                            }}>
+                                {[
+                                    { left: 0, top: 0, borderRadius: '0 0 100% 0' },
+                                    { right: 0, top: 0, borderRadius: '0 0 0 100%' },
+                                    { left: 0, bottom: 0, borderRadius: '0 100% 0 0' },
+                                    { right: 0, bottom: 0, borderRadius: '100% 0 0 0' }
+                                ].map((pos, i) => (
+                                    <div key={i} style={{
+                                        position: 'absolute',
+                                        ...pos,
+                                        width: '18px', height: '18px',
+                                        border: '3.5px solid #558b2f',
+                                        boxShadow: '0 0 8px rgba(85,139,47,0.8)',
+                                        animation: `ensnarePulse 0.8s ease-in-out infinite ${i * 0.2}s`,
+                                        boxSizing: 'border-box'
+                                    }} />
+                                ))}
+                            </div>
+                        )
                     )}
                     {unit.stunned && !isAsleepMonster && !isDead && (
                         <div style={{
@@ -2011,6 +2136,62 @@ export default function CombatGrid(props) {
                             </div>
                         ) : null;
                     })()}
+                    {liveMonster?.arcaneBarrierActive && (
+                        <div style={{
+                            position: 'absolute',
+                            width: '130%',
+                            height: '130%',
+                            left: '-15%',
+                            top: '-15%',
+                            zIndex: 340,
+                            pointerEvents: 'none',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <div style={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                border: '3px solid rgba(255, 84, 0, 0.85)',
+                                boxShadow: '0 0 25px rgba(255, 84, 0, 0.7), inset 0 0 15px rgba(255, 84, 0, 0.4)',
+                                position: 'relative',
+                                animation: 'spin-slow 20s linear infinite',
+                            }}>
+                                {['\u16A0', '\u16A2', '\u16A6', '\u16A8', '\u16B1', '\u16B2', '\u16B7', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                                    const angle = (i / 12) * 360;
+                                    const radius = 42;
+                                    const rad = (angle - 90) * (Math.PI / 180);
+                                    return (
+                                        <span
+                                            key={i}
+                                            style={{
+                                                position: 'absolute',
+                                                left: `${50 + radius * Math.cos(rad)}%`,
+                                                top: `${50 + radius * Math.sin(rad)}%`,
+                                                transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                                                color: 'rgba(255, 84, 0, 0.95)',
+                                                fontSize: isMinion ? '13px' : (isLarge ? '26px' : '20px'),
+                                                textShadow: '0 0 8px rgba(255, 84, 0, 1)',
+                                                userSelect: 'none',
+                                            }}
+                                        >
+                                            {rune}
+                                        </span>
+                                    );
+                                })}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '15%',
+                                    left: '15%',
+                                    width: '70%',
+                                    height: '70%',
+                                    borderRadius: '50%',
+                                    border: '1px solid rgba(255, 84, 0, 0.3)',
+                                }} />
+                            </div>
+                        </div>
+                    )}
                 </div>
                 {animationOverlays[unit.id] && getAllOverlaysById(unit.id).map((overlay, i) => (
                     <Overlay key={i} animationType={overlay.type} data={{ ...overlay.data, dead: isDead }} />
@@ -2129,6 +2310,27 @@ export default function CombatGrid(props) {
     const renderAnimation = (anim) => {
         if (!anim) return null;
         const key = anim.id;
+
+        if (anim.type === 'betrayal_success_overlay' && anim.tgtPx) {
+            const imgUrl = images.betrayal_hit?.default || images.betrayal_hit;
+            const size = anim.isTargetLarge ? TILE_SIZE * 2 : TILE_SIZE;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    backgroundImage: `url(${imgUrl})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    pointerEvents: 'none',
+                    zIndex: 2500,
+                    animation: 'betrayalHitFade 1.2s ease-out forwards'
+                }} />
+            );
+        }
 
         if (anim.type === 'stomp_shockwave' && anim.centerPx) {
             return (

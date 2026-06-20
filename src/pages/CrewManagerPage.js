@@ -10,6 +10,44 @@ import {
 } from '../utils/api-handler';
 import { InventoryManager } from '../utils/inventory-manager';
 
+const WEAKNESS_SYMBOLS = {
+    holy: '☀️',
+    fire: '🔥',
+    ice: '❄️',
+    electricity: '⚡',
+    arcane: '🔮',
+    psionic: '🧠',
+    physical: '🛡️',
+    crushing: '🔨',
+    cutting: '⚔️',
+    blood_magic: '🩸',
+    curse: '💀'
+};
+
+const renderWeaknessSymbols = (weaknesses) => {
+    if (!weaknesses || !Array.isArray(weaknesses)) return null;
+    return weaknesses.map((w, idx) => {
+        const type = typeof w === 'object' && w !== null ? (w.id || w.name || '') : w;
+        const normalized = type.toLowerCase().replace('-', '_');
+        const symbol = WEAKNESS_SYMBOLS[normalized] || WEAKNESS_SYMBOLS[type] || '❓';
+        const label = type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+        return (
+            <span 
+                key={idx} 
+                title={label} 
+                style={{ 
+                    marginRight: '6px', 
+                    fontSize: '1.2em', 
+                    cursor: 'help', 
+                    display: 'inline-block' 
+                }}
+            >
+                {symbol}
+            </span>
+        );
+    });
+};
+
 class CrewManagerPage extends React.Component{
   constructor(props){
     super(props)
@@ -268,11 +306,8 @@ goBack = () => {
                                 return <div key={i}>{ name }{i !== this.state.selectedCrewMember.passives.length-1 ?  ',' : ''} &nbsp; </div>
                             })}
                         </div>
-                        <div className="weaknesses">Weaknesses: &nbsp;
-                            {(this.state.selectedCrewMember.weaknesses || []).map((e,i)=> {
-                                const name = typeof e === 'object' && e !== null ? e.name : e;
-                                return <div key={i}>{ name }{i !== this.state.selectedCrewMember.weaknesses.length-1 ?  ',' : ''} &nbsp; </div>
-                            })}
+                        <div className="weaknesses" style={{ display: 'flex', alignItems: 'center' }}>Weaknesses: &nbsp;
+                            {renderWeaknessSymbols(this.state.selectedCrewMember.weaknesses)}
                         </div>
                     </div>}
                     {/* <div className="button-container">

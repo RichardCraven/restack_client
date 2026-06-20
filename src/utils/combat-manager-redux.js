@@ -219,6 +219,39 @@ export function CombatManagerRedux() {
     this.pauseCombat = (val) => {
         this.combatPaused = val;
         Object.values(this.combatants).forEach(e => e.combatPaused = val);
+
+        if (val === true) {
+            // Record when we paused so we can freeze the effect-icon sweep
+            this.pauseStartTimestamp = Date.now();
+        } else if (val === false && this.pauseStartTimestamp) {
+            // Shift all time-based endTimeMs fields forward by the paused duration
+            const pausedDuration = Date.now() - this.pauseStartTimestamp;
+            const END_TIME_KEYS = [
+                'sleepEndTimeMs', 'stunnedEndTimeMs', 'frozenEndTimeMs', 'fearEndTimeMs',
+                'ensnaredEndTimeMs', 'markedEndTimeMs', 'hexEndTimeMs',
+                'weaknessRevealedEndTimeMs', 'bonesEndTimeMs', 'astralBeingEndTimeMs',
+                'etherealSpeedEndTimeMs', 'thirdEyeEndTimeMs', 'arcaneBarrierEndTimeMs',
+                'shieldWallEndTimeMs', 'poisonEndTimeMs', 'bleedEndTimeMs',
+            ];
+            Object.values(this.combatants).forEach(unit => {
+                if (!unit) return;
+                END_TIME_KEYS.forEach(key => {
+                    if (unit[key] && unit[key] > 0) unit[key] += pausedDuration;
+                });
+                if (Array.isArray(unit.activeBuffs)) {
+                    unit.activeBuffs.forEach(b => {
+                        if (b && b.endTimeMs && b.endTimeMs > 0) b.endTimeMs += pausedDuration;
+                    });
+                }
+                if (Array.isArray(unit.activeDebuffs)) {
+                    unit.activeDebuffs.forEach(d => {
+                        if (d && d.endTimeMs && d.endTimeMs > 0) d.endTimeMs += pausedDuration;
+                    });
+                }
+            });
+            this.pauseStartTimestamp = null;
+        }
+
         if (typeof this.updateData === 'function') {
             this.updateData(clone(this.combatants));
         }
@@ -1638,6 +1671,7 @@ export function CombatManagerRedux() {
                                 unit.feared = false; unit.fearRounds = 0; unit.fearTotalRounds = 0; unit.fearStackDuration = 0; unit.fearTotalDurationMs = 0; unit.fearEndTimeMs = 0;
                                 unit.asleep = false; unit.sleepRounds = 0; unit.sleepTotalRounds = 0; unit.sleepTotalDurationMs = 0; unit.sleepEndTimeMs = 0;
                                 unit.ensnared = false; unit.ensnaredRounds = 0; unit.ensnaredTotalRounds = 0; unit.ensnaredStackDuration = 0; unit.ensnaredTotalDurationMs = 0; unit.ensnaredEndTimeMs = 0;
+                                unit.ensnaredSourceAbility = null;
                                 unit.marked = false; unit.markedRounds = 0; unit.markedTotalRounds = 0; unit.markedStackDuration = 0; unit.markedTotalDurationMs = 0; unit.markedEndTimeMs = 0;
 
                                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Shadow Armor dispelled all debuffs!`);
@@ -1754,6 +1788,9 @@ export function CombatManagerRedux() {
                     unit.newMoonAtkBoost = 0;
                     unit.newMoonFearChance = 0;
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer under the New Moon.`);
+                } else if (buff.name === 'Arcane Barrier') {
+                    unit.arcaneBarrierActive = false;
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Arcane Barrier has worn off.`);
                 } else {
                     this.appendCombatLog(`${this.getCombatantLogName(unit)}'s ${buff.name} has worn off.`);
                 }
@@ -1825,6 +1862,7 @@ export function CombatManagerRedux() {
                 unit.ensnaredStackDuration = 0;
                 unit.ensnaredTotalDurationMs = 0;
                 unit.ensnaredEndTimeMs = 0;
+                unit.ensnaredSourceAbility = null;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer ensnared.`);
             }
         }
@@ -2148,7 +2186,28 @@ export function CombatManagerRedux() {
             return false;
         });
 
-        return hasSpecial || hasAttack;
+        const isReady = hasSpecial || hasAttack;
+        if (!isReady) return false;
+
+        // Betrayed units cannot use passive, buff, heal, or non-damage utility/debuff abilities
+        if (unit.betrayed) {
+            const resolved = this.resolveSpecial(unit, normKey);
+            if (resolved) {
+                const type = String(resolved.type || '').toLowerCase();
+                const isPassive = type === 'passive' || resolved.isPassive;
+                const isBuff = type === 'buff' || resolved.isBuff || (resolved.effect && resolved.effect.type === 'buff');
+                const isHeal = type === 'heal' || resolved.isHeal || normKey.includes('heal') || normKey.includes('meditate') || normKey.includes('regenerate');
+                const isUtility = type === 'utility' || type === 'summon' || normKey.includes('summon') || normKey.includes('portal') || normKey.includes('rift');
+                const isDebuff = type === 'debuff' || (resolved.effect && ['sleep', 'fear', 'ensnared', 'betrayal', 'hex', 'polymorph', 'bind', 'induce_fear', 'crimson_sight', 'witch_whispers'].includes(resolved.effect.type));
+                const isDamage = type.includes('damage') || resolved.damage > 0 || resolved.flatDamage > 0 || resolved.atkPercentage > 0;
+
+                if ((isPassive || isBuff || isHeal || isUtility || isDebuff) && !isDamage) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     };
 
     // Returns first ready special matching any of the provided keys
@@ -3187,6 +3246,7 @@ export function CombatManagerRedux() {
                     this.appendCombatLog(`${this.getCombatantLogName(target)} resists Ensnare! (Dragon CC Immunity)`);
                 } else {
                     target.ensnared = true;
+                    target.ensnaredSourceAbility = 'ensnare';
                     target.ensnaredRounds = getDurationRounds(pick.duration || 'short');
                     target.ensnaredTotalRounds = target.ensnaredRounds;
                     target.ensnaredStackDuration = target.ensnaredRounds;
@@ -4949,6 +5009,7 @@ export function CombatManagerRedux() {
         });
 
         target.ensnared = true;
+        target.ensnaredSourceAbility = 'spider_minion';
         target.ensnaredRounds = Math.max(target.ensnaredRounds || 0, 2);
         target.ensnaredTotalRounds = Math.max(target.ensnaredTotalRounds || 0, 2);
         target.ensnaredStackDuration = Math.max(target.ensnaredStackDuration || 0, 2);
@@ -5802,6 +5863,7 @@ export function CombatManagerRedux() {
             // Ensnare target unit
             const dur = getDurationRounds(ability.duration || 'short');
             target.ensnared = true;
+            target.ensnaredSourceAbility = 'spiderweb';
             target.ensnaredRounds = dur;
             target.ensnaredTotalRounds = dur;
             target.ensnaredStackDuration = dur;
@@ -6159,6 +6221,61 @@ export function CombatManagerRedux() {
         if (this.animationManager && typeof this.animationManager.triggerVisualAbility === 'function') {
             this.animationManager.triggerVisualAbility(unit.id, target.id, ability);
         }
+        const isRangedProj = ability.range && ability.range !== 'close' && ability.range !== 'self' && abilityId !== 'inspire' && ability.type !== 'summon';
+        const isSpellOrProj = isMagicalAbility || isRangedProj;
+        const negatedByBarrier = !!(target && target.arcaneBarrierActive && target.id !== unit.id && ability.range !== 'self' && isSpellOrProj && Math.random() < 0.5);
+
+        if (negatedByBarrier) {
+            this.appendCombatLog(`${this.getCombatantLogName(target)}'s Arcane Barrier negated ${this.getCombatantLogName(unit)}'s ${ability.name || abilityId}!`);
+            
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                const isTargetLarge = target.isLarge
+                    || target.size === 2
+                    || (target.isMonster === true && target.isMinion !== true)
+                    || (target.type && ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'].includes(target.type) && target.isMinion !== true);
+                const callerTiles = (origCallerOccupied && origCallerOccupied.length > 0) ? origCallerOccupied : [origCallerCoords];
+                const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0) ? target.occupiedCoords : [target.coordinates];
+                let bestCallerCoord = origCallerCoords;
+                let bestTargetCoord = target.coordinates;
+                let minDistance = Infinity;
+                callerTiles.forEach(cc => {
+                    targetTiles.forEach(tc => {
+                        const dist = Math.abs(cc.x - tc.x) + Math.abs(cc.y - tc.y);
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            bestCallerCoord = cc;
+                            bestTargetCoord = tc;
+                        }
+                    });
+                });
+                const isCallerLarge = unit.isMonster && !unit.isMinion && (
+                    unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3 ||
+                    unit.type === 'sphinx' || unit.key === 'sphinx' ||
+                    ['beholder', 'ogre', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire'].includes(unit.type)
+                );
+                let sourceCoord = bestCallerCoord;
+                if (isCallerLarge && !isMeleeAbility) {
+                    sourceCoord = unit.coordinates;
+                }
+                let targetCoord = bestTargetCoord;
+                if (isTargetLarge && !isMeleeAbility) {
+                    targetCoord = target.coordinates;
+                }
+                const activeDarkSphere = isRangedProj ? Object.values(this.combatants).find(c =>
+                    c && !c.dead && c.type === 'darkness_sphere' && !!c.isMonster === !!target.isMonster
+                ) : null;
+                const sphereCoords = activeDarkSphere ? activeDarkSphere.coordinates : null;
+                this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType, null, preRolledHits, sphereCoords, true);
+            }
+            
+            if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
+                unit.arrowNotched = false;
+                unit.notchedArrowType = null;
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
         // Sandbox-style Redux animation hook (pure CSS/state)
         if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
             const isTargetLarge = target.isLarge
@@ -6264,6 +6381,15 @@ export function CombatManagerRedux() {
             unit.thirdEyeTotalRounds = selfBuffDuration;
             unit.thirdEyeTotalDurationMs = selfBuffDurationMs;
             unit.thirdEyeEndTimeMs = Date.now() + selfBuffDurationMs;
+        }
+        if (abilityId === 'arcane_barrier') {
+            this._applyBuff(unit, { increase_stats: { stats: [] } }, 'Arcane Barrier', selfBuffDuration);
+            unit.arcaneBarrierActive = true;
+            unit.arcaneBarrierRoundsLeft = selfBuffDuration;
+            unit.arcaneBarrierTotalRounds = selfBuffDuration;
+            unit.arcaneBarrierTotalDurationMs = selfBuffDurationMs;
+            unit.arcaneBarrierEndTimeMs = Date.now() + selfBuffDurationMs;
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} is shielded by an Arcane Barrier!`);
         }
 
         // Apply all-enemy debuffs
@@ -6693,7 +6819,19 @@ export function CombatManagerRedux() {
                     const targetFort = (target.stats && typeof target.stats.fort === 'number') ? target.stats.fort : 0;
                     resolvedEffects.forEach(eff => {
                         const chance = typeof eff.chance === 'number' ? eff.chance : 100;
-                        if (Math.random() * 100 <= chance) {
+                        let rollSuccess = false;
+                        if (eff.type === 'instant_death') {
+                            const roll = Math.random() * 100;
+                            rollSuccess = roll <= chance;
+                            if (rollSuccess) {
+                                this.appendCombatLog(`${this.getCombatantLogName(target)} was instantly slain by Death Missile!`);
+                            } else {
+                                this.appendCombatLog(`${this.getCombatantLogName(target)} survived Death Missile's instant death check (${chance}% chance).`);
+                            }
+                        } else {
+                            rollSuccess = Math.random() * 100 <= chance;
+                        }
+                        if (rollSuccess) {
                             if (target.type === 'dragon' && ['frozen', 'stun', 'sleep', 'fear', 'ensnared', 'polymorph'].includes(eff.type)) {
                                 if (Math.random() < 0.5) {
                                     this.appendCombatLog(`${this.getCombatantLogName(target)} resists ${formatCombatText(eff.type)}! (Dragon CC Immunity)`);
@@ -6751,6 +6889,7 @@ export function CombatManagerRedux() {
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is frozen!`);
                             } else if (eff.type === 'ensnared') {
                                 target.ensnared = true;
+                                target.ensnaredSourceAbility = abilityId;
                                 target.ensnaredRounds = dur;
                                 target.ensnaredTotalRounds = dur;
                                 target.ensnaredStackDuration = dur;
@@ -6847,9 +6986,35 @@ export function CombatManagerRedux() {
                                 target.betrayed_eras = dur;
                                 this._applyDebuff(target, null, 'Betrayed', dur);
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is BETRAYED! They switch sides and attack their allies!`);
+
+                                // Choose a target and turn to face them
+                                this.acquireTarget(target, true);
+                                if (target.targetId && this.combatants[target.targetId]) {
+                                    const newTgt = this.combatants[target.targetId];
+                                    const dx = newTgt.coordinates.x - target.coordinates.x;
+                                    const dy = newTgt.coordinates.y - target.coordinates.y;
+                                    if (Math.abs(dx) >= Math.abs(dy)) {
+                                        target.facing = dx > 0 ? 'right' : 'left';
+                                    } else {
+                                        target.facing = dy > 0 ? 'down' : 'up';
+                                    }
+                                } else {
+                                    target.facing = (target.isMonster || target.isMinion) ? 'left' : 'right';
+                                }
+
+                                // Trigger betrayal success overlay animation
+                                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                                    this.animManagerRedux.triggerAbility(
+                                        target.coordinates,
+                                        target.coordinates,
+                                        'betrayal_success',
+                                        target.isLarge,
+                                        (Array.isArray(target.occupiedCoords) ? target.occupiedCoords : [target.coordinates]),
+                                        target.id
+                                    );
+                                }
                             } else if (eff.type === 'instant_death') {
                                 target.hp = 0;
-                                this.appendCombatLog(`${this.getCombatantLogName(target)} is struck by instant death!`);
                                 this.targetKilled(target);
                             }
                         }
@@ -7791,6 +7956,7 @@ export function CombatManagerRedux() {
                     if (debuff === 'ensnared' || debuff === 'bind') {
                         user.ensnared = false;
                         user.ensnared_eras = 0;
+                        user.ensnaredSourceAbility = null;
                     }
                 });
             }
