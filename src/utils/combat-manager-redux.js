@@ -491,7 +491,7 @@ export function CombatManagerRedux() {
 
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
 
-        this.data.crew.forEach((e, index) => {
+        (this.data?.crew || []).forEach((e, index) => {
             if (e && (e.dead === true || e.hp === 0)) return;
 
             // Ensure fundamental abilities are always available
@@ -578,10 +578,11 @@ export function CombatManagerRedux() {
         const isLarge = (
             !isHuge && (
                 (typeof m.large === 'boolean' && m.large === true)
-                || (m.type && LARGE_COMBAT_KEYS.includes(m.type) && m.isMinion !== true)
+                || (m.type && LARGE_COMBAT_KEYS.includes(m.type) && (m.isMinion !== true || m.tier === 3 || m.tier === 4))
                 || (typeof m.size === 'number' && m.size >= 2)
                 || (typeof m.scale === 'number' && m.scale >= 2)
-                || (m.isMonster === true && m.isMinion !== true)
+                || (m.isMonster === true && (m.isMinion !== true || m.tier === 3 || m.tier === 4))
+                || (m.tier === 3)
             )
         );
 
@@ -659,12 +660,116 @@ export function CombatManagerRedux() {
                 }
             }
 
+            // Helper to get all coordinates currently occupied by placed combatants (including large/huge VCT tiles)
+            const getCurrentlyOccupiedCoords = () => {
+                const occupied = [];
+                Object.values(this.combatants).forEach(c => {
+                    if (!c || c.dead) return;
+                    if (Array.isArray(c.occupiedCoords)) {
+                        c.occupiedCoords.forEach(coord => {
+                            if (!occupied.some(o => o.x === coord.x && o.y === coord.y)) {
+                                occupied.push({ x: coord.x, y: coord.y });
+                            }
+                        });
+                    } else if (c.coordinates) {
+                        if (!occupied.some(o => o.x === c.coordinates.x && o.y === c.coordinates.y)) {
+                            occupied.push({ x: c.coordinates.x, y: c.coordinates.y });
+                        }
+                    }
+                });
+                return occupied;
+            };
+
+            // Helper to get coordinates a minion would occupy if placed at (x, y)
+            const getOccupiedCoordsForPos = (x, y, isHuge, isLarge) => {
+                const coords = [{ x, y }];
+                if (isHuge) {
+                    const hOffset = (x >= 4) ? -1 : 1;
+                    const extra = [
+                        { x: x, y: y - 1 },
+                        { x: x, y: y - 2 },
+                        { x: x + hOffset, y: y },
+                        { x: x + hOffset, y: y - 1 },
+                        { x: x + hOffset, y: y - 2 },
+                        { x: x + 2 * hOffset, y: y },
+                        { x: x + 2 * hOffset, y: y - 1 },
+                        { x: x + 2 * hOffset, y: y - 2 }
+                    ];
+                    extra.forEach(c => {
+                        if (!coords.some(existing => existing.x === c.x && existing.y === c.y)) {
+                            coords.push(c);
+                        }
+                    });
+                } else if (isLarge) {
+                    const hOffset = (x >= 4) ? -1 : 1;
+                    const extra = [
+                        { x: x, y: y - 1 },
+                        { x: x + hOffset, y: y },
+                        { x: x + hOffset, y: y - 1 }
+                    ];
+                    extra.forEach(c => {
+                        if (!coords.some(existing => existing.x === c.x && existing.y === c.y)) {
+                            coords.push(c);
+                        }
+                    });
+                }
+                return coords;
+            };
+
             this.data.minions.forEach((e, i) => {
                 e.isMinion = true;
                 e.isMonster = true; // Starting boss minions are hostile monsters
-                const laneIndex = i % availableLanes.length;
-                const columnOffset = Math.floor(i / availableLanes.length);
-                e.coordinates = { x: MAX_DEPTH - columnOffset, y: availableLanes[laneIndex] };
+
+                // Determine minion size
+                const isMinionHuge = (
+                    (typeof e.huge === 'boolean' && e.huge === true)
+                    || (e.type === 'dragon')
+                    || (e.tier === 4)
+                    || (typeof e.size === 'number' && e.size === 3)
+                    || (typeof e.scale === 'number' && e.scale === 3)
+                );
+                const isMinionLarge = (
+                    !isMinionHuge && (
+                        (typeof e.large === 'boolean' && e.large === true)
+                        || (e.type && LARGE_COMBAT_KEYS.includes(e.type) && (e.isMinion !== true || e.tier === 3 || e.tier === 4))
+                        || (typeof e.size === 'number' && e.size >= 2)
+                        || (typeof e.scale === 'number' && e.scale >= 2)
+                        || (e.isMonster === true && (e.isMinion !== true || e.tier === 3 || e.tier === 4))
+                        || (e.tier === 3)
+                    )
+                );
+
+                const currentlyOccupied = getCurrentlyOccupiedCoords();
+                let assignedCoord = null;
+
+                // Find the first valid starting point flanking the boss (columns right-to-left)
+                for (let colOffset = 0; colOffset < 5; colOffset++) {
+                    const targetX = MAX_DEPTH - colOffset;
+                    for (let laneIdx = 0; laneIdx < availableLanes.length; laneIdx++) {
+                        const targetY = availableLanes[laneIdx];
+                        
+                        const minionOccupied = getOccupiedCoordsForPos(targetX, targetY, isMinionHuge, isMinionLarge);
+                        
+                        const allInBounds = minionOccupied.every(c => c.x >= 0 && c.x <= MAX_DEPTH && c.y >= 0 && c.y < MAX_LANES);
+                        if (!allInBounds) continue;
+                        
+                        const overlaps = minionOccupied.some(c => currentlyOccupied.some(o => o.x === c.x && o.y === c.y));
+                        if (!overlaps) {
+                            assignedCoord = { x: targetX, y: targetY };
+                            break;
+                        }
+                    }
+                    if (assignedCoord) break;
+                }
+
+                // Fallback to original formulaic assignment if no clean overlap-free coordinate is found
+                if (!assignedCoord) {
+                    const laneIndex = i % availableLanes.length;
+                    const columnOffset = Math.floor(i / availableLanes.length);
+                    assignedCoord = { x: MAX_DEPTH - columnOffset, y: availableLanes[laneIndex] };
+                }
+
+                e.coordinates = assignedCoord;
 
                 const minion = createFighter(e, callbacks, this.FIGHT_INTERVAL);
                 minion.isMinion = true;
@@ -710,10 +815,11 @@ export function CombatManagerRedux() {
         const isLarge = (
             !isHuge && (
                 (typeof combatant.large === 'boolean' && combatant.large === true)
-                || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type) && combatant.isMinion !== true)
+                || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type) && (combatant.isMinion !== true || combatant.tier === 3 || combatant.tier === 4))
                 || (typeof combatant.size === 'number' && combatant.size >= 2)
                 || (typeof combatant.scale === 'number' && combatant.scale >= 2)
-                || (combatant.isMonster === true && combatant.isMinion !== true)
+                || (combatant.isMonster === true && (combatant.isMinion !== true || combatant.tier === 3 || combatant.tier === 4))
+                || (combatant.tier === 3)
             )
         );
 
@@ -910,10 +1016,11 @@ export function CombatManagerRedux() {
         const isLarge = (
             !isHuge && (
                 (typeof unit.large === 'boolean' && unit.large === true)
-                || (unit.type && LARGE_COMBAT_KEYS.includes(unit.type) && unit.isMinion !== true)
+                || (unit.type && LARGE_COMBAT_KEYS.includes(unit.type) && (unit.isMinion !== true || unit.tier === 3 || unit.tier === 4))
                 || (typeof unit.size === 'number' && unit.size >= 2)
                 || (typeof unit.scale === 'number' && unit.scale >= 2)
-                || (unit.isMonster === true && unit.isMinion !== true)
+                || (unit.isMonster === true && (unit.isMinion !== true || unit.tier === 3 || unit.tier === 4))
+                || (unit.tier === 3)
             )
         );
 
@@ -2829,6 +2936,43 @@ export function CombatManagerRedux() {
 
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                 return;
+            }
+        }
+
+        // Priority 1.5: Direct Dispel (tier 3) if any friendly unit has debuffs
+        if (this._abilityReady(unit, 'direct_dispel')) {
+            const pick = this.resolveSpecial(unit, 'direct_dispel');
+            if (pick) {
+                const targetWithDebuffs = Object.values(this.combatants).find(c => {
+                    if (!c || c.dead || c.isVCT) return false;
+                    const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                    if (!sameTeam) return false;
+                    const hasDebuff = (c.activeDebuffs && c.activeDebuffs.length > 0) ||
+                        c.poison || c.poisoned || c.bleed || c.frozen || c.stunned ||
+                        c.feared || c.asleep || c.ensnared || c.marked || c.hexed ||
+                        c.betrayed || c.polymorphed || c.silenced || c.demonMarked;
+                    return hasDebuff;
+                });
+
+                if (targetWithDebuffs) {
+                    this.cleanseDebuffs(targetWithDebuffs);
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Direct Dispel on ${this.getCombatantLogName(targetWithDebuffs)}, removing all debuffs.`);
+                    this._setCooldown(unit, 'direct_dispel', typeof pick.cooldown === 'number' ? pick.cooldown : 10);
+                    unit.actionsTakenThisRound += 1;
+
+                    targetWithDebuffs.dispelPulse = true;
+                    setTimeout(() => {
+                        targetWithDebuffs.dispelPulse = false;
+                        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    }, 550);
+
+                    if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                        this.animManagerRedux.triggerAbility(unit.coordinates, targetWithDebuffs.coordinates, 'direct_dispel', false, null, unit.id);
+                    }
+
+                    if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    return;
+                }
             }
         }
 
@@ -4910,6 +5054,84 @@ export function CombatManagerRedux() {
         target.defensiveStanceTotalRounds = 0;
         return dispelledCount;
     };
+    
+    this.cleanseDebuffs = (unit) => {
+        if (!unit) return;
+
+        if (Array.isArray(unit.activeDebuffs)) {
+            unit.activeDebuffs.forEach(debuff => {
+                this._revertDebuff(unit, debuff);
+            });
+            unit.activeDebuffs = [];
+        }
+
+        unit.poison = false;
+        unit.poisoned = false;
+        unit.poisonRounds = 0;
+        unit.poisonTotalRounds = 0;
+        unit.poisonStackDuration = 0;
+        unit.poisonTotalDurationMs = 0;
+        unit.poisonEndTimeMs = 0;
+        unit.poison_eras = 0;
+
+        unit.bleed = false;
+        unit.bleedRounds = 0;
+        unit.bleedEndTimeMs = 0;
+
+        unit.stunned = false;
+        unit.stunnedRounds = 0;
+        unit.stunnedTotalRounds = 0;
+        unit.stunnedStackDuration = 0;
+        unit.stunnedTotalDurationMs = 0;
+        unit.stunnedEndTimeMs = 0;
+        unit.stunned_eras = 0;
+
+        unit.asleep = false;
+        unit.sleepRounds = 0;
+        unit.sleepTotalRounds = 0;
+        unit.sleepTotalDurationMs = 0;
+        unit.sleepEndTimeMs = 0;
+        unit.exhausted = false;
+
+        unit.feared = false;
+        unit.fearRounds = 0;
+        unit.fearTotalRounds = 0;
+        unit.fearStackDuration = 0;
+        unit.fearTotalDurationMs = 0;
+        unit.fearEndTimeMs = 0;
+        unit.feared_eras = 0;
+
+        unit.frozen = false;
+        unit.frozenRounds = 0;
+        unit.frozenTotalRounds = 0;
+        unit.frozenStackDuration = 0;
+        unit.frozenTotalDurationMs = 0;
+        unit.frozenEndTimeMs = 0;
+        unit.frozen_eras = 0;
+
+        unit.ensnared = false;
+        unit.ensnared_eras = 0;
+        unit.ensnaredSourceAbility = null;
+
+        unit.marked = false;
+        unit.hexed = false;
+        unit.hexRounds = 0;
+        unit.hexTotalRounds = 0;
+        unit.hexEndTimeMs = 0;
+
+        unit.betrayed = false;
+        unit.betrayed_eras = 0;
+
+        unit.polymorphed = false;
+        unit.polymorphRounds = 0;
+
+        unit.silenced = false;
+        unit.silenceRounds = 0;
+        unit.silenced_eras = 0;
+
+        unit.demonMarked = false;
+        unit.demonMarkedRounds = 0;
+    };
 
     this._hatchEgg = (egg) => {
         const coords = { ...egg.coordinates };
@@ -5199,7 +5421,7 @@ export function CombatManagerRedux() {
             ability.type === 'magical' ||
             ability.subtype === 'spell' ||
             ability.type === 'spell' ||
-            ['magic_missile', 'minor_magic_missile', 'major_magic_missile', 'greater_magic_missile', 'fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex', 'heal', 'open_rift', 'summon_imp', 'force_back', 'bombardment', 'blue_dragon_breath', 'fire_breath', 'void_lance', 'lightning', 'stomp', 'spells'].includes((abilityId || ability.name || '').toLowerCase())
+            ['magic_missile', 'minor_magic_missile', 'major_magic_missile', 'greater_magic_missile', 'fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex', 'heal', 'open_rift', 'summon_imp', 'force_back', 'bombardment', 'blue_dragon_breath', 'fire_breath', 'void_lance', 'lightning', 'stomp', 'rift', 'spells'].includes((abilityId || ability.name || '').toLowerCase())
         );
         const isSelfTarget = target.id === unit.id || ability.range === 'self';
         const isMentalityDebuff = !!(
@@ -5214,7 +5436,7 @@ export function CombatManagerRedux() {
             for (let h = 0; h < missilesCount; h++) {
                 preRolledHits.push((isSelfTarget || isMentalityDebuff) ? true : this.hitCheck(unit, target));
             }
-        } else if (abilityId === 'acid_blast' || abilityId === 'fireball') {
+        } else if (abilityId === 'acid_blast' || abilityId === 'fireball' || abilityId === 'ice_blast') {
             preRolledHits.push((isSelfTarget || isMentalityDebuff) ? true : this.hitCheck(unit, target));
         }
         const isMeleeAbility = [
@@ -5286,6 +5508,125 @@ export function CombatManagerRedux() {
             if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
                 this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'dragon_dispell', false, null, unit.id);
             }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        if (abilityId === 'direct_dispel') {
+            this.cleanseDebuffs(target);
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Direct Dispel on ${this.getCombatantLogName(target)}, removing all debuffs.`);
+            
+            target.dispelPulse = true;
+            setTimeout(() => {
+                target.dispelPulse = false;
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            }, 550);
+
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, target.coordinates, 'direct_dispel', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        // ── RIFT ─────────────────────────────────────────────────────────────────
+        if (abilityId === 'rift') {
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} opens a Rift!`);
+
+            // Determine direction: monsters push toward lower x (player side)
+            const forwardDir = unit.isMonster ? -1 : 1;
+            const isHuge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
+            const isLarge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
+            let sizeOffset = 0;
+            if (isHuge) {
+                sizeOffset = 2;
+            } else if (isLarge) {
+                sizeOffset = 1;
+            }
+            const riftStartX = unit.coordinates.x + forwardDir * sizeOffset;
+            const riftY = unit.coordinates.y;
+
+            const dur = this.roundDurationMs || 2000;
+
+            // Trigger Phase 1 animation (line appears)
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(
+                    unit.coordinates,
+                    { x: riftStartX, y: riftY },
+                    'rift',
+                    false,
+                    null,
+                    unit.id,
+                    null,
+                    dur
+                );
+            }
+
+            // Phase 2: trigger pushback exactly as the sweeping line hits the adjacent columns (90% into the round)
+            const sweepDelay = Math.round(dur * 0.9);
+            setTimeout(() => {
+                if (this.combatOver) return;
+                const pushedNames = [];
+                const resistedNames = [];
+
+                Object.values(this.combatants).forEach(c => {
+                    if (!c || c.dead || c.isVCT) return;
+                    const isEnemy = (!!unit.isMonster !== !!c.isMonster);
+                    if (!isEnemy) return;
+
+                    // Check if any occupied tile falls within the sweep zone:
+                    // x in [riftStartX, riftStartX + forwardDir, riftStartX + 2*forwardDir]
+                    // y in [riftY - 1, riftY, riftY + 1]
+                    const occupiedTiles = Array.isArray(c.occupiedCoords) && c.occupiedCoords.length > 0
+                        ? c.occupiedCoords
+                        : [c.coordinates];
+
+                    const inSweepZone = occupiedTiles.some(tile => {
+                        const xDiff = (tile.x - riftStartX) * forwardDir; // positive = in path
+                        const inX = xDiff >= 0 && xDiff <= 2;
+                        const inY = Math.abs(tile.y - riftY) <= 1;
+                        return inX && inY;
+                    });
+
+                    if (!inSweepZone) return;
+
+                    // Push up to 2 tiles back (away from Djinn/caster)
+                    let nx = c.coordinates.x;
+                    const ny = c.coordinates.y;
+                    
+                    for (let dist = 2; dist >= 1; dist--) {
+                        const targetX = Math.max(0, Math.min(MAX_DEPTH, c.coordinates.x + dist * forwardDir));
+                        if (targetX !== c.coordinates.x && this.canFitAt(c, targetX, ny)) {
+                            nx = targetX;
+                            break;
+                        }
+                    }
+
+                    if (this.shouldPushbackSucceed(c, true)) {
+                        if (nx !== c.coordinates.x) {
+                            this.updateUnitCoordinates(c, nx, ny);
+                            pushedNames.push(this.getCombatantLogName(c));
+                        } else {
+                            resistedNames.push(`${this.getCombatantLogName(c)} (no room)`);
+                        }
+                    } else {
+                        resistedNames.push(this.getCombatantLogName(c));
+                    }
+                });
+
+                if (pushedNames.length > 0) {
+                    this.appendCombatLog(`The Rift sweeps forward, pushing back: ${pushedNames.join(', ')}!`);
+                }
+                if (resistedNames.length > 0) {
+                    this.appendCombatLog(`${resistedNames.join(', ')} resisted the Rift's push!`);
+                }
+                if (pushedNames.length === 0 && resistedNames.length === 0) {
+                    this.appendCombatLog(`The Rift sweeps forward but catches no one.`);
+                }
+
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            }, sweepDelay);
+
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             return;
         }
@@ -5790,19 +6131,39 @@ export function CombatManagerRedux() {
         if (abilityId === 'summon_spiders') {
             const witchAtk = unit.stats?.atk || unit.atk || 10;
             const originalX = unit.coordinates.x;
+            const facing = unit.facing || (unit.isMonster ? 'left' : 'right');
 
-            // Move Witch 1 tile off the backline if she is currently on the backline (MAX_DEPTH)
-            if (originalX === MAX_DEPTH) {
-                const nextX = MAX_DEPTH - 1;
-                const currentY = unit.coordinates.y;
-                if (this.canFitAt(unit, nextX, currentY)) {
-                    this.updateUnitCoordinates(unit, nextX, currentY);
+            // Move Witch 1 tile off the backline if she is currently on the boundary (MAX_DEPTH or 0)
+            if (facing === 'left' || facing === 'up') {
+                if (originalX === MAX_DEPTH) {
+                    const nextX = MAX_DEPTH - 1;
+                    const currentY = unit.coordinates.y;
+                    if (this.canFitAt(unit, nextX, currentY)) {
+                        this.updateUnitCoordinates(unit, nextX, currentY);
+                    }
+                }
+            } else {
+                if (originalX === 0) {
+                    const nextX = 1;
+                    const currentY = unit.coordinates.y;
+                    if (this.canFitAt(unit, nextX, currentY)) {
+                        this.updateUnitCoordinates(unit, nextX, currentY);
+                    }
                 }
             }
 
-            this.appendCombatLog(`${this.getCombatantLogName(unit)} summons a Spider Nest at the backline!`);
+            // Spiders spawn at the column behind her based on her facing direction
+            let summonX = unit.coordinates.x;
+            if (facing === 'left' || facing === 'up') {
+                summonX = unit.coordinates.x + 1;
+            } else {
+                summonX = unit.coordinates.x - 1;
+            }
+            summonX = Math.max(0, Math.min(MAX_DEPTH, summonX));
 
-            // Spawn the spiders spawner at the backline (MAX_DEPTH)
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} summons a Spider Nest behind her!`);
+
+            // Spawn the spiders spawner behind the Witch
             const spawnerId = `spiders_spawner_${Date.now()}`;
             const spawner = {
                 id: spawnerId,
@@ -5818,7 +6179,7 @@ export function CombatManagerRedux() {
                 sleepEndTimeMs: 0,
                 endurance: 100,
                 maxEndurance: 100,
-                coordinates: { x: MAX_DEPTH, y: unit.coordinates.y },
+                coordinates: { x: summonX, y: unit.coordinates.y },
                 hp: 50,
                 starting_hp: 50,
                 stats: { str: 10, dex: 10, atk: witchAtk, def: 5, speed: 0 },
@@ -5842,7 +6203,7 @@ export function CombatManagerRedux() {
 
             if (this.animManagerRedux && typeof this.animManagerRedux.triggerSummon === 'function') {
                 const summonIcon = (images && images.summon_spiders) || 'summon_spiders_icon';
-                this.animManagerRedux.triggerSummon({ x: MAX_DEPTH, y: unit.coordinates.y }, 'spider', summonIcon);
+                this.animManagerRedux.triggerSummon({ x: summonX, y: unit.coordinates.y }, 'spider', summonIcon);
             }
             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             return;
@@ -6231,8 +6592,9 @@ export function CombatManagerRedux() {
             if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
                 const isTargetLarge = target.isLarge
                     || target.size === 2
-                    || (target.isMonster === true && target.isMinion !== true)
-                    || (target.type && ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'].includes(target.type) && target.isMinion !== true);
+                    || (target.isMonster === true && (target.isMinion !== true || target.tier === 3 || target.tier === 4))
+                    || (target.type && ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'].includes(target.type) && (target.isMinion !== true || target.tier === 3 || target.tier === 4))
+                    || (target.tier === 3 || target.tier === 4);
                 const callerTiles = (origCallerOccupied && origCallerOccupied.length > 0) ? origCallerOccupied : [origCallerCoords];
                 const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0) ? target.occupiedCoords : [target.coordinates];
                 let bestCallerCoord = origCallerCoords;
@@ -6248,8 +6610,8 @@ export function CombatManagerRedux() {
                         }
                     });
                 });
-                const isCallerLarge = unit.isMonster && !unit.isMinion && (
-                    unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3 ||
+                const isCallerLarge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && (
+                    unit.tier === 4 || unit.tier === 3 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3 ||
                     unit.type === 'sphinx' || unit.key === 'sphinx' ||
                     ['beholder', 'ogre', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire'].includes(unit.type)
                 );
@@ -6280,8 +6642,9 @@ export function CombatManagerRedux() {
         if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
             const isTargetLarge = target.isLarge
                 || target.size === 2
-                || (target.isMonster === true && target.isMinion !== true)
-                || (target.type && ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'].includes(target.type) && target.isMinion !== true);
+                || (target.isMonster === true && (target.isMinion !== true || target.tier === 3 || target.tier === 4))
+                || (target.type && ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'].includes(target.type) && (target.isMinion !== true || target.tier === 3 || target.tier === 4))
+                || (target.tier === 3 || target.tier === 4);
             // Find closest tiles between caller and target
             const callerTiles = (origCallerOccupied && origCallerOccupied.length > 0) ? origCallerOccupied : [origCallerCoords];
             const targetTiles = (Array.isArray(target.occupiedCoords) && target.occupiedCoords.length > 0) ? target.occupiedCoords : [target.coordinates];
@@ -6299,8 +6662,8 @@ export function CombatManagerRedux() {
                 });
             });
 
-            const isCallerLarge = unit.isMonster && !unit.isMinion && (
-                unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3 ||
+            const isCallerLarge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && (
+                unit.tier === 4 || unit.tier === 3 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3 ||
                 unit.type === 'sphinx' || unit.key === 'sphinx' ||
                 ['beholder', 'ogre', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire'].includes(unit.type)
             );
@@ -6535,7 +6898,7 @@ export function CombatManagerRedux() {
             let hit;
             if (isMagicMissile && Array.isArray(preRolledHits)) {
                 hit = preRolledHits[h];
-            } else if ((abilityId === 'acid_blast' || abilityId === 'fireball') && Array.isArray(preRolledHits)) {
+            } else if ((abilityId === 'acid_blast' || abilityId === 'fireball' || abilityId === 'ice_blast') && Array.isArray(preRolledHits)) {
                 hit = preRolledHits[0];
             } else {
                 hit = (isSelfTarget || (isMentalityDebuff && abilityId !== 'betrayal')) ? true : this.hitCheck(unit, target);
@@ -7054,6 +7417,8 @@ export function CombatManagerRedux() {
             setTimeout(() => performHit(2), 1200);
         } else if (abilityId === 'ice_blast' || abilityId === 'acid_blast') {
             setTimeout(() => performHit(0), 600);
+        } else if (abilityId === 'fireball') {
+            setTimeout(() => performHit(0), 900);
         } else if (isMagicMissile) {
             const count = (abilityId === 'greater_magic_missile') ? 5 : 3;
             for (let i = 0; i < count; i++) {

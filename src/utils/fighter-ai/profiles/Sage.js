@@ -188,10 +188,24 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
     this.chooseAttackType = (caller, target, combatants = null) => { // eslint-disable-line no-unused-vars
         if (!caller || !Array.isArray(caller.attacks) || caller.attacks.length === 0) return null;
 
+        const directDispelAttack = caller.attacks.find(a => a && a.name === 'direct_dispel') || null;
         const healAttack = caller.attacks.find(a => a && a.name === 'heal') || null;
         const meditateAttack = caller.attacks.find(a => a && a.name === 'meditate') || null;
 
         if (combatants) {
+            if (directDispelAttack && this.isAttackReady(directDispelAttack)) {
+                const needsDispel = Object.values(combatants).some(e => {
+                    if (!this.isFriendly(e)) return false;
+                    return (e.activeDebuffs && e.activeDebuffs.length > 0) ||
+                        e.poison || e.poisoned || e.bleed || e.frozen || e.stunned ||
+                        e.feared || e.asleep || e.ensnared || e.marked || e.hexed ||
+                        e.betrayed || e.polymorphed || e.silenced || e.demonMarked;
+                });
+                if (needsDispel) {
+                    return directDispelAttack;
+                }
+            }
+
             const needsHealing = Object.values(combatants).some(e =>
                 this.isFriendly(e) && e.id !== caller.id && e.hp < this.getCombatantMaxHp(e)
             );
@@ -215,6 +229,24 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
             currentTargetId: caller?.targetId || null,
             pendingAttack: caller?.pendingAttack?.name || null
         });
+
+        // First, check if direct_dispel is ready and anyone needs a dispel
+        const directDispelAttack = caller.attacks && caller.attacks.find(a => a && a.name === 'direct_dispel');
+        if (directDispelAttack && this.isAttackReady(directDispelAttack)) {
+            const debuffedFriendlies = Object.values(combatants).filter(e => {
+                if (!this.isFriendly(e)) return false;
+                return (e.activeDebuffs && e.activeDebuffs.length > 0) ||
+                    e.poison || e.poisoned || e.bleed || e.frozen || e.stunned ||
+                    e.feared || e.asleep || e.ensnared || e.marked || e.hexed ||
+                    e.betrayed || e.polymorphed || e.silenced || e.demonMarked;
+            });
+            if (debuffedFriendlies.length > 0) {
+                const targetToDispel = debuffedFriendlies[0];
+                caller.targetId = targetToDispel.id;
+                caller.pendingAttack = directDispelAttack;
+                return;
+            }
+        }
 
         // First, check if any friendly needs healing (hp < max_hp)
         const healthyFriendlies = this.getHealableFriendlies(caller, combatants);
@@ -479,6 +511,71 @@ export function Sage(data, utilMethods, animationManager, overlayManager){ // es
             targetIsEnemy: !!(target.isMonster || target.isMinion)
         });
         
+        // Handle direct dispel attack on friendly targets
+        if (caller.pendingAttack.name === 'direct_dispel') {
+            if (this.isFriendly(target)) {
+                const inRange = this.isFriendlyAdjacentRange(distanceToTarget, laneDiff);
+                if (!inRange) {
+                    if (typeof this.missesTarget === 'function') this.missesTarget(caller);
+                    return;
+                }
+                
+                caller.healing = true;
+                
+                if (Array.isArray(target.activeDebuffs)) {
+                    target.activeDebuffs.forEach(debuff => {
+                        if (debuff.statChanges) {
+                            Object.entries(debuff.statChanges).forEach(([stat, amount]) => {
+                                target.stats[stat] = (target.stats[stat] || 0) + amount;
+                            });
+                        }
+                    });
+                    target.activeDebuffs = [];
+                }
+                
+                target.poison = false;
+                target.poisoned = false;
+                target.poisonRounds = 0;
+                target.bleed = false;
+                target.bleedRounds = 0;
+                target.stunned = false;
+                target.stunnedRounds = 0;
+                target.asleep = false;
+                target.sleepRounds = 0;
+                target.feared = false;
+                target.fearRounds = 0;
+                target.frozen = false;
+                target.frozenRounds = 0;
+                target.ensnared = false;
+                target.marked = false;
+                target.hexed = false;
+                target.betrayed = false;
+                target.polymorphed = false;
+                target.silenced = false;
+                target.demonMarked = false;
+
+                // trigger animation and pulse
+                target.dispelPulse = true;
+                if (typeof this.broadcastDataUpdate === 'function') {
+                    this.broadcastDataUpdate(target);
+                }
+                setTimeout(() => {
+                    target.dispelPulse = false;
+                    if (typeof this.broadcastDataUpdate === 'function') {
+                        this.broadcastDataUpdate(target);
+                    }
+                }, 550);
+
+                if (typeof this.kickoffAttackCooldown === 'function') {
+                    this.kickoffAttackCooldown(caller);
+                }
+                setTimeout(() => {
+                    caller.healing = false;
+                }, 250);
+                return;
+            }
+        }
+
         // Handle heal attack on friendly targets
         if (caller.pendingAttack.name === 'heal') {
             if (this.isFriendly(target)) {

@@ -632,31 +632,29 @@ const MonstersCombatGrid = ({
                                 )}
                                 {/* Overlay and indicators above portrait */
 }                                <div className={`portrait-overlay ${battleData[monster.id]?.frozen ? 'frozen' : ''}`} style={{zIndex: 2, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>
-                                    {!vct && (
-                                        <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
-                                            {(visibleDamageIndicators[monster.id] || []).map((indicator, idx, arr) => {
-                                                const yOffset = typeof indicator.yOffset === 'number' ? indicator.yOffset : 0;
-                                                const isStatDebuff = !indicator.isCrit && !indicator.isMiss && typeof indicator.value === 'string' && indicator.type !== 'robbed' && isNaN(indicator.value);
-                                                return (
-                                                    <div
-                                                        className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}${indicator.type === 'robbed' ? ' robbed' : ''}${indicator.isMiss ? ' miss' : ''}`}
-                                                        key={indicator.id}
-                                                        style={{
-                                                            transform: `translateY(-${yOffset}px)`,
-                                                            zIndex: 10 + (arr.length - idx),
-                                                            position: 'absolute',
-                                                            left: 0,
-                                                            right: 0,
-                                                            margin: '0 auto',
-                                                            pointerEvents: 'none',
-                                                        }}
-                                                    >
-                                                        {formatDamageIndicatorValue(indicator.value)}
-                                                    </div>
-                                                );
-                                            })}
-                                        </div>
-                                    )}
+                                    <div className="damage-indicator-container" style={{ overflow: 'visible' }}>
+                                        {(visibleDamageIndicators[monster.id] || []).map((indicator, idx, arr) => {
+                                            const yOffset = typeof indicator.yOffset === 'number' ? indicator.yOffset : 0;
+                                            const isStatDebuff = !indicator.isCrit && !indicator.isMiss && typeof indicator.value === 'string' && indicator.type !== 'robbed' && isNaN(indicator.value);
+                                            return (
+                                                <div
+                                                    className={`damage-indicator${isStatDebuff ? ' stat-debuff' : ''}${indicator.isCrit ? ' crit' : ''}${indicator.type === 'heal' ? ' heal' : ''}${indicator.type === 'robbed' ? ' robbed' : ''}${indicator.isMiss ? ' miss' : ''}`}
+                                                    key={indicator.id}
+                                                    style={{
+                                                        transform: `translateY(-${yOffset}px)`,
+                                                        zIndex: 10 + (arr.length - idx),
+                                                        position: 'absolute',
+                                                        left: 0,
+                                                        right: 0,
+                                                        margin: '0 auto',
+                                                        pointerEvents: 'none',
+                                                    }}
+                                                >
+                                                    {formatDamageIndicatorValue(indicator.value)}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
                                 {/* { !battleData[monster.id]?.dead && (
                                   <div className="targetted-by-container" style={{zIndex: 3, position: 'absolute', top: 0, left: 0, width: '100%', height: '100%'}}>

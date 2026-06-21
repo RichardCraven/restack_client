@@ -241,7 +241,7 @@ function Tile(props) {
                 '#8080807a' : 
                 ( props.type === 'overlay-tile' ? 
                     'transparent': 
-                    (props.isActiveInventory && props.type === 'inventory-tile' ? 'lightgreen' : props.color)),
+                    (props.type === 'inventory-tile' ? (props.isActiveInventory ? 'lightgreen' : 'transparent') : props.color)),
             fontSize: '0.7em',
             position: 'relative',
             overflow: 'hidden',

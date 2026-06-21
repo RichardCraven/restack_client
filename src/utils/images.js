@@ -635,6 +635,7 @@ import arcane_barrier from '../assets/icons/combat-icons/specials/monsters/djinn
 import death_missile from '../assets/icons/combat-icons/specials/monsters/djinn/death_missile.png';
 import death_missile_hit from '../assets/icons/combat-icons/specials/monsters/djinn/death_missile_hit.png';
 import bind from '../assets/icons/combat-icons/specials/monsters/djinn/bind.png';
+import djinn_rift from '../assets/icons/combat-icons/specials/monsters/djinn/rift.png';
 import void_lance from '../assets/icons/combat-icons/monster-attacks/void_lance.png';
 import fire_breath from '../assets/icons/combat-icons/monster-attacks/fire_breath.png'
 import lightning from '../assets/icons/combat-icons/specials/wizard/lightning.png'
@@ -725,6 +726,7 @@ import eagle_eye from '../assets/icons/combat-icons/specials/ranger/eagle_eye.pn
 import healing_hands from '../assets/icons/combat-icons/specials/sage/healing_hands.png'
 import circle_of_protection from '../assets/icons/combat-icons/specials/sage/circle_of_protection.png'
 import circle_of_deflection from '../assets/icons/combat-icons/specials/sage/circle_of_deflection.png'
+import direct_dispel from '../assets/icons/combat-icons/specials/sage/direct_dispel.png'
 import shielded from '../assets/icons/combat-icons/specials/sage/shielded.png'
 import shielded_partial from '../assets/icons/combat-icons/specials/sage/shielded_partial.png'
 import perceive from '../assets/icons/combat-icons/specials/sage/perceive.png'
@@ -1682,6 +1684,7 @@ export {
     weakness_doubled,
     circle_of_protection,
     circle_of_deflection,
+    direct_dispel,
     shielded,
     shielded_partial,
     monk_ethereal_speed,
@@ -1839,6 +1842,7 @@ export {
     death_missile,
     death_missile_hit,
     bind,
+    djinn_rift,
 
     energy_blast,
     Hagigah,

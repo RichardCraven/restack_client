@@ -267,6 +267,7 @@ export default function FightersCombatGrid(props) {
                                                 details?.drained ? 'drained' : '',
                                                 details?.regenerating ? 'regenerating' : '',
                                                 details?.healPulse ? 'heal-pulse' : '',
+                                                details?.dispelPulse ? 'dispel-pulse' : '',
                                                 details?.bleed ? 'bleeding' : '',
                                                 details?.frozen ? 'frozen' : '',
                                                 // ── Redux AI visual states ───────────────────────

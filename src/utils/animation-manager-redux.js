@@ -185,7 +185,7 @@ export class AnimationManagerRedux {
         break;
       case 'ice_blast':
       case 'reveal_weakness':
-        this._iceBlast(sourceCoords, targetCoords);
+        this._iceBlast(sourceCoords, targetCoords, hitResults);
         break;
       case 'acid_blast':
         this._acidBlast(sourceCoords, targetCoords, hitResults);
@@ -268,6 +268,9 @@ export class AnimationManagerRedux {
       case 'regenerate':
         this._heal(sourceCoords, targetCoords);
         break;
+      case 'direct_dispel':
+        this._directDispel(sourceCoords, targetCoords);
+        break;
       case 'vampiric_bite':
         this._vampiricBite(sourceCoords, targetCoords);
         break;
@@ -303,6 +306,9 @@ export class AnimationManagerRedux {
         break;
       case 'trials_beam':
         this._trialsBeam(sourceCoords, targetCoords);
+        break;
+      case 'rift':
+        this._rift(sourceCoords, targetCoords, customDuration);
         break;
       case 'begin_the_trials':
         // Initial cast just spawns the Trial icon, no beam from Sphinx
@@ -555,13 +561,19 @@ export class AnimationManagerRedux {
       duration: 1000,
     });
     const didHit = !Array.isArray(hitResults) || hitResults.length === 0 || hitResults[0] === true;
-    if (didHit) {
-      setTimeout(() => {
-        this._emit({ type: 'explosion', tgtPx, duration: 600 });
-      }, 900);
-      setTimeout(() => {
-        this._emit({ type: 'fire_secondary_ring', tgtPx, duration: 500 });
-      }, 980);
+    if (!this._negatedByBarrier) {
+      if (didHit) {
+        setTimeout(() => {
+          this._emit({ type: 'explosion', tgtPx, duration: 600 });
+        }, 900);
+        setTimeout(() => {
+          this._emit({ type: 'fire_secondary_ring', tgtPx, duration: 500 });
+        }, 980);
+      } else {
+        setTimeout(() => {
+          this._emit({ type: 'projectile_drip', tgtPx, variant: 'fireball', duration: 1000 });
+        }, 900);
+      }
     }
   }
 
@@ -653,7 +665,7 @@ export class AnimationManagerRedux {
     }, 150);
   }
 
-  _iceBlast(src, tgt) {
+  _iceBlast(src, tgt, hitResults = null) {
     const srcPx = this._px(src);
     let tgtPx = this._getImpactTargetPx(tgt);
     tgtPx = this._adjustTgtPxForArcaneBarrier(srcPx, tgtPx);
@@ -667,9 +679,18 @@ export class AnimationManagerRedux {
       angle,
       duration: 700,
     });
-    setTimeout(() => {
-      this._emit({ type: 'ice_burst', tgtPx, duration: 500 });
-    }, 600);
+    const didHit = !Array.isArray(hitResults) || hitResults.length === 0 || hitResults[0] === true;
+    if (!this._negatedByBarrier) {
+      if (didHit) {
+        setTimeout(() => {
+          this._emit({ type: 'ice_burst', tgtPx, duration: 500 });
+        }, 600);
+      } else {
+        setTimeout(() => {
+          this._emit({ type: 'projectile_drip', tgtPx, variant: 'ice_blast', duration: 1000 });
+        }, 600);
+      }
+    }
   }
 
   _acidBlast(src, tgt, hitResults = null) {
@@ -689,17 +710,19 @@ export class AnimationManagerRedux {
 
     const isHit = Array.isArray(hitResults) ? hitResults[0] !== false : (hitResults !== false);
 
-    if (isHit) {
-      setTimeout(() => {
-        this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
-      }, 600);
-      setTimeout(() => {
-        this._emit({ type: 'acid_secondary_ring', tgtPx, duration: 450 });
-      }, 690);
-    } else {
-      setTimeout(() => {
-        this._emit({ type: 'acid_blast_miss_dot', tgtPx, duration: 350 });
-      }, 600);
+    if (!this._negatedByBarrier) {
+      if (isHit) {
+        setTimeout(() => {
+          this._emit({ type: 'poison_burst', tgtPx, duration: 500 });
+        }, 600);
+        setTimeout(() => {
+          this._emit({ type: 'acid_secondary_ring', tgtPx, duration: 450 });
+        }, 690);
+      } else {
+        setTimeout(() => {
+          this._emit({ type: 'projectile_drip', tgtPx, variant: 'acid_blast', duration: 1000 });
+        }, 600);
+      }
     }
   }
 
@@ -890,6 +913,16 @@ export class AnimationManagerRedux {
     const tgtPx = this._px(tgt);
     this._emit({
       type: 'heal_glow',
+      srcPx: this._px(src),
+      tgtPx,
+      duration: 800,
+    });
+  }
+
+  _directDispel(src, tgt) {
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'direct_dispel_glow',
       srcPx: this._px(src),
       tgtPx,
       duration: 800,
@@ -1286,9 +1319,41 @@ export class AnimationManagerRedux {
   }
 
   /**
-   * Trigger the spinning trial effect icon appearing above the Sphinx.
-   * @param {object} sphinxCoords  { x, y } of Sphinx's anchor tile
+   * Trigger the Djinn's Rift skill:
+   * Phase 1 – a jagged vertical energy line materialises 1 tile in front of the Djinn.
+   * Phase 2 – after 1 round (~roundDurationMs), the line sweeps 2 tile-widths forward.
+   * @param {object} sourceCoords  Djinn's grid coordinates { x, y }
+   * @param {object} riftSpawnCoords  1 tile in front of Djinn { x, y }
    */
+  _rift(sourceCoords, riftSpawnCoords, roundDurationMs) {
+    const dur = roundDurationMs || 2000;
+    const spawnPx = this._px(riftSpawnCoords || {
+      x: sourceCoords.x,
+      y: sourceCoords.y
+    });
+
+    // Phase 1: the line appears
+    this._emit({
+      type: 'rift_line_appear',
+      spawnPx,
+      tileSize: this.TILE_SIZE,
+      duration: Math.round(dur * 0.9),  // stays visible until sweep
+    });
+
+    // Phase 2: sweep 2 tile-widths toward enemies (to the left, same as forwardDir = -1 for monsters)
+    const sweepDelay = Math.round(dur * 0.8);
+    const sweepDuration = Math.round(dur * 0.25);
+    setTimeout(() => {
+      this._emit({
+        type: 'rift_line_sweep',
+        spawnPx,
+        tileSize: this.TILE_SIZE,
+        sweepDistancePx: this.TILE_SIZE * 2,
+        duration: sweepDuration,
+      });
+    }, sweepDelay);
+  }
+
   triggerTrialIconAppear(sphinxCoords) {
     const srcPx = this._px(sphinxCoords);
     // Place icon above sphinx's top row (offset by -TILE_SIZE * 1.5 in y)

@@ -966,7 +966,7 @@ class MonsterBattle extends React.Component {
         const hasLevelUps = Object.keys(this.state.levelTransitions || {}).length > 0;
         if (hasLevelUps && this.state.battleResult === 'win') {
             const queue = Object.entries(this.state.levelTransitions).map(([id, trans]) => {
-                const crewMember = (this.props.crew || []).find(c => c && c.id === id);
+                const crewMember = (this.props.crew || []).find(c => c && String(c.id) === String(id));
                 return crewMember ? { crewMember, fromLevel: trans.from, toLevel: trans.to } : null;
             }).filter(Boolean);
             if (queue.length > 0) {
@@ -1027,7 +1027,7 @@ class MonsterBattle extends React.Component {
                 foodGained = 0,
                 itemsGained,
                 crewWins = outcome === 'crewWins' || outcome === true,
-                summaryMessage, battleResult;
+                summaryMessage, battleResult, levelTransitions = {};
 
             // liveCrew should be derived from the freshest snapshot
             let liveCrew = Object.values(latestBattleData).filter(e => !e.dead && !e.isMinion && !e.isMonster);
@@ -1180,63 +1180,58 @@ class MonsterBattle extends React.Component {
                     }
                 } catch (e) { console.warn('dust loot drop failed', e); }
 
-                this._setTimeout(() => {
-                    // Snapshot levels before awarding XP so we can show before→after
-                    const levelsBefore = {};
-                    try {
-                        (this.props.crewManager.crew || []).forEach(c => {
-                            if (c && c.id) levelsBefore[c.id] = typeof c.level === 'number' ? c.level : 0;
-                        });
-                    } catch (e) { }
-                    // Use latest liveCrew snapshot when awarding experience
-                    try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch (e) { console.warn('addExperience failed', e); }
-                    // ── Battle Tactics: decrement combatsRemaining after this victory ──
-                    try {
-                        const meta = getMeta() || {};
-                        const metaCrew = Array.isArray(meta.crew) ? meta.crew : (this.props.crewManager.crew || []);
-                        const soldierInMeta = metaCrew.find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
-                        if (soldierInMeta) {
-                            const tacticAction = (soldierInMeta.specialActions || []).find(
-                                a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
-                            );
-                            if (tacticAction) {
-                                tacticAction.combatsRemaining = Math.max(0, (tacticAction.combatsRemaining || 1) - 1);
-                                if (tacticAction.combatsRemaining === 0) {
-                                    // Tactic fully consumed — clear it
-                                    soldierInMeta.specialActions = (soldierInMeta.specialActions || []).filter(a => a !== tacticAction);
-                                    console.log(`[Battle Tactics] "${tacticAction.name}" fully consumed after this combat.`);
-                                } else {
-                                    console.log(`[Battle Tactics] "${tacticAction.name}" — ${tacticAction.combatsRemaining} combat(s) remaining.`);
-                                }
-                                // Sync back to live crewManager
-                                const liveSoldier = (this.props.crewManager.crew || []).find(m => m && m.id === soldierInMeta.id);
-                                if (liveSoldier) {
-                                    liveSoldier.specialActions = soldierInMeta.specialActions;
-                                }
-                                meta.crew = metaCrew;
-                                try { storeMeta(meta); } catch (e) { }
+                // Snapshot levels before awarding XP so we can show before→after
+                const levelsBefore = {};
+                try {
+                    (this.props.crewManager.crew || []).forEach(c => {
+                        if (c && c.id) levelsBefore[c.id] = typeof c.level === 'number' ? c.level : 0;
+                    });
+                } catch (e) { }
+                // Use latest liveCrew snapshot when awarding experience
+                try { this.props.crewManager.addExperience(liveCrew, experienceGained); } catch (e) { console.warn('addExperience failed', e); }
+                // ── Battle Tactics: decrement combatsRemaining after this victory ──
+                try {
+                    const meta = getMeta() || {};
+                    const metaCrew = Array.isArray(meta.crew) ? meta.crew : (this.props.crewManager.crew || []);
+                    const soldierInMeta = metaCrew.find(m => m && (m.type === 'soldier' || m.image === 'soldier'));
+                    if (soldierInMeta) {
+                        const tacticAction = (soldierInMeta.specialActions || []).find(
+                            a => a && a.type === 'tactics' && a.available === true && (a.combatsRemaining || 0) > 0
+                        );
+                        if (tacticAction) {
+                            tacticAction.combatsRemaining = Math.max(0, (tacticAction.combatsRemaining || 1) - 1);
+                            if (tacticAction.combatsRemaining === 0) {
+                                // Tactic fully consumed — clear it
+                                soldierInMeta.specialActions = (soldierInMeta.specialActions || []).filter(a => a !== tacticAction);
+                                console.log(`[Battle Tactics] "${tacticAction.name}" fully consumed after this combat.`);
+                            } else {
+                                console.log(`[Battle Tactics] "${tacticAction.name}" — ${tacticAction.combatsRemaining} combat(s) remaining.`);
                             }
+                            // Sync back to live crewManager
+                            const liveSoldier = (this.props.crewManager.crew || []).find(m => m && m.id === soldierInMeta.id);
+                            if (liveSoldier) {
+                                liveSoldier.specialActions = soldierInMeta.specialActions;
+                            }
+                            meta.crew = metaCrew;
+                            try { storeMeta(meta); } catch (e) { }
                         }
-                    } catch (e) { console.warn('[Battle Tactics] combatsRemaining decrement failed', e); }
-                    // Build level transitions map for display
-                    const levelTransitions = {};
-                    try {
-                        (this.props.crewManager.crew || []).forEach(c => {
-                            if (!c || !c.id) return;
-                            const before = levelsBefore[c.id];
-                            const after = typeof c.level === 'number' ? c.level : 0;
-                            if (typeof before === 'number' && after > before) {
-                                levelTransitions[c.id] = { from: before, to: after };
-                            }
-                        });
-                    } catch (e) { }
-                    let meta = getMeta();
-                    meta.crew = this.props.crewManager.crew;
-                    storeMeta(meta)
-                    updateUserRequest();
-                    this.setState({ levelTransitions });
-                    this.forceUpdate();
-                }, 1000)
+                    }
+                } catch (e) { console.warn('[Battle Tactics] combatsRemaining decrement failed', e); }
+                // Build level transitions map for display
+                try {
+                    (this.props.crewManager.crew || []).forEach(c => {
+                        if (!c || !c.id) return;
+                        const before = levelsBefore[c.id];
+                        const after = typeof c.level === 'number' ? c.level : 0;
+                        if (typeof before === 'number' && after > before) {
+                            levelTransitions[c.id] = { from: before, to: after };
+                        }
+                    });
+                } catch (e) { }
+                let meta = getMeta();
+                meta.crew = this.props.crewManager.crew;
+                storeMeta(meta);
+                updateUserRequest();
 
 
             } else {
@@ -1416,6 +1411,7 @@ class MonsterBattle extends React.Component {
                 suppressSummaryPortraits: false,
                 isFinalDeath: false,
                 battleData: latestBattleData,
+                levelTransitions,
             })
         }, 1500);
     }

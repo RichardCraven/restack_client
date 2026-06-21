@@ -21,22 +21,36 @@ export async function setUpCamp(component, maybeDuration) {
         const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
         const foodCost = crew.reduce((sum, m) => sum + (3 + (typeof m.level === 'number' ? m.level : 1)), 0);
         const currentFood = typeof meta.food === 'number' ? meta.food : 55;
+        const hasFortify = crew.some(member => 
+            member && !member.dead && member.globalSkills && 
+            member.globalSkills.some(s => (typeof s === 'string' ? s : s.key) === 'fortify')
+        );
+
         if (currentFood < foodCost) {
-            const currentResolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
-            const penalty = applyResolvePenalty(2);
-            meta.resolve = Math.max(0, currentResolve - penalty);
-            storeMeta(meta);
-            try {
-                component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood}). Resolve decreased by ${penalty}!` });
-                // auto-clear after 4s
-                const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
-                setTimeoutFn(() => { try { component.setState({ campWarningMessage: null }); } catch(e){} }, 4000);
-            } catch(e) {}
-            try { if (component.props.saveUserData) component.props.saveUserData(); } catch (e) {}
-            return; // block camping
+            if (hasFortify) {
+                console.log('[CampManager] Fortify active: allowing camp with insufficient food. Resolve penalty bypassed.');
+                try {
+                    component.setState({ campWarningMessage: `Insufficient food! Fortify prevented the Resolve penalty.` });
+                    const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
+                    setTimeoutFn(() => { try { component.setState({ campWarningMessage: null }); } catch(e){} }, 4000);
+                } catch(e) {}
+            } else {
+                const currentResolve = typeof meta.resolve === 'number' ? meta.resolve : 100;
+                const penalty = applyResolvePenalty(2);
+                meta.resolve = Math.max(0, currentResolve - penalty);
+                storeMeta(meta);
+                try {
+                    component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood}). Resolve decreased by ${penalty}!` });
+                    // auto-clear after 4s
+                    const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
+                    setTimeoutFn(() => { try { component.setState({ campWarningMessage: null }); } catch(e){} }, 4000);
+                } catch(e) {}
+                try { if (component.props.saveUserData) component.props.saveUserData(); } catch (e) {}
+                return; // block camping
+            }
         }
         // Deduct food cost
-        meta.food = currentFood - foodCost;
+        meta.food = Math.max(0, currentFood - foodCost);
         console.log(`[CampManager] food cost: -${foodCost} (remaining: ${meta.food})`);
         // --- End food cost ---
 

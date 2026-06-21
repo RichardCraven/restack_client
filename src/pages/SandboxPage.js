@@ -20,6 +20,7 @@ import {
   healing_hands,
   perceive,
   weakness_doubled,
+  direct_dispel,
   beholder_minion_portrait,
   soldier,
   wizard,
@@ -74,6 +75,7 @@ import {
   death_missile,
   death_missile_hit,
   bind,
+  djinn_rift,
   barbarian_slash,
   barbarian_cleave,
   barbarian_axe_throw,
@@ -336,7 +338,8 @@ const monstersData = [
       { id: 'betrayal', name: 'Betrayal', desc: 'Sow discord, forcing the target to betray their allies.', icon: betrayal, type: 'betrayal_type' },
       { id: 'arcane_barrier', name: 'Arcane Barrier', desc: 'Shield yourself in pure arcane force.', icon: arcane_barrier, type: 'arcane_barrier_type' },
       { id: 'death_missile', name: 'Death Missile', desc: 'Fires a skull missile that curses the target on impact.', icon: death_missile, type: 'death_missile_type' },
-      { id: 'bind', name: 'Bind', desc: 'Conjure ethereal energy to restrict target movement.', icon: bind, type: 'bind_type' }
+      { id: 'bind', name: 'Bind', desc: 'Conjure ethereal energy to restrict target movement.', icon: bind, type: 'bind_type' },
+      { id: 'rift', name: 'Rift', desc: 'Conjure a jagged energy line spanning three tiles in front of you. After a delay, it sweeps forward and pushes back any units caught in its path by two tiles.', icon: djinn_rift, type: 'rift_type' }
     ]
   },
   {
@@ -470,7 +473,8 @@ const fightersData = [
     abilities: [
       { id: 'heal', name: 'Heal', desc: 'Cast restorative magic on an ally.', icon: healing_hands, type: 'heal' },
       { id: 'circle_of_protection', name: 'Circle of Protection', desc: 'Create a sanctuary shielding allies.', icon: circle_of_protection, type: 'circle_of_protection' },
-      { id: 'perceive', name: 'Perceive', desc: 'Affects all enemy units. Doubles the weakness of each enemy for a 2x long duration.', icon: perceive, type: 'perceive_type' }
+      { id: 'perceive', name: 'Perceive', desc: 'Affects all enemy units. Doubles the weakness of each enemy for a 2x long duration.', icon: perceive, type: 'perceive_type' },
+      { id: 'direct_dispel', name: 'Direct Dispel', desc: 'Removes all debuffs from a friendly unit.', icon: direct_dispel, type: 'direct_dispel' }
     ]
   },
   {
@@ -697,6 +701,7 @@ const SandboxPage = () => {
   const [turrets, setTurrets] = useState([]); // List of coordinates {row, col}
   const [minions, setMinions] = useState([]); // List of coordinates {row, col}
   const [healIcon, setHealIcon] = useState(null); // { row, col, active }
+  const [dispelIcon, setDispelIcon] = useState(null); // { row, col, active }
   const [targetHealGlow, setTargetHealGlow] = useState(false);
   const [equippedWeapons, setEquippedWeapons] = useState({
     soldier: 'shortsword_sword',
@@ -764,6 +769,9 @@ const SandboxPage = () => {
   const [djinnBindEndTime, setDjinnBindEndTime] = useState(null);
   const [djinnBindFading, setDjinnBindFading] = useState(false);
 
+  const [riftActive, setRiftActive] = useState(false);
+  const [riftSweeping, setRiftSweeping] = useState(false);
+
   // Djinn - Betrayal states
   const [rangerPos, setRangerPos] = useState({ row: 3, col: 0 });
   const [betrayalBeamActive, setBetrayalBeamActive] = useState(false);
@@ -778,6 +786,7 @@ const SandboxPage = () => {
   const [dragonDispellWaveActive, setDragonDispellWaveActive] = useState(false);
   const [sageTargetFlash, setSageTargetFlash] = useState(false);
   const [sageTargetShake, setSageTargetShake] = useState(false);
+  const [targetDispelGlow, setTargetDispelGlow] = useState(false);
 
   // Extra Ranger Target states
   const [extraRangerShake, setExtraRangerShake] = useState(false);
@@ -896,7 +905,7 @@ const SandboxPage = () => {
 
   useEffect(() => {
     let interval;
-    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive || bleedEndTime || astralModeActive || sagePerceiveActive || thirdEyeActive || riftPortalActive || targetFeared || extraRangerFeared || vampireCrimsonSightActive || skeletonReassemblyActive || skeletonReassemblyCooldownEndTime || djinnDeathMissileHitActive || djinnArcaneBarrierActive || djinnBindActive || rangerBetrayalEffectActive || fighterHexed || monsterHexed) {
+    if (copActive || defensiveStanceActive || berserkerActive || inspireActive || etherealSpeedActive || innerFireActive || targetEnsnared || targetMarked || frozenIconActive || targetPoisoned || sleepIconActive || bleedEndTime || astralModeActive || sagePerceiveActive || thirdEyeActive || riftPortalActive || targetFeared || extraRangerFeared || vampireCrimsonSightActive || skeletonReassemblyActive || skeletonReassemblyCooldownEndTime || djinnDeathMissileHitActive || djinnArcaneBarrierActive || djinnBindActive || rangerBetrayalEffectActive || fighterHexed || monsterHexed || targetDispelGlow) {
       interval = setInterval(() => {
         setCurrentTime(Date.now());
       }, 50);
@@ -906,7 +915,7 @@ const SandboxPage = () => {
     return () => {
       if (interval) clearInterval(interval);
     };
-  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime, astralModeActive, sagePerceiveActive, thirdEyeActive, riftPortalActive, targetFeared, extraRangerFeared, vampireCrimsonSightActive, skeletonReassemblyActive, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitActive, djinnArcaneBarrierActive, djinnBindActive, rangerBetrayalEffectActive, fighterHexed, monsterHexed]);
+  }, [copActive, defensiveStanceActive, berserkerActive, inspireActive, etherealSpeedActive, innerFireActive, targetEnsnared, targetMarked, frozenIconActive, targetPoisoned, sleepIconActive, bleedEndTime, astralModeActive, sagePerceiveActive, thirdEyeActive, riftPortalActive, targetFeared, extraRangerFeared, vampireCrimsonSightActive, skeletonReassemblyActive, skeletonReassemblyCooldownEndTime, djinnDeathMissileHitActive, djinnArcaneBarrierActive, djinnBindActive, rangerBetrayalEffectActive, fighterHexed, monsterHexed, targetDispelGlow]);
 
   // Central status cleanups effect
   useEffect(() => {
@@ -3853,23 +3862,50 @@ const SandboxPage = () => {
 
       const isFighterSource = selectedUnitType === 'fighter';
       const originalCol = isFighterSource ? fighterPos.col : targetPos.col;
-      const atBackline = originalCol === GRID_SIZE - 1;
       const spawnerRow = isFighterSource ? fighterPos.row : targetPos.row;
 
-      // 1. Move Witch 1 tile off the backline
-      if (atBackline) {
-        if (isFighterSource) {
-          setFighterPos(prev => ({ ...prev, col: GRID_SIZE - 2 }));
-        } else {
-          setTargetPos(prev => ({ ...prev, col: GRID_SIZE - 2 }));
+      // Determine facing direction: player fighter faces right, monster target faces left
+      const facing = isFighterSource ? 'right' : 'left';
+      const wasAtBoundary = (facing === 'left' && originalCol === GRID_SIZE - 1) || (facing === 'right' && originalCol === 0);
+
+      // 1. Move Witch 1 tile off the backline if they are on it
+      if (facing === 'left') {
+        if (originalCol === GRID_SIZE - 1) {
+          if (isFighterSource) {
+            setFighterPos(prev => ({ ...prev, col: GRID_SIZE - 2 }));
+          } else {
+            setTargetPos(prev => ({ ...prev, col: GRID_SIZE - 2 }));
+          }
+        }
+      } else {
+        if (originalCol === 0) {
+          if (isFighterSource) {
+            setFighterPos(prev => ({ ...prev, col: 1 }));
+          } else {
+            setTargetPos(prev => ({ ...prev, col: 1 }));
+          }
         }
       }
 
-      // 2. Spawn the spawner icon at the backline
+      // 2. Spawn the spawner icon at the column behind the Witch
+      let finalWitchCol = originalCol;
+      if (facing === 'left') {
+        if (originalCol === GRID_SIZE - 1) {
+          finalWitchCol = GRID_SIZE - 2;
+        }
+      } else {
+        if (originalCol === 0) {
+          finalWitchCol = 1;
+        }
+      }
+
+      let spawnerCol = facing === 'left' ? finalWitchCol + 1 : finalWitchCol - 1;
+      spawnerCol = Math.max(0, Math.min(GRID_SIZE - 1, spawnerCol));
+
       const spawnerId = `spawner_${Date.now()}`;
       const spawnerObj = {
         id: spawnerId,
-        x: (GRID_SIZE - 1) * 20,
+        x: spawnerCol * 20,
         y: spawnerRow * 20,
         isSpawner: true,
         icon: summon_spiders_icon,
@@ -3889,12 +3925,12 @@ const SandboxPage = () => {
             // Remove the spawner icon
             setProjectiles(prev => prev.filter(p => p.id !== spawnerId));
             
-            // Witch moves back to the backline
-            if (atBackline) {
+            // Witch moves back to her original column
+            if (wasAtBoundary) {
               if (isFighterSource) {
-                setFighterPos(prev => ({ ...prev, col: GRID_SIZE - 1 }));
+                setFighterPos(prev => ({ ...prev, col: originalCol }));
               } else {
-                setTargetPos(prev => ({ ...prev, col: GRID_SIZE - 1 }));
+                setTargetPos(prev => ({ ...prev, col: originalCol }));
               }
             }
             return;
@@ -4376,7 +4412,7 @@ const SandboxPage = () => {
     }
 
     // --- BUFFS & HEALS ---
-    else if (ability.type === 'heal' || ability.type === 'heal_gold' || ability.type === 'barrier' || ability.type === 'battle_cry' || ability.type === 'overdrive') {
+    else if (ability.type === 'heal' || ability.type === 'heal_gold' || ability.type === 'barrier' || ability.type === 'battle_cry' || ability.type === 'overdrive' || ability.type === 'direct_dispel') {
       setAnimating(true);
       let buff = 'heal';
       let txt = '+30';
@@ -4394,10 +4430,14 @@ const SandboxPage = () => {
         buff = 'rage';
         txt = 'OVERDRIVE';
         color = '#ffb703';
+      } else if (ability.type === 'direct_dispel') {
+        buff = 'dispel';
+        txt = 'CLEANSED!';
+        color = '#00ffff';
       }
 
-      // Sage heal: approach the ally first, then heal
-      if (selectedFighterId === 'sage' && ability.type === 'heal') {
+      // Sage heal / dispel: approach the ally first, then apply
+      if (selectedFighterId === 'sage' && (ability.type === 'heal' || ability.type === 'direct_dispel')) {
         setAnimationPhase('heal_approach');
         setTimeout(() => {
           // a) Sage has arrived adjacent (350ms duration)
@@ -4416,20 +4456,43 @@ const SandboxPage = () => {
             midRow = (adjRow + targetPos.row) / 2;
           }
 
-          // b) Render healing hands icon and target glow
-          setHealIcon({ row: midRow, col: midCol, active: true });
-          setTargetHealGlow(true);
+          // b) Render hands/dispel icon and target glow
+          if (ability.type === 'direct_dispel') {
+            setDispelIcon({ row: midRow, col: midCol, active: true });
+            setTargetDispelGlow(true);
+            
+            // Clear all target debuffs
+            setTargetPoisoned(false);
+            setTargetStunned(false);
+            setTargetFrozen(false);
+            setTargetFeared(false);
+            setTargetBleeding(false);
+            setTargetEnsnared(false);
+            setTargetAsleep(false);
+            setTargetMarked(false);
+            setFighterHexed(false);
+            setMonsterHexed(false);
+          } else {
+            setHealIcon({ row: midRow, col: midCol, active: true });
+            setTargetHealGlow(true);
+          }
 
           addFloatingText(txt, 'normal', color, targetPos.row, targetPos.col);
 
           // c) Effect is finished: icon fades and color glow fades after 800ms
           setTimeout(() => {
-            setHealIcon(prev => prev ? { ...prev, active: false } : null);
-            setTargetHealGlow(false);
+            if (ability.type === 'direct_dispel') {
+              setDispelIcon(prev => prev ? { ...prev, active: false } : null);
+              setTargetDispelGlow(false);
+            } else {
+              setHealIcon(prev => prev ? { ...prev, active: false } : null);
+              setTargetHealGlow(false);
+            }
 
             // d) Sage moves back to its origin tile after fade duration (300ms)
             setTimeout(() => {
               setAnimationPhase('return');
+              setDispelIcon(null);
               setHealIcon(null);
 
               // Arrives back at origin
@@ -5358,6 +5421,45 @@ const SandboxPage = () => {
         setAnimating(false);
       }, 500);
     }
+
+    // --- DJINN RIFT ---
+    else if (ability.type === 'rift_type') {
+      setAnimating(true);
+      // Show the rift line appearing then sweeping toward target
+      setRiftActive(true);
+      setRiftSweeping(false);
+      addFloatingText('RIFT!', 'crit', '#d8b4fe', targetPos.row, targetPos.col);
+
+      // Phase 2: sweep start at 1600ms
+      setTimeout(() => {
+        setRiftSweeping(true);
+      }, 1600);
+
+      // Phase 3: pushback at 1800ms (when sweeping line hits the unit)
+      setTimeout(() => {
+        // If target is in range (same lane ±1, within 3 tiles), show push-back
+        const dx = Math.abs(fighterPos.col - targetPos.col);
+        const dy = Math.abs(fighterPos.row - targetPos.row);
+        if (dx <= 3 && dy <= 1) {
+          addFloatingText('PUSHED BACK!', 'normal', '#c084fc', targetPos.row, targetPos.col);
+          
+          let newCol = targetPos.col;
+          if (fighterPos.col < targetPos.col) {
+            newCol = Math.min(GRID_SIZE - 1, targetPos.col + 2);
+          } else {
+            newCol = Math.max(0, targetPos.col - 2);
+          }
+          
+          setTargetPos(prev => ({ ...prev, col: newCol }));
+        }
+      }, 1800);
+
+      setTimeout(() => {
+        setRiftActive(false);
+        setRiftSweeping(false);
+        setAnimating(false);
+      }, 2400);
+    }
   };
 
   return (
@@ -5777,6 +5879,24 @@ const SandboxPage = () => {
           }
           100% {
             transform: rotate(60deg);
+            opacity: 0;
+          }
+        }
+        @keyframes weaponSwingArcFlipped {
+          0% {
+            transform: scaleX(-1) rotate(-60deg);
+            opacity: 0;
+          }
+          10% {
+            transform: scaleX(-1) rotate(-60deg);
+            opacity: 1;
+          }
+          90% {
+            transform: scaleX(-1) rotate(60deg);
+            opacity: 1;
+          }
+          100% {
+            transform: scaleX(-1) rotate(60deg);
             opacity: 0;
           }
         }
@@ -9128,6 +9248,22 @@ const SandboxPage = () => {
                       zIndex: 14
                     }} />
                   )}
+                  {/* Cyan Glow Overlay/Glow for Dispel */}
+                  {selectedFighterId === 'sage' && (
+                    <div style={{
+                      boxSizing: 'border-box',
+                      position: 'absolute',
+                      top: 0, left: 0, width: '100%', height: '100%',
+                      background: 'rgba(0, 255, 255, 0.15)',
+                      border: '3px solid #00ffff',
+                      borderRadius: '6px',
+                      boxShadow: '0 0 25px rgba(0, 255, 255, 0.8), inset 0 0 15px rgba(0, 255, 255, 0.5)',
+                      opacity: targetDispelGlow ? 1 : 0,
+                      transition: 'opacity 0.3s ease-in-out',
+                      pointerEvents: 'none',
+                      zIndex: 14
+                    }} />
+                  )}
                   {/* Frozen Overlay */}
                   {targetFrozen && (
                     <div style={{
@@ -10278,6 +10414,37 @@ const SandboxPage = () => {
                 </div>
               )}
 
+              {/* --- Dispel Icon Overlay --- */}
+              {dispelIcon && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: `calc(${dispelIcon.col * 20}% + 10%)`,
+                    top: `calc(${dispelIcon.row * 20}% + 10%)`,
+                    width: '20%',
+                    height: '20%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 25,
+                    pointerEvents: 'none',
+                    opacity: dispelIcon.active ? 1 : 0,
+                    transform: `translate(-50%, -50%) scale(${dispelIcon.active ? 1.25 : 0.8})`,
+                    transition: 'opacity 0.3s ease-out, transform 0.3s ease-out',
+                  }}
+                >
+                  <img
+                    src={direct_dispel}
+                    alt="direct dispel"
+                    style={{
+                      width: '45px',
+                      height: '45px',
+                      filter: 'drop-shadow(0 0 8px #00ffff) drop-shadow(0 0 15px rgba(0, 255, 255, 0.6))',
+                    }}
+                  />
+                </div>
+              )}
+
               {/* --- Projectile Overlay --- */}
               {projectile && (
                 projectile.isRangerArrow ? (
@@ -10756,6 +10923,96 @@ const SandboxPage = () => {
                     pointerEvents: 'none',
                     animation: 'pinkBeamPulse 0.5s ease-out infinite'
                   }} />
+                );
+              })()}
+
+              {/* --- Djinn Rift: vertical energy line overlay --- */}
+              {riftActive && (() => {
+                const isLeftToRight = fighterPos.col < targetPos.col;
+                const lineCol = fighterPos.col;
+                const lineX = lineCol * TILE_PCT;
+                const lineY = targetPos.row * TILE_PCT; // top of 3-tile span
+                const lineH = TILE_PCT * 3; // 3 tiles tall
+                const sweepOffset = riftSweeping 
+                  ? (isLeftToRight ? (TILE_PCT * 2) : -(TILE_PCT * 2)) 
+                  : 0;
+                const embers = [
+                  { id: 1, top: '15%', left: '8px', size: '5px', delay: '0s', color: '#c084fc' },
+                  { id: 2, top: '35%', left: '22px', size: '4px', delay: '0.4s', color: '#a855f7' },
+                  { id: 3, top: '50%', left: '12px', size: '6px', delay: '0.2s', color: '#ffffff' },
+                  { id: 4, top: '65%', left: '26px', size: '3px', delay: '0.7s', color: '#c084fc' },
+                  { id: 5, top: '80%', left: '14px', size: '5px', delay: '0.1s', color: '#a855f7' },
+                  { id: 6, top: '92%', left: '20px', size: '4px', delay: '0.9s', color: '#ffffff' }
+                ];
+                return (
+                  <div style={{
+                    position: 'absolute',
+                    left: `calc(${lineX}% + ${sweepOffset}%)`,
+                    top: `calc(${lineY}% - ${TILE_PCT}%)`,
+                    width: '40px',
+                    height: `${lineH}%`,
+                    transform: 'translateX(-50%)',
+                    transition: riftSweeping ? 'left 0.5s ease-in, opacity 0.5s ease-in' : 'none',
+                    opacity: riftSweeping ? 0 : 1,
+                    animation: riftSweeping ? 'none' : 'riftLineAppear 0.5s ease-out forwards',
+                    zIndex: 35,
+                    pointerEvents: 'none',
+                    overflow: 'visible',
+                  }}>
+                    <svg
+                      viewBox="0 0 40 300"
+                      width="100%"
+                      height="100%"
+                      preserveAspectRatio="none"
+                      style={{
+                        overflow: 'visible',
+                        animation: 'riftFluidWobble 4s ease-in-out infinite alternate'
+                      }}
+                    >
+                      <path
+                        d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                        fill="none"
+                        stroke="#7c3aed"
+                        strokeWidth="10"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ filter: 'blur(3px)', opacity: 0.8 }}
+                      />
+                      <path
+                        d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                        fill="none"
+                        stroke="#c084fc"
+                        strokeWidth="4"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ filter: 'drop-shadow(0 0 6px #7c3aed)' }}
+                      />
+                      <path
+                        d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                        fill="none"
+                        stroke="#ffffff"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ animation: 'riftCoreShimmer 0.8s ease-in-out infinite alternate' }}
+                      />
+                    </svg>
+                    {embers.map(e => (
+                      <div key={e.id} style={{
+                        position: 'absolute',
+                        top: e.top,
+                        left: e.left,
+                        width: e.size,
+                        height: e.size,
+                        borderRadius: '50%',
+                        backgroundColor: e.color,
+                        boxShadow: `0 0 6px ${e.color}, 0 0 12px ${e.color}`,
+                        pointerEvents: 'none',
+                        animation: `riftEmbers 1.4s ease-out infinite`,
+                        animationDelay: e.delay
+                      }} />
+                    ))}
+                  </div>
                 );
               })()}
 
@@ -11303,7 +11560,7 @@ const SandboxPage = () => {
                             height: '100%',
                             objectFit: 'contain',
                             transformOrigin: `${30 - halfDistPx}px 30px`,
-                            animation: 'weaponSwingArc 0.75s ease-in-out forwards'
+                            animation: `${(swingDx < 0 || (swingDx === 0 && fighterPos.col > targetPos.col)) ? 'weaponSwingArcFlipped' : 'weaponSwingArc'} 0.75s ease-in-out forwards`
                           }}
                         />
                       </div>

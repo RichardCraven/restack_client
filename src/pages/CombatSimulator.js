@@ -480,7 +480,31 @@ class CrewManagerPage extends React.Component {
             const tier = targetLevel >= 20 ? 3 : targetLevel >= 10 ? 2 : 1;
             try {
                 const allWeapons = this.props.inventoryManager.weapons;
-                const tierWeapons = Object.values(allWeapons).filter(w => w && w.tier === tier);
+                let tierWeapons = Object.entries(allWeapons)
+                    .filter(([key, w]) => w && w.tier === tier)
+                    .map(([key, w]) => {
+                        const cloned = clone(w);
+                        if (cloned) cloned._im_key = key;
+                        return cloned;
+                    });
+
+                const isBow = (w) => {
+                    const k = w._im_key || '';
+                    return k.endsWith('_bow') || k === 'merklins_peacekeeper' || w.range === 'far';
+                };
+                const isMartial = (w) => {
+                    const k = w._im_key || '';
+                    return k.endsWith('_sword') || k.endsWith('_axe') || w.range === 'close';
+                };
+
+                if (member.type === 'ranger') {
+                    tierWeapons = tierWeapons.filter(isBow);
+                } else if (member.type === 'soldier' || member.type === 'barbarian') {
+                    tierWeapons = tierWeapons.filter(isMartial);
+                } else {
+                    tierWeapons = tierWeapons.filter(w => !isBow(w));
+                }
+
                 if (tierWeapons.length > 0) {
                     const weapon = clone(tierWeapons[Math.floor(Math.random() * tierWeapons.length)]);
                     weapon.equippedBy = member.id;
@@ -560,7 +584,31 @@ class CrewManagerPage extends React.Component {
                         const tier = targetLevel >= 20 ? 3 : targetLevel >= 10 ? 2 : 1;
                         try {
                             const allWeapons = this.props.inventoryManager.weapons;
-                            const tierWeapons = Object.values(allWeapons).filter(w => w && w.tier === tier);
+                            let tierWeapons = Object.entries(allWeapons)
+                                .filter(([key, w]) => w && w.tier === tier)
+                                .map(([key, w]) => {
+                                    const cloned = clone(w);
+                                    if (cloned) cloned._im_key = key;
+                                    return cloned;
+                                });
+
+                            const isBow = (w) => {
+                                const k = w._im_key || '';
+                                return k.endsWith('_bow') || k === 'merklins_peacekeeper' || w.range === 'far';
+                            };
+                            const isMartial = (w) => {
+                                const k = w._im_key || '';
+                                return k.endsWith('_sword') || k.endsWith('_axe') || w.range === 'close';
+                            };
+
+                            if (member.type === 'ranger') {
+                                tierWeapons = tierWeapons.filter(isBow);
+                            } else if (member.type === 'soldier' || member.type === 'barbarian') {
+                                tierWeapons = tierWeapons.filter(isMartial);
+                            } else {
+                                tierWeapons = tierWeapons.filter(w => !isBow(w));
+                            }
+
                             if (tierWeapons.length > 0) {
                                 const weapon = clone(tierWeapons[Math.floor(Math.random() * tierWeapons.length)]);
                                 weapon.equippedBy = member.id;

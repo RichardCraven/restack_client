@@ -76,7 +76,10 @@ describe('Fireball Splash & Generic AI Basic Attack Range', () => {
       type: 'damage'
     };
 
+    jest.useFakeTimers();
     cm.useAbility(wizard, fireballAbility, target);
+    jest.runAllTimers();
+    jest.useRealTimers();
 
     // Primary target should take full damage (20)
     expect(target.hp).toBe(80);
@@ -156,7 +159,10 @@ describe('Fireball Splash & Generic AI Basic Attack Range', () => {
       type: 'damage'
     };
 
+    jest.useFakeTimers();
     cm.useAbility(wizard, fireballAbility, target);
+    jest.runAllTimers();
+    jest.useRealTimers();
 
     // Primary target should take full damage (20 flat + 5 wizard ATK = 25)
     expect(target.hp).toBe(75);

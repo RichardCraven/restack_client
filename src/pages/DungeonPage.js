@@ -4,6 +4,8 @@ import { INTERVALS, MONSTER_RESPAWN_MINUTES, ITEM_RESPAWN_MINUTES } from '../uti
 import '../styles/dungeon-board.scss'
 import Tile from '../components/tile'
 import MonsterBattle from './sub-views/MonsterBattle';
+import ShrineScreen from './sub-views/ShrineScreen';
+
 import LevelUpScreen from '../components/LevelUpScreen';
 import '../styles/level-up-screen.scss';
 import { CombatManagerRedux } from '../utils/combat-manager-redux';
@@ -49,13 +51,13 @@ import '../styles/map-redux.scss';
 import { FLAGS } from '../flags';
 
 const SLOT_INFO = {
-    'chest': { name: 'Chest Slot', desc: 'Equip body armor, tabards, or amulets here.' },
+    'chest': { name: 'Chest Slot', desc: 'Equip body armor or tabards here.' },
     'right': { name: 'Right Hand Slot', desc: 'Equip weapons, wands, shields, or off-hand items.' },
     'left': { name: 'Left Hand Slot', desc: 'Equip weapons, wands, shields, or off-hand items.' },
     'head': { name: 'Head Slot', desc: 'Equip helmets, masks, or hats here.' },
     'boots': { name: 'Boots Slot', desc: 'Equip boots here.' },
-    'ancillary-left': { name: 'Ancillary Slot (Left)', desc: 'Equip rings, relics, or accessories here.' },
-    'ancillary-right': { name: 'Ancillary Slot (Right)', desc: 'Equip rings, relics, or accessories here.' },
+    'ancillary-left': { name: 'Ancillary Slot (Left)', desc: 'Equip rings, amulets, relics, or accessories here.' },
+    'ancillary-right': { name: 'Ancillary Slot (Right)', desc: 'Equip rings, amulets, relics, or accessories here.' },
     'pet': { name: 'Pet Slot', desc: 'Equip companion pets here to support you in battle.' }
 };
 
@@ -1736,6 +1738,7 @@ class DungeonPage extends React.Component {
             , ambushMonster: null
             , showShrineOverlay: false
             , shrineData: null
+            , inShrineScreen: false
             , contextMenu: { visible: false, x: 0, y: 0, slotName: '' }
         }
     // Native browser tooltip will be used for death-tracker; no custom tooltip state required.
@@ -2032,8 +2035,8 @@ class DungeonPage extends React.Component {
                             let newSlot = null;
                             if (['helm', 'mask'].includes(item.subtype)) { newSlot = 'head'; }
                             else if (item.subtype === 'boots') { newSlot = 'boots'; }
-                            else if (['amulet', 'armor', 'tabard'].includes(item.subtype)) { newSlot = 'chest'; }
-                            else if (item.subtype === 'charm') { newSlot = 'ancillary-left'; }
+                            else if (['armor', 'tabard'].includes(item.subtype)) { newSlot = 'chest'; }
+                            else if (['charm', 'amulet', 'ring'].includes(item.subtype)) { newSlot = 'ancillary-left'; }
                             else if (['wand', 'staff', 'shield'].includes(item.subtype) || item.type === 'weapon') { newSlot = 'right'; }
                             
                             if (newSlot) {
@@ -2057,8 +2060,8 @@ class DungeonPage extends React.Component {
                                 let newSlot = null;
                                 if (['helm', 'mask'].includes(item.subtype)) { newSlot = 'head'; }
                                 else if (item.subtype === 'boots') { newSlot = 'boots'; }
-                                else if (['amulet', 'armor', 'tabard'].includes(item.subtype)) { newSlot = 'chest'; }
-                                else if (item.subtype === 'charm') { newSlot = 'ancillary-left'; }
+                                else if (['armor', 'tabard'].includes(item.subtype)) { newSlot = 'chest'; }
+                                else if (['charm', 'amulet', 'ring'].includes(item.subtype)) { newSlot = 'ancillary-left'; }
                                 else if (['wand', 'staff', 'shield'].includes(item.subtype) || item.type === 'weapon') { newSlot = 'right'; }
                                 
                                 if (newSlot) {
@@ -5202,7 +5205,7 @@ class DungeonPage extends React.Component {
         } else if (subtype === 'boots') {
             targetSlot = 'boots';
             if (slotOccupied(targetSlot)) targetSlot = null;
-        } else if(['amulet','armor','tabard'].includes(subtype)){
+        } else if(['armor','tabard'].includes(subtype)){
             if (subtype === 'tabard' && crewClass !== 'spellcaster') {
                 // Only spellcasters/magic users can equip tabards
                 return;
@@ -5229,7 +5232,7 @@ class DungeonPage extends React.Component {
             if(!slotOccupied('left')) targetSlot = 'left';
             else if(!slotOccupied('right')) targetSlot = 'right';
             else targetSlot = null;
-        } else if(subtype === 'charm'){
+        } else if(['charm', 'amulet', 'ring'].includes(subtype)){
             // ancillary slots
             if(!slotOccupied('ancillary-left')) targetSlot = 'ancillary-left';
             else if(!slotOccupied('ancillary-right')) targetSlot = 'ancillary-right';
@@ -7222,32 +7225,16 @@ class DungeonPage extends React.Component {
             return;
         }
 
+        // Launch the new full-screen ShrineScreen (cinematic combat encounter)
         this.setState({
             keysLocked: true,
-            showShrineOverlay: true,
+            inShrineScreen: true,
             shrineData: {
                 tile,
                 shrineClass,
                 shrineKey,
                 matchingMember,
-                ritualActive: true,
-                ritualDuration: 20, // seconds
-                ritualTimeLeft: 20,
-                ritualComplete: false,
-            }
-        }, () => {
-            // Start the countdown
-            this._shrineInterval = setInterval(() => {
-                this.setState(prev => {
-                    if (!prev.shrineData || !prev.shrineData.ritualActive) return null;
-                    const next = prev.shrineData.ritualTimeLeft - 1;
-                    if (next <= 0) {
-                        clearInterval(this._shrineInterval);
-                        return { shrineData: { ...prev.shrineData, ritualTimeLeft: 0, ritualActive: false, ritualComplete: true } };
-                    }
-                    return { shrineData: { ...prev.shrineData, ritualTimeLeft: next } };
-                });
-            }, 1000);
+            },
         });
     }
 
@@ -7259,6 +7246,38 @@ class DungeonPage extends React.Component {
             shrineData: null,
         });
     }
+
+    // Called by ShrineScreen when the encounter ends (success or failure)
+    onShrineComplete = (result) => {
+        const { success, shrineData, selectedSkill } = result || {};
+
+        if (success && selectedSkill) {
+            // Delegate to existing confirmGlobalSkill — it handles marking used, awarding skill, removing tile
+            // But we need shrineData in state for confirmGlobalSkill to read
+            this.setState({ shrineData, inShrineScreen: false }, () => {
+                this.confirmGlobalSkill(selectedSkill);
+            });
+        } else if (success && !selectedSkill) {
+            // No more skills to unlock — just mark shrine used and clean up
+            const meta = getMeta() || {};
+            if (shrineData && shrineData.shrineKey) {
+                const shrinesUsed = Array.isArray(meta.shrinesUsed) ? meta.shrinesUsed : [];
+                if (!shrinesUsed.includes(shrineData.shrineKey)) shrinesUsed.push(shrineData.shrineKey);
+                meta.shrinesUsed = shrinesUsed;
+                try { storeMeta(meta); } catch(e) {}
+            }
+            if (shrineData && shrineData.tile) {
+                try { this.props.boardManager.removeTileFromBoard(shrineData.tile); } catch(e) {}
+            }
+            try { if (this.props.boardManager.messaging) this.props.boardManager.messaging('🏛 Communion complete — all shrine gifts already bestowed.'); } catch(e) {}
+            this.setState({ keysLocked: false, inShrineScreen: false, shrineData: null });
+        } else {
+            // Failure — shrine not marked used (they can try again later if resolve allows)
+            try { if (this.props.boardManager.messaging) this.props.boardManager.messaging('🏛 The communion was broken — the shrine\'s power awaits another attempt.'); } catch(e) {}
+            this.setState({ keysLocked: false, inShrineScreen: false, shrineData: null });
+        }
+    }
+
 
     confirmGlobalSkill = (skillKey) => {
         if (!skillKey) return;
@@ -7312,8 +7331,9 @@ class DungeonPage extends React.Component {
         }
 
         clearInterval(this._shrineInterval);
-        this.setState({ keysLocked: false, showShrineOverlay: false, shrineData: null });
+        this.setState({ keysLocked: false, showShrineOverlay: false, inShrineScreen: false, shrineData: null });
         try { if (this.props.boardManager.messaging) this.props.boardManager.messaging(`✨ Global skill unlocked: ${skillKey.replace(/_/g,' ')}`); } catch(e) {}
+
     }
 
     triggerLoreTabletEncounter = (tile) => {
@@ -9645,12 +9665,13 @@ class DungeonPage extends React.Component {
                             <div className="experience-line" style={{width: `${this.props.crewManager.calculateExpPercentage(this.state.selectedCrewMember)}%`}}></div>
                         </div>
 
-                        {/* Max HP stat-line under the experience container */}
+                        {/* hitpoints stat-line under the experience container */}
                         {(() => {
                             const selected = this.state.selectedCrewMember || {};
                             const maxHp = (selected.stats && selected.stats.hp) ? selected.stats.hp : 0;
+                            const currentHp = (typeof selected.hp !== 'undefined') ? selected.hp : maxHp;
                             return (
-                                <div className="stat-line"> <span className="stat-name">Max HP</span>  <span className='stat-value'>{maxHp} </span> </div>
+                                <div className="stat-line"> <span className="stat-name">hitpoints</span>  <span className='stat-value'>{currentHp}/{maxHp}</span> </div>
                             )
                         })()}
                         <div className="stat-line"> <span className="stat-name">Strength</span>  <span className='stat-value'>{this.state.selectedCrewMember.stats?.str} </span> </div>
@@ -10364,6 +10385,16 @@ class DungeonPage extends React.Component {
                 onTriggerLootArc={this.triggerLootRadialArc}
                 saveUserData={this.props.saveUserData}
             ></MonsterBattle>}
+
+            {/* Shrine Screen — full-screen cinematic shrine encounter */}
+            {this.state.inShrineScreen && this.state.shrineData && (
+                <ShrineScreen
+                    shrineData={this.state.shrineData}
+                    crew={(this.props.crewManager && this.props.crewManager.crew) || []}
+                    monsterManager={this.props.monsterManager}
+                    onShrineComplete={this.onShrineComplete}
+                />
+            )}
 
             <CModal className={`inventory-modal ${this.state.isInventoryExpanded ? 'expanded' : ''}`} alignment='center' visible={this.state.showInventoryPopup} onClose={() => this.setState({ showInventoryPopup: false, isInventoryExpanded: false })}>
                 <div className='inventory-content'>

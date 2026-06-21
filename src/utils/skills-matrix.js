@@ -301,6 +301,20 @@ const skillsMatrix = {
         effect: ['buff_self'],
         buff: {}
     },
+    direct_dispel: {
+        class: 'sage',
+        treePath: 'combat_a',
+        id: 'direct_dispel',
+        tier: 3,
+        name: 'Direct Dispel',
+        desc: 'Removes all debuffs from a friendly unit.',
+        icon: images.direct_dispel,
+        cooldown: 10,
+        initialCooldown: 3,
+        duration: 'instant',
+        range: 'medium',
+        type: 'utility'
+    },
 
     // === SOLDIER ===
     fortify: {
@@ -459,7 +473,7 @@ const skillsMatrix = {
         range: 'close',
         atkPercentage: 100,
         type: 'damage',
-        effect: { type: 'stun', chance: 100, duration: 2 }
+        effect: { type: 'stun', chance: 80, duration: 2 }
     },
     imbued_strike: {
         class: 'soldier',
@@ -1633,6 +1647,17 @@ const skillsMatrix = {
         mentalityDebuff: true,
         power: 35,
         effect: { type: 'ensnared', duration: 'medium' }
+    },
+    rift: {
+        id: 'rift',
+        tier: 1,
+        name: 'Rift',
+        desc: 'Conjure a jagged line of energy spanning three vertical tiles in front of you. After a brief delay, the line surges outward, pushing back any units caught in its path by two tiles.',
+        icon: images['djinn_rift'],
+        cooldown: 12,
+        range: 'close',
+        type: 'utility',
+        initialCooldown: 3,
     },
     // ── Sphinx skills ────────────────────────────────────────────────────────
     third_eye: {

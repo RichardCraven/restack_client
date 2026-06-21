@@ -426,10 +426,11 @@ export function CombatManager() {
             const isLarge = (
                 !isHuge && (
                     (typeof combatant.large === 'boolean' && combatant.large === true)
-                    || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type) && combatant.isMinion !== true)
+                    || (combatant.type && LARGE_COMBAT_KEYS.includes(combatant.type) && (combatant.isMinion !== true || combatant.tier === 3 || combatant.tier === 4))
                     || (typeof combatant.size === 'number' && combatant.size >= 2)
                     || (typeof combatant.scale === 'number' && combatant.scale >= 2)
-                    || (combatant.isMonster === true && combatant.isMinion !== true)
+                    || (combatant.isMonster === true && (combatant.isMinion !== true || combatant.tier === 3 || combatant.tier === 4))
+                    || (combatant.tier === 3)
                 )
             );
 
@@ -566,14 +567,14 @@ export function CombatManager() {
     // Returns true if combatant is a large (2-tile-tall) or huge (3-tile-tall) creature.
     this._isLargeCombatant = (combatant) => {
         if (!combatant) return false;
-        const LARGE_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt'];
+        const LARGE_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'];
         return (
             (typeof combatant.large === 'boolean' && combatant.large === true)
-            || (combatant.type && LARGE_KEYS.includes(combatant.type))
+            || (combatant.type && LARGE_KEYS.includes(combatant.type) && (combatant.isMinion !== true || combatant.tier === 3 || combatant.tier === 4))
             || (typeof combatant.size === 'number' && combatant.size >= 2)
             || (typeof combatant.scale === 'number' && combatant.scale >= 2)
-            || (combatant.isMonster === true && combatant.isMinion !== true)
-            || (combatant.tier === 4 && combatant.isMinion !== true)
+            || (combatant.isMonster === true && (combatant.isMinion !== true || combatant.tier === 3 || combatant.tier === 4))
+            || (combatant.tier === 3 || combatant.tier === 4)
         );
     }
 
@@ -911,10 +912,11 @@ export function CombatManager() {
         const isLarge = (
             !isHuge && (
                 (typeof m.large === 'boolean' && m.large === true)
-                || (m.type && LARGE_COMBAT_KEYS.includes(m.type) && m.isMinion !== true)
+                || (m.type && LARGE_COMBAT_KEYS.includes(m.type) && (m.isMinion !== true || m.tier === 3 || m.tier === 4))
                 || (typeof m.size === 'number' && m.size >= 2)
                 || (typeof m.scale === 'number' && m.scale >= 2)
-                || (m.isMonster === true && m.isMinion !== true)
+                || (m.isMonster === true && (m.isMinion !== true || m.tier === 3 || m.tier === 4))
+                || (m.tier === 3)
             )
         );
 
@@ -959,13 +961,116 @@ export function CombatManager() {
             for (let i = MAX_LANES - 1; i >= 0; i--) {
                 if (!occupiedLanes.includes(i)) availableLanes.push(i);
             }
+            // Helper to get all coordinates currently occupied by placed combatants (including large/huge VCT tiles)
+            const getCurrentlyOccupiedCoords = () => {
+                const occupied = [];
+                Object.values(this.combatants).forEach(c => {
+                    if (!c || c.dead) return;
+                    if (Array.isArray(c.occupiedCoords)) {
+                        c.occupiedCoords.forEach(coord => {
+                            if (!occupied.some(o => o.x === coord.x && o.y === coord.y)) {
+                                occupied.push({ x: coord.x, y: coord.y });
+                            }
+                        });
+                    } else if (c.coordinates) {
+                        if (!occupied.some(o => o.x === c.coordinates.x && o.y === c.coordinates.y)) {
+                            occupied.push({ x: c.coordinates.x, y: c.coordinates.y });
+                        }
+                    }
+                });
+                return occupied;
+            };
+
+            // Helper to get coordinates a minion would occupy if placed at (x, y)
+            const getOccupiedCoordsForPos = (x, y, isHuge, isLarge) => {
+                const coords = [{ x, y }];
+                if (isHuge) {
+                    const hOffset = (x >= 4) ? -1 : 1;
+                    const extra = [
+                        { x: x, y: y - 1 },
+                        { x: x, y: y - 2 },
+                        { x: x + hOffset, y: y },
+                        { x: x + hOffset, y: y - 1 },
+                        { x: x + hOffset, y: y - 2 },
+                        { x: x + 2 * hOffset, y: y },
+                        { x: x + 2 * hOffset, y: y - 1 },
+                        { x: x + 2 * hOffset, y: y - 2 }
+                    ];
+                    extra.forEach(c => {
+                        if (!coords.some(existing => existing.x === c.x && existing.y === c.y)) {
+                            coords.push(c);
+                        }
+                    });
+                } else if (isLarge) {
+                    const hOffset = (x >= 4) ? -1 : 1;
+                    const extra = [
+                        { x: x, y: y - 1 },
+                        { x: x + hOffset, y: y },
+                        { x: x + hOffset, y: y - 1 }
+                    ];
+                    extra.forEach(c => {
+                        if (!coords.some(existing => existing.x === c.x && existing.y === c.y)) {
+                            coords.push(c);
+                        }
+                    });
+                }
+                return coords;
+            };
+
             this.data.minions.forEach((e, i) => {
                 e.isMinion = true;
-                e.coordinates = { x: 0, y: 0 }
-                const laneIndex = i % availableLanes.length;
-                const columnOffset = Math.floor(i / availableLanes.length); // 0 for first batch, 1 for overflow
-                e.coordinates.y = availableLanes[laneIndex];
-                e.coordinates.x = MAX_DEPTH - columnOffset;
+                
+                // Determine minion size
+                const isMinionHuge = (
+                    (typeof e.huge === 'boolean' && e.huge === true)
+                    || (e.type === 'dragon')
+                    || (e.tier === 4)
+                    || (typeof e.size === 'number' && e.size === 3)
+                    || (typeof e.scale === 'number' && e.scale === 3)
+                );
+                const isMinionLarge = (
+                    !isMinionHuge && (
+                        (typeof e.large === 'boolean' && e.large === true)
+                        || (e.type && LARGE_COMBAT_KEYS.includes(e.type) && (e.isMinion !== true || e.tier === 3 || e.tier === 4))
+                        || (typeof e.size === 'number' && e.size >= 2)
+                        || (typeof e.scale === 'number' && e.scale >= 2)
+                        || (e.isMonster === true && (e.isMinion !== true || e.tier === 3 || e.tier === 4))
+                        || (e.tier === 3)
+                    )
+                );
+
+                const currentlyOccupied = getCurrentlyOccupiedCoords();
+                let assignedCoord = null;
+
+                // Find the first valid starting point flanking the boss (columns right-to-left)
+                for (let colOffset = 0; colOffset < 5; colOffset++) {
+                    const targetX = MAX_DEPTH - colOffset;
+                    for (let laneIdx = 0; laneIdx < availableLanes.length; laneIdx++) {
+                        const targetY = availableLanes[laneIdx];
+                        
+                        const minionOccupied = getOccupiedCoordsForPos(targetX, targetY, isMinionHuge, isMinionLarge);
+                        
+                        const allInBounds = minionOccupied.every(c => c.x >= 0 && c.x <= MAX_DEPTH && c.y >= 0 && c.y < MAX_LANES);
+                        if (!allInBounds) continue;
+                        
+                        const overlaps = minionOccupied.some(c => currentlyOccupied.some(o => o.x === c.x && o.y === c.y));
+                        if (!overlaps) {
+                            assignedCoord = { x: targetX, y: targetY };
+                            break;
+                        }
+                    }
+                    if (assignedCoord) break;
+                }
+
+                // Fallback to original formulaic assignment if no clean overlap-free coordinate is found
+                if (!assignedCoord) {
+                    const laneIndex = i % availableLanes.length;
+                    const columnOffset = Math.floor(i / availableLanes.length);
+                    assignedCoord = { x: MAX_DEPTH - columnOffset, y: availableLanes[laneIndex] };
+                }
+
+                e.coordinates = assignedCoord;
+
                 let m = createFighter(e, callbacks, this.FIGHT_INTERVAL)
                 m.isMinion = true;
                 this.combatants[m.id] = m;

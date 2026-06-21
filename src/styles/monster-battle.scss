@@ -1609,19 +1609,19 @@
             }
             @keyframes ArcAnimation_left {
                 0%{
-                    transform: translate(-40px, -45px) rotateZ(60deg);
+                    transform: scaleX(-1) translate(40px, -45px) rotateZ(-60deg);
                     opacity: 0.1;
                 }
                 50%{
-                    transform: translate(-55px, -15px) rotateZ(-30deg);
+                    transform: scaleX(-1) translate(55px, -15px) rotateZ(30deg);
                     opacity: 0.9;
                 }
                 80%{
-                    transform: translate(-55px, 15px) rotateZ(-60deg);
+                    transform: scaleX(-1) translate(55px, 15px) rotateZ(60deg);
                     opacity: 1;
                 }
                 100%{
-                    transform: translate(-40px, 40px) rotateZ(-110deg);
+                    transform: scaleX(-1) translate(40px, 40px) rotateZ(110deg);
                     opacity: 0;
                 }
             }
@@ -1678,6 +1678,24 @@
                 }
                 100% {
                     transform: rotate(60deg);
+                    opacity: 0;
+                }
+            }
+            @keyframes weaponSwingArcFlipped {
+                0% {
+                    transform: scaleX(-1) rotate(-60deg);
+                    opacity: 0;
+                }
+                10% {
+                    transform: scaleX(-1) rotate(-60deg);
+                    opacity: 1;
+                }
+                90% {
+                    transform: scaleX(-1) rotate(60deg);
+                    opacity: 1;
+                }
+                100% {
+                    transform: scaleX(-1) rotate(60deg);
                     opacity: 0;
                 }
             }
@@ -2533,6 +2551,59 @@
         100% {
             opacity: 0;
             transform: scale(1.12);
+        }
+    }
+
+    // Brief blue/cyan pulse on dispel recipients.
+    .portrait.dispel-pulse,
+    .fighter-portrait.dispel-pulse {
+        position: relative;
+        animation: fighterDispelPulse 550ms ease-out;
+        box-shadow: 0 0 0 rgba(0, 191, 255, 0);
+    }
+
+    .portrait.dispel-pulse::after,
+    .fighter-portrait.dispel-pulse::after {
+        content: '';
+        position: absolute;
+        inset: -4px;
+        border-radius: 8px;
+        pointer-events: none;
+        background: radial-gradient(circle at 50% 50%, rgba(0, 255, 255, 0.55) 0%, rgba(0, 191, 255, 0.22) 45%, rgba(0, 191, 255, 0) 75%);
+        animation: fighterDispelPulseRing 550ms ease-out;
+        z-index: 2;
+    }
+
+    @keyframes fighterDispelPulse {
+        0% {
+            transform: scale(1);
+            filter: brightness(1) saturate(1);
+            box-shadow: 0 0 0 rgba(0, 191, 255, 0);
+        }
+        40% {
+            transform: scale(1.05);
+            filter: brightness(1.25) saturate(1.4);
+            box-shadow: 0 0 22px rgba(0, 255, 255, 0.85);
+        }
+        100% {
+            transform: scale(1);
+            filter: brightness(1) saturate(1);
+            box-shadow: 0 0 0 rgba(0, 191, 255, 0);
+        }
+    }
+
+    @keyframes fighterDispelPulseRing {
+        0% {
+            opacity: 0;
+            transform: scale(0.9);
+        }
+        35% {
+            opacity: 1;
+            transform: scale(1.04);
+        }
+        100% {
+            opacity: 0;
+            transform: scale(1.18);
         }
     }
 
@@ -4719,6 +4790,22 @@
     }
 }
 
+@keyframes riftLineAppear {
+    0%   { opacity: 0; transform: translateX(-50%) scaleY(0.2); }
+    20%  { opacity: 1; transform: translateX(-50%) scaleY(1.05); }
+    35%  { transform: translateX(-50%) scaleY(0.95); }
+    50%  { transform: translateX(-50%) scaleY(1); }
+    90%  { opacity: 1; transform: translateX(-50%) scaleY(1); }
+    100% { opacity: 0.6; transform: translateX(-50%) scaleY(1); }
+}
+
+@keyframes riftLineSweep {
+    0%   { opacity: 1;   transform: translateX(-50%) scaleY(1); }
+    80%  { opacity: 0.7; }
+    100% { opacity: 0;   transform: translateX(calc(-50% + var(--rift-sweep, -200px))) scaleY(1); }
+}
+
+
 @keyframes fearOverlayPulse {
     0% {
         transform: translate(-50%, -50%) scale(0.4);
@@ -6173,3 +6260,127 @@
   75% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
   100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
 }
+
+@keyframes projectileDrip {
+    0% {
+        transform: translate(-50%, -50%) scale(1.0);
+        opacity: 1;
+        filter: blur(0px);
+    }
+    30% {
+        transform: translate(-50%, -50%) scale(1.05);
+        opacity: 1;
+        filter: blur(0px);
+    }
+    70% {
+        transform: translate(-50%, calc(-50% + 40px)) scaleX(0.6) scaleY(1.8);
+        opacity: 0.8;
+        filter: blur(1px);
+    }
+    100% {
+        transform: translate(-50%, calc(-50% + 90px)) scaleX(0.3) scaleY(2.2);
+        opacity: 0;
+        filter: blur(3px);
+    }
+}
+
+@-webkit-keyframes projectileDrip {
+    0% {
+        -webkit-transform: translate(-50%, -50%) scale(1.0);
+        opacity: 1;
+        -webkit-filter: blur(0px);
+    }
+    30% {
+        -webkit-transform: translate(-50%, -50%) scale(1.05);
+        opacity: 1;
+        -webkit-filter: blur(0px);
+    }
+    70% {
+        -webkit-transform: translate(-50%, calc(-50% + 40px)) scaleX(0.6) scaleY(1.8);
+        opacity: 0.8;
+        -webkit-filter: blur(1px);
+    }
+    100% {
+        -webkit-transform: translate(-50%, calc(-50% + 90px)) scaleX(0.3) scaleY(2.2);
+        opacity: 0;
+        -webkit-filter: blur(3px);
+    }
+}
+
+@-moz-keyframes projectileDrip {
+    0% {
+        -moz-transform: translate(-50%, -50%) scale(1.0);
+        opacity: 1;
+        filter: blur(0px);
+    }
+    30% {
+        -moz-transform: translate(-50%, -50%) scale(1.05);
+        opacity: 1;
+        filter: blur(0px);
+    }
+    70% {
+        -moz-transform: translate(-50%, calc(-50% + 40px)) scaleX(0.6) scaleY(1.8);
+        opacity: 0.8;
+        filter: blur(1px);
+    }
+    100% {
+        -moz-transform: translate(-50%, calc(-50% + 90px)) scaleX(0.3) scaleY(2.2);
+        opacity: 0;
+        filter: blur(3px);
+    }
+}
+
+@keyframes riftCoreShimmer {
+    0% { stroke-width: 2.2px; filter: drop-shadow(0 0 2px #ffffff); opacity: 0.85; }
+    100% { stroke-width: 3.5px; filter: drop-shadow(0 0 5px #c084fc); opacity: 1; }
+}
+
+@keyframes riftFluidWobble {
+    0%, 100% { transform: scaleX(1) skewX(0deg); filter: hue-rotate(0deg); }
+    33% { transform: scaleX(1.05) skewX(1deg); filter: hue-rotate(15deg); }
+    66% { transform: scaleX(0.95) skewX(-1deg); filter: hue-rotate(-15deg); }
+}
+
+@keyframes riftEmbers {
+    0% {
+        transform: translateY(15px) scale(0.5);
+        opacity: 0;
+    }
+    30% {
+        opacity: 0.9;
+    }
+    100% {
+        transform: translateY(-40px) scale(1.2);
+        opacity: 0;
+    }
+}
+
+// ── Shrine Screen Animations ──────────────────────────────────────────────────
+
+@keyframes shrine-float-up {
+    0%   { transform: translateY(0px) scale(1);   opacity: 0.35; }
+    50%  { transform: translateY(-18px) scale(1.2); opacity: 0.7;  }
+    100% { transform: translateY(-36px) scale(0.8); opacity: 0;   }
+}
+
+@keyframes shrine-fade-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to   { opacity: 1; transform: scale(1); }
+}
+
+@keyframes shrine-glow-pulse {
+    0%   { filter: drop-shadow(0 0 10px rgba(201,162,39,0.7))  drop-shadow(0 0 20px rgba(201,162,39,0.3)); }
+    100% { filter: drop-shadow(0 0 24px rgba(201,162,39,1.0))  drop-shadow(0 0 48px rgba(201,162,39,0.6)); }
+}
+
+@keyframes shrine-float {
+    0%   { transform: translateY(0px);  }
+    100% { transform: translateY(-8px); }
+}
+
+@keyframes shrine-concentrate-pulse {
+    0%   { box-shadow: 0 0 10px rgba(201,162,39,0.4), 0 0 20px rgba(201,162,39,0.2); }
+    50%  { box-shadow: 0 0 20px rgba(201,162,39,0.8), 0 0 40px rgba(201,162,39,0.4); }
+    100% { box-shadow: 0 0 10px rgba(201,162,39,0.4), 0 0 20px rgba(201,162,39,0.2); }
+}
+

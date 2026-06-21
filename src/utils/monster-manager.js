@@ -678,7 +678,7 @@ export function MonsterManager() {
             portrait: images['djinn_portrait'],
             greetings: ['your fate leads you here, now it will all end'],
             deathCries: ['it seems your fate has other plans'],
-            skills: ['void_lance', 'betrayal', 'arcane_barrier', 'bind', 'death_missile'],
+            skills: ['void_lance', 'betrayal', 'arcane_barrier', 'bind', 'death_missile', 'rift'],
             weaknesses: ['arcane'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },

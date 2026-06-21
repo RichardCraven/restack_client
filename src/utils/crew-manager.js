@@ -45,7 +45,7 @@ export function CrewManager(){
         this.crew = [];
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
 
-        const normalizeSpecialName = (value) => String(value || '').replaceAll('_', ' ').trim().toLowerCase();
+        const normalizeSpecialName = (value) => String(value || '').replace(/_/g, ' ').trim().toLowerCase();
         const hasSpecial = (specials, specialName) => {
             const target = normalizeSpecialName(specialName);
             return Array.isArray(specials) && specials.some((s) => {
@@ -597,8 +597,8 @@ export function CrewManager(){
             stats: { str: 3, int: 7, dex: 5, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['wizard_portrait'],
             inventory: [],
-            skills: ['magic_missile', 'fireball', 'ice_blast', 'lightning_strike', 'acid_blast', 'disintegrate', 'sleep', 'annihilation', 'vortex'],
-            passives: ['magic_affinity'],
+            skills: ['magic_missile', 'fireball', 'ice_blast'],
+            passives: ['magic_affinity', 'arcane_sense'],
             weaknesses: ['ice', 'fire', 'electricity', 'blood_magic'],
             description: "Hailing from the magister's college, Zildjikan was the dean of transmutation. A powerful magic user, he has been known to linger for long periods in the silent realm, searching for secret truths.",
             specialActions: [],
@@ -615,8 +615,8 @@ export function CrewManager(){
             stats: { str: 8, int: 5, dex: 6, fort: 7, baseHp: 11, experience: 0, attackSpeedMult: 2 },
             portrait: images['soldier_portrait'],
             inventory: [],
-            passives: ['inspiring_force'],
-            skills: ['slash', 'shield_wall', 'shield_slam', 'defensive_stance', 'fist_of_honor', 'imbued_strike', 'one_man_army', 'inspire', 'battlecry'],
+            passives: ['inspiring_force', 'fortify'],
+            skills: ['slash', 'shield_slam', 'fist_of_honor', 'imbued_strike'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
             specialActions: [],
@@ -635,8 +635,8 @@ export function CrewManager(){
             stats: { str: 5, int: 6, dex: 7, fort: 7, baseHp: 10, experience: 0, attackSpeedMult: 2 },
             portrait: images['monk_portrait'],
             inventory: [],
-            passives: ['diamond_skin'],
-            skills: ['monk_punch', 'monk_ethereal_speed', 'monk_astral_focus', 'monk_astral_projection', 'monk_force_punch_flurry', 'monk_third_eye', 'monk_twin_finger_authority', 'monk_inner_fire', 'monk_meditate', 'monk_whirlwind', 'monk_force_punch', 'monk_flurry'],
+            passives: ['diamond_skin', 'swift_step'],
+            skills: ['monk_punch', 'monk_ethereal_speed', 'monk_meditate', 'monk_force_punch', 'monk_flurry'],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Yu was born into the dynastic order of the White Serpent, inheriting the secrets of absolute stillness and unyielding motion",
             specialActions: [],
@@ -653,8 +653,8 @@ export function CrewManager(){
             stats: { str: 3, int: 7, dex: 5, fort: 7, baseHp: 10, experience: 0 },
             portrait: images['sage_portrait'],
             inventory: [],
-            skills: ['heal', 'circle_of_protection', 'perceive'],
-            passives: ["owls_insight"],
+            skills: ['heal', 'circle_of_protection'],
+            passives: ["owls_insight", "herbalism"],
             weaknesses: ['fire', 'electricity', 'ice', 'blood_magic', 'crushing'],
             description: "Loryastes is the headmaster of Citadel library, chronicler of the histories of three monarchies, and a pupil of The Great Scribe",
             specialActions: [],
@@ -671,8 +671,8 @@ export function CrewManager(){
             stats: { str: 5, int: 5, dex: 6, fort: 3, baseHp: 10, experience: 0 },
             portrait: images['ranger_portrait'],
             inventory: [],
-            skills: ['loose', 'notch', 'mark', 'execute', 'ensnare'],
-            passives: ['nimble_dodge', 'eagle_eye'],
+            skills: ['loose', 'notch', 'mark'],
+            passives: ['nimble_dodge', 'eagle_eye', 'hunters_quarry'],
             weaknesses: ['ice', 'curse', 'crushing'],
             description: "Dormund was born a slave, surviving and advancing through sheer cunning and a ruthless will",
             specialActions: [],
@@ -689,8 +689,8 @@ export function CrewManager(){
             stats: { str: 8, int: 3, dex: 4, fort: 6, baseHp: 52, experience: 0, attackSpeedMult: 2 },
             portrait: images['barbarian_portrait'],
             inventory: [],
-            skills: ['barbarian_slash', 'barbarian_cleave', 'barbarian_axe_throw', 'barbarian_berserker', 'barbarian_leap_attack', 'barbarian_whirlwind'],
-            passives: ['fury'],
+            skills: ['barbarian_slash', 'barbarian_cleave', 'barbarian_berserker'],
+            passives: ['fury', 'iron_gut'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",
             specialActions: [],
@@ -727,16 +727,8 @@ export function CrewManager(){
             inventory: [],
             skills: [
                 'summon_skeleton',
-                'open_rift',
                 'summon_imp',
-                'summon_skeleton_knight',
-                'summon_zombie',
-                'summon_ghoul',
-                'summon_imp_army',
-                'summon_skeleton_army',
-                'summon_devil',
-                'summoner_duplicate',
-                'summoner_triplicate'
+                'summoner_duplicate'
             ],
             passives: ['magic_affinity'],
             weaknesses: ['crushing', 'blood_magic'],

@@ -558,10 +558,10 @@ const computeHitVars = (combatant, getHitAnimation) => {
         '--portrait-bulge-x': bulgeX,
         '--portrait-bulge-y': bulgeY,
         '--portrait-transform-origin': transformOrigin,
-        '--portrait-base-scale': combatant.type === 'spider_minion' ? '0.5' : (combatant.isMinion ? '1' : '2'),
+        '--portrait-base-scale': combatant.type === 'spider_minion' ? '0.5' : ((combatant.isMinion && combatant.tier !== 3 && combatant.tier !== 4) ? '1' : '2'),
         '--portrait-flip': combatant.facing === 'right' ? '-1' : '1',
-        '--portrait-animation-duration': combatant.isMinion ? '520ms' : '420ms',
-        '--portrait-animation-timing': combatant.isMinion ? 'cubic-bezier(.18,.9,.22,1)' : 'cubic-bezier(.2,.8,.2,1)'
+        '--portrait-animation-duration': (combatant.isMinion && combatant.tier !== 3 && combatant.tier !== 4) ? '520ms' : '420ms',
+        '--portrait-animation-timing': (combatant.isMinion && combatant.tier !== 3 && combatant.tier !== 4) ? 'cubic-bezier(.18,.9,.22,1)' : 'cubic-bezier(.2,.8,.2,1)'
     };
 };
 
@@ -1124,6 +1124,7 @@ export default function CombatGrid(props) {
             details?.drained ? 'drained' : '',
             details?.regenerating ? 'regenerating' : '',
             details?.healPulse ? 'heal-pulse' : '',
+            details?.dispelPulse ? 'dispel-pulse' : '',
             details?.bleed ? 'bleeding' : '',
             details?.frozen ? 'frozen' : '',
             details?.activeDebuffs?.some(d => d && d.name === 'shadow_curse') ? 'shadow-cursed' : '',
@@ -1704,8 +1705,8 @@ export default function CombatGrid(props) {
         const yPos = tilePos(unit.coordinates.y);
         const isTelep = isTeleporting(unit.id);
 
-        const isHuge = isMonster && !isMinion && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
-        const isLarge = isMonster && !isMinion && !isHuge;
+        const isHuge = (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
+        const isLarge = (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
         const width = isHuge 
             ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
             : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
@@ -3282,6 +3283,49 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'projectile_drip' && anim.tgtPx) {
+            const variant = anim.variant || 'fireball';
+            let width = '32px';
+            let height = '32px';
+            let background = '';
+            let boxShadow = '';
+
+            if (variant === 'fireball') {
+                width = '32px';
+                height = '32px';
+                background = 'radial-gradient(circle, #fff 0%, #ff6600 40%, #ff2200 70%, transparent 100%)';
+                boxShadow = '0 0 16px #ff4400, 0 0 32px #ff2200';
+            } else if (variant === 'ice_blast') {
+                width = '24px';
+                height = '24px';
+                background = 'radial-gradient(circle, #fff 0%, #00bfff 50%, #0080ff 100%)';
+                boxShadow = '0 0 12px #00bfff, 0 0 24px #0080ff';
+            } else if (variant === 'acid_blast') {
+                width = '30px';
+                height = '30px';
+                background = 'radial-gradient(circle, #fff 0%, #adff2f 40%, #38b000 80%, transparent 100%)';
+                boxShadow = '0 0 12px #39ff14, 0 0 24px #38b000';
+            }
+
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width,
+                    height,
+                    borderRadius: '50%',
+                    background,
+                    boxShadow,
+                    transform: 'translate(-50%, -50%)',
+                    transformOrigin: 'center center',
+                    pointerEvents: 'none',
+                    zIndex: 4000,
+                    animation: 'projectileDrip 1.0s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards',
+                }} />
+            );
+        }
+
         if (anim.type === 'ice_projectile' && anim.srcPx && anim.tgtPx) {
             return (
                 <div key={key} style={{
@@ -4168,7 +4212,7 @@ export default function CombatGrid(props) {
                             height: '100%',
                             objectFit: 'contain',
                             transformOrigin: `${30 - halfDistPx}px 30px`,
-                            animation: `weaponSwingArc ${duration / 1000}s ease-in-out forwards`
+                            animation: `${(dx < 0 || (dx === 0 && sourceUnit && sourceUnit.facing === 'left')) ? 'weaponSwingArcFlipped' : 'weaponSwingArc'} ${duration / 1000}s ease-in-out forwards`
                         }}
                     />
                 </div>
@@ -4246,6 +4290,39 @@ export default function CombatGrid(props) {
                             height: '40px',
                             objectFit: 'contain',
                             filter: 'drop-shadow(0 0 5px #2ecc71)',
+                            animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
+                        }}
+                    />
+                </div>
+            );
+        }
+
+        if (anim.type === 'direct_dispel_glow' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x - 40}px`,
+                    top: `${anim.tgtPx.y - 40}px`,
+                    width: '80px',
+                    height: '80px',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(0,255,255,0.6) 0%, rgba(0,191,255,0.1) 70%, transparent 100%)',
+                    boxShadow: '0 0 20px rgba(0,255,255,0.5)',
+                    pointerEvents: 'none',
+                    zIndex: 4000,
+                    animation: 'healGlowPop 0.8s ease-out forwards',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    <img
+                        src={images.direct_dispel?.default || images.direct_dispel}
+                        alt="direct dispel"
+                        style={{
+                            width: '40px',
+                            height: '40px',
+                            objectFit: 'contain',
+                            filter: 'drop-shadow(0 0 5px #00bfff)',
                             animation: 'scaleUp 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) both'
                         }}
                     />
@@ -4819,6 +4896,173 @@ export default function CombatGrid(props) {
             );
         }
 
+        // ── Djinn Rift – Phase 1: vertical energy line appears ──────────────
+        // ── Djinn Rift – Phase 1: vertical energy line appears ──────────────
+        if (anim.type === 'rift_line_appear' && anim.spawnPx) {
+            const lineH = TILE_SIZE * 3;
+            const containerW = 40;
+            const embers = [
+                { id: 1, top: '15%', left: '8px', size: '5px', delay: '0s', color: '#c084fc' },
+                { id: 2, top: '35%', left: '22px', size: '4px', delay: '0.4s', color: '#a855f7' },
+                { id: 3, top: '50%', left: '12px', size: '6px', delay: '0.2s', color: '#ffffff' },
+                { id: 4, top: '65%', left: '26px', size: '3px', delay: '0.7s', color: '#c084fc' },
+                { id: 5, top: '80%', left: '14px', size: '5px', delay: '0.1s', color: '#a855f7' },
+                { id: 6, top: '92%', left: '20px', size: '4px', delay: '0.9s', color: '#ffffff' }
+            ];
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.spawnPx.x - TILE_SIZE / 2}px`,
+                    top:  `${anim.spawnPx.y - lineH / 2}px`,
+                    width: `${containerW}px`,
+                    height: `${lineH}px`,
+                    transformOrigin: 'center top',
+                    zIndex: 4900,
+                    pointerEvents: 'none',
+                    animation: `riftLineAppear ${anim.duration || 1800}ms ease-out forwards`,
+                    overflow: 'visible',
+                }}>
+                    <svg
+                        viewBox="0 0 40 300"
+                        width="100%"
+                        height="100%"
+                        preserveAspectRatio="none"
+                        style={{
+                            overflow: 'visible',
+                            animation: 'riftFluidWobble 4s ease-in-out infinite alternate'
+                        }}
+                    >
+                        <path
+                            d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                            fill="none"
+                            stroke="#7c3aed"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ filter: 'blur(3px)', opacity: 0.8 }}
+                        />
+                        <path
+                            d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                            fill="none"
+                            stroke="#c084fc"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ filter: 'drop-shadow(0 0 6px #7c3aed)' }}
+                        />
+                        <path
+                            d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                            fill="none"
+                            stroke="#ffffff"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ animation: 'riftCoreShimmer 0.8s ease-in-out infinite alternate' }}
+                        />
+                    </svg>
+                    {embers.map(e => (
+                        <div key={e.id} style={{
+                            position: 'absolute',
+                            top: e.top,
+                            left: e.left,
+                            width: e.size,
+                            height: e.size,
+                            borderRadius: '50%',
+                            backgroundColor: e.color,
+                            boxShadow: `0 0 6px ${e.color}, 0 0 12px ${e.color}`,
+                            pointerEvents: 'none',
+                            animation: `riftEmbers 1.4s ease-out infinite`,
+                            animationDelay: e.delay
+                        }} />
+                    ))}
+                </div>
+            );
+        }
+
+        // ── Djinn Rift – Phase 2: line sweeps 2 tiles forward and fades ──────
+        if (anim.type === 'rift_line_sweep' && anim.spawnPx) {
+            const lineH = TILE_SIZE * 3;
+            const containerW = 40;
+            const sweepPx = anim.sweepDistancePx || TILE_SIZE * 2;
+            const embers = [
+                { id: 1, top: '15%', left: '8px', size: '5px', delay: '0s', color: '#c084fc' },
+                { id: 2, top: '35%', left: '22px', size: '4px', delay: '0.4s', color: '#a855f7' },
+                { id: 3, top: '50%', left: '12px', size: '6px', delay: '0.2s', color: '#ffffff' },
+                { id: 4, top: '65%', left: '26px', size: '3px', delay: '0.7s', color: '#c084fc' },
+                { id: 5, top: '80%', left: '14px', size: '5px', delay: '0.1s', color: '#a855f7' },
+                { id: 6, top: '92%', left: '20px', size: '4px', delay: '0.9s', color: '#ffffff' }
+            ];
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.spawnPx.x - TILE_SIZE / 2}px`,
+                    top:  `${anim.spawnPx.y - lineH / 2}px`,
+                    width: `${containerW}px`,
+                    height: `${lineH}px`,
+                    transformOrigin: 'center center',
+                    zIndex: 4950,
+                    pointerEvents: 'none',
+                    animation: `riftLineSweep ${anim.duration || 500}ms ease-in forwards`,
+                    ['--rift-sweep']: `${-sweepPx}px`,
+                    overflow: 'visible',
+                }}>
+                    <svg
+                        viewBox="0 0 40 300"
+                        width="100%"
+                        height="100%"
+                        preserveAspectRatio="none"
+                        style={{
+                            overflow: 'visible',
+                            animation: 'riftFluidWobble 4s ease-in-out infinite alternate'
+                        }}
+                    >
+                        <path
+                            d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                            fill="none"
+                            stroke="#7c3aed"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ filter: 'blur(3px)', opacity: 0.8 }}
+                        />
+                        <path
+                            d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                            fill="none"
+                            stroke="#c084fc"
+                            strokeWidth="4"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ filter: 'drop-shadow(0 0 6px #7c3aed)' }}
+                        />
+                        <path
+                            d="M 20,0 L 12,30 L 28,60 L 10,90 L 30,120 L 14,150 L 26,180 L 10,210 L 28,240 L 12,270 L 20,300"
+                            fill="none"
+                            stroke="#ffffff"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            style={{ animation: 'riftCoreShimmer 0.8s ease-in-out infinite alternate' }}
+                        />
+                    </svg>
+                    {embers.map(e => (
+                        <div key={e.id} style={{
+                            position: 'absolute',
+                            top: e.top,
+                            left: e.left,
+                            width: e.size,
+                            height: e.size,
+                            borderRadius: '50%',
+                            backgroundColor: e.color,
+                            boxShadow: `0 0 6px ${e.color}, 0 0 12px ${e.color}`,
+                            pointerEvents: 'none',
+                            animation: `riftEmbers 1.4s ease-out infinite`,
+                            animationDelay: e.delay
+                        }} />
+                    ))}
+                </div>
+            );
+        }
+
         // ── Return from Trial overlay ─────────────────────────────────────────
         if (anim.type === 'return_from_trial' && anim.tgtPx) {
             const returnIcons = [
@@ -4940,8 +5184,8 @@ export default function CombatGrid(props) {
         // Find in monsters
         const unit = Object.values(battleData).find(u => u && u.id === unitId);
         if (unit && unit.coordinates) {
-            const isHuge = unit.isMonster && !unit.isMinion && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
-            const isLarge = unit.isMonster && !unit.isMinion && !isHuge;
+            const isHuge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
+            const isLarge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
             const width = isHuge 
                 ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
                 : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
