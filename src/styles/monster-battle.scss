@@ -285,6 +285,7 @@
         bottom: 4px;
         left: 0;
         width: 100%;
+        height: 2px;
     }
     .tempo-bar {
         position: relative;
@@ -1683,19 +1684,19 @@
             }
             @keyframes weaponSwingArcFlipped {
                 0% {
-                    transform: scaleX(-1) rotate(-60deg);
+                    transform: scaleY(-1) rotate(-60deg);
                     opacity: 0;
                 }
                 10% {
-                    transform: scaleX(-1) rotate(-60deg);
+                    transform: scaleY(-1) rotate(-60deg);
                     opacity: 1;
                 }
                 90% {
-                    transform: scaleX(-1) rotate(60deg);
+                    transform: scaleY(-1) rotate(60deg);
                     opacity: 1;
                 }
                 100% {
-                    transform: scaleX(-1) rotate(60deg);
+                    transform: scaleY(-1) rotate(60deg);
                     opacity: 0;
                 }
             }
@@ -2637,6 +2638,22 @@
     }
 
 
+    // ── Entropic Kindred — column-expansion flash strips ────────────────────────
+    @keyframes entropicColMaterialize {
+        0%   { opacity: 0;    background: rgba(0, 220, 255, 0.0);  box-shadow: none; }
+        8%   { opacity: 1;    background: rgba(0, 220, 255, 0.9);  box-shadow: 0 0 60px 20px rgba(0, 255, 220, 0.8), inset 0 0 40px rgba(180, 255, 255, 0.6); }
+        20%  { opacity: 1;    background: rgba(80, 200, 255, 0.75); box-shadow: 0 0 80px 30px rgba(0, 200, 255, 0.6); }
+        50%  { opacity: 0.85; background: rgba(30, 100, 180, 0.4);  box-shadow: 0 0 40px 10px rgba(0, 150, 255, 0.3); }
+        80%  { opacity: 0.5;  background: rgba(10, 30, 80, 0.2);    box-shadow: none; }
+        100% { opacity: 0;    background: rgba(0, 0, 0, 0);         box-shadow: none; }
+    }
+    .entropic-kindred-col-flash {
+        animation: entropicColMaterialize 1.6s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        border-left:  1px solid rgba(0, 220, 255, 0.6);
+        border-right: 1px solid rgba(0, 220, 255, 0.6);
+    }
+
+
     // ── Fear-cast glow — emanates from the casting monster's portrait ──────────
     @keyframes fearCastGlowPulse {
         0%   { opacity: 0;    transform: scale(0.6); }
@@ -3056,16 +3073,15 @@
         justify-content: center;
         @keyframes FloatUp { 
             0%{
-                transform: translateY(-1px);
+                transform: translateY(0px);
                 opacity: 1;
             }
-            50%{
-                transform: translateY(-15px);
-                opacity: 0.7;
+            30%{
+                opacity: 1;
             }
             100%{
-                transform: translateY(-30px);
-                opacity: 0.1;
+                transform: translateY(-90px);
+                opacity: 0;
             }
         }
 
@@ -3082,9 +3098,9 @@
             text-shadow: 0 0 4px rgba(255, 59, 48, 0.6), 0 0 12px rgba(255, 0, 0, 0.4), 0 1px 3px rgba(0, 0, 0, 0.9);
             letter-spacing: 0.02em;
             opacity: 0;
-            -webkit-animation: FloatUp 1.8s linear ;
-            -moz-animation: FloatUp 1.8s linear ;
-            animation: FloatUp 1.8s linear ;
+            -webkit-animation: FloatUp 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards ;
+            -moz-animation: FloatUp 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards ;
+            animation: FloatUp 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards ;
             &.stat-debuff {
                 color: #b060ff;
                 font-size: 11px;
@@ -3094,9 +3110,9 @@
             }
             @keyframes CritFloatUp {
                 0%   { transform: translateY(0px) scale(1);   opacity: 1; }
-                20%  { transform: translateY(-8px) scale(1.3); opacity: 1; }
-                60%  { transform: translateY(-22px) scale(1.1); opacity: 0.85; }
-                100% { transform: translateY(-40px) scale(0.9); opacity: 0; }
+                20%  { transform: translateY(-12px) scale(1.3); opacity: 1; }
+                60%  { transform: translateY(-45px) scale(1.1); opacity: 0.85; }
+                100% { transform: translateY(-110px) scale(0.9); opacity: 0; }
             }
             &.crit {
                 color: #ffd700;
@@ -3104,7 +3120,7 @@
                 font-weight: 900;
                 letter-spacing: 0.06em;
                 text-shadow: 0 0 8px #ff8800, 0 0 16px #ff4400, 0 2px 2px rgba(0,0,0,0.7);
-                animation: CritFloatUp 1.8s cubic-bezier(.2,.8,.2,1);
+                animation: CritFloatUp 1.8s cubic-bezier(.2,.8,.2,1) forwards;
                 opacity: 0;
             }
             &.heal {
@@ -4477,7 +4493,7 @@
 
 // Left column: stat bars + status badges + target
 .redux-stats-col {
-    flex: 0 0 160px;
+    flex: 1 1 160px;
     min-width: 130px;
     display: flex;
     flex-direction: column;
@@ -4730,7 +4746,7 @@
 
 // Right column: event log in redux mode
 .redux-log-col {
-    flex: 1 1 auto;
+    flex: 1 1 0px;
     min-width: 120px;
     display: flex;
     flex-direction: column;
@@ -5499,6 +5515,132 @@
     }
 }
 
+@keyframes dominatedPulseGlow {
+    0% {
+        box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.3), 0 0 8px rgba(255, 215, 0, 0.2);
+        background: rgba(255, 215, 0, 0.05);
+    }
+    100% {
+        box-shadow: inset 0 0 25px rgba(255, 215, 0, 0.7), 0 0 20px rgba(255, 215, 0, 0.6);
+        background: rgba(255, 215, 0, 0.20);
+    }
+}
+
+@keyframes madnessPulseGlow {
+    0% {
+        box-shadow: inset 0 0 12px rgba(176, 96, 255, 0.4), 0 0 10px rgba(176, 96, 255, 0.3);
+        background: rgba(176, 96, 255, 0.06);
+        border-color: rgba(176, 96, 255, 0.7);
+    }
+    33% {
+        box-shadow: inset 0 0 20px rgba(255, 0, 200, 0.5), 0 0 16px rgba(255, 0, 200, 0.4);
+        background: rgba(255, 0, 200, 0.08);
+        border-color: rgba(255, 0, 200, 0.75);
+    }
+    66% {
+        box-shadow: inset 0 0 18px rgba(0, 230, 255, 0.4), 0 0 14px rgba(0, 230, 255, 0.35);
+        background: rgba(0, 230, 255, 0.06);
+        border-color: rgba(0, 230, 255, 0.7);
+    }
+    100% {
+        box-shadow: inset 0 0 28px rgba(176, 96, 255, 0.75), 0 0 22px rgba(176, 96, 255, 0.65);
+        background: rgba(176, 96, 255, 0.20);
+        border-color: rgba(176, 96, 255, 0.9);
+    }
+}
+
+/* Madness symbol float — '?' glyphs floating above the unit */
+@keyframes madnessSymbolFloat {
+    0%   { transform: translateY(0px)   scale(0.7); opacity: 0; }
+    20%  { opacity: 1; }
+    80%  { opacity: 0.9; }
+    100% { transform: translateY(-22px) scale(1.0); opacity: 0; }
+}
+
+/* Madness projectile — spinning psychic orb in flight */
+@keyframes madnessProjFly {
+    0% {
+        transform: translate(0px, 0px) scale(1.0) rotate(0deg);
+        opacity: 1;
+    }
+    80% {
+        opacity: 1;
+    }
+    100% {
+        transform: translate(var(--proj-dx), var(--proj-dy)) scale(0.5) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Madness cast overlay — swirling vortex appears at target area */
+@keyframes madnessCastRingIn {
+    0%   { transform: scale(0.2) rotate(0deg);   opacity: 0; }
+    30%  { transform: scale(1.2) rotate(90deg);  opacity: 1; }
+    70%  { transform: scale(0.95) rotate(200deg); opacity: 0.85; }
+    100% { transform: scale(0.5) rotate(360deg); opacity: 0; }
+}
+
+@keyframes madnessCastRingInner {
+    0%   { transform: scale(0.1) rotate(0deg);   opacity: 0; }
+    25%  { transform: scale(1.3) rotate(-120deg); opacity: 1; }
+    75%  { transform: scale(1.0) rotate(-280deg); opacity: 0.8; }
+    100% { transform: scale(0.4) rotate(-360deg); opacity: 0; }
+}
+
+@keyframes madnessCastFlash {
+    0%   { transform: scale(0.05); opacity: 1; }
+    25%  { transform: scale(1.4);  opacity: 0.9; }
+    60%  { transform: scale(1.1);  opacity: 0.5; }
+    100% { transform: scale(1.8);  opacity: 0; }
+}
+
+@keyframes madnessCastParticleFly {
+    0% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(calc(-50% + var(--target-x)), calc(-50% + var(--target-y))) scale(0.1);
+        opacity: 0;
+    }
+}
+
+/* Madness success overlay — mind-shattering impact */
+@keyframes madnessSuccessRing {
+    0%   { transform: scale(0.1); opacity: 1; }
+    35%  { transform: scale(1.3); opacity: 0.95; }
+    70%  { transform: scale(1.1); opacity: 0.7; }
+    100% { transform: scale(1.9); opacity: 0; }
+}
+
+@keyframes madnessSuccessIcon {
+    0%   { transform: scale(0.1) rotate(-30deg); opacity: 0; filter: blur(4px); }
+    20%  { transform: scale(1.4) rotate(15deg);  opacity: 1; filter: blur(0px) drop-shadow(0 0 20px #b060ff) drop-shadow(0 0 30px #ff00c8); }
+    50%  { transform: scale(1.0) rotate(-5deg);  opacity: 0.95; filter: drop-shadow(0 0 12px #b060ff); }
+    80%  { transform: scale(0.9) rotate(10deg);  opacity: 0.7; }
+    100% { transform: scale(0.5) rotate(-20deg); opacity: 0; filter: blur(3px); }
+}
+
+@keyframes madnessSuccessParticleFly {
+    0% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 1;
+    }
+    15% {
+        opacity: 1;
+    }
+    100% {
+        transform: translate(calc(-50% + var(--target-x)), calc(-50% + var(--target-y))) scale(0.05);
+        opacity: 0;
+    }
+}
+
+@keyframes madnessSuccessShockwave {
+    0%   { transform: scale(0.05); border-width: 6px; opacity: 1; }
+    40%  { border-width: 3px; opacity: 0.9; }
+    100% { transform: scale(2.2); border-width: 1px; opacity: 0; }
+}
+
 @keyframes soulSuckBeamPulse {
     0% {
         height: 20px;
@@ -5881,6 +6023,49 @@
             mask-composite: exclude;
     animation: bombardWarningBorder 1.5s linear infinite;
   }
+}
+
+/* ── Meteor Warning Area Shimmer ── */
+.meteor-warning-shimmer {
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: inset 0 0 15px rgba(255, 69, 0, 0.25), 0 0 10px rgba(255, 140, 0, 0.2);
+  background: rgba(255, 69, 0, 0.03);
+  animation: 
+    meteorWarningFade 1.5s cubic-bezier(0.4, 0, 0.2, 1) forwards,
+    meteorWarningFill 0.75s ease-in-out infinite alternate;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    border-radius: 8px;
+    padding: 3px; /* border thickness */
+    background: linear-gradient(90deg, #ff4500, #ff8c00, #ffd700, #ff4500);
+    background-size: 300% 100%;
+    -webkit-mask: 
+      linear-gradient(#fff 0 0) content-box, 
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    animation: meteorWarningBorder 1.2s linear infinite;
+  }
+}
+
+@keyframes meteorWarningFade {
+  0% { opacity: 0; }
+  10% { opacity: 1; }
+  100% { opacity: 1; }
+}
+
+@keyframes meteorWarningBorder {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 300% 50%; }
+}
+
+@keyframes meteorWarningFill {
+  0% { background: rgba(255, 69, 0, 0.02); }
+  100% { background: rgba(255, 69, 0, 0.12); }
 }
 
 @keyframes bombardWarningFade {
@@ -6383,4 +6568,312 @@
     50%  { box-shadow: 0 0 20px rgba(201,162,39,0.8), 0 0 40px rgba(201,162,39,0.4); }
     100% { box-shadow: 0 0 10px rgba(201,162,39,0.4), 0 0 20px rgba(201,162,39,0.2); }
 }
+
+@keyframes shrine-lunge {
+    0% { transform: translate(0px, 0px); }
+    30% { transform: translate(var(--lunge-dx, 0px), var(--lunge-dy, -30px)); }
+    100% { transform: translate(0px, 0px); }
+}
+
+.shrine-lunge-attack {
+    animation: shrine-lunge 400ms ease-out forwards;
+}
+
+@keyframes shrine-shake {
+    0%, 100% { transform: translate(0px, 0px); filter: brightness(1); }
+    20%, 60% { transform: translate(-6px, 0px); filter: brightness(1.3) sepia(0.8) saturate(4) hue-rotate(-50deg); }
+    40%, 80% { transform: translate(6px, 0px); filter: brightness(1.3) sepia(0.8) saturate(4) hue-rotate(-50deg); }
+}
+
+.shrine-hit-shake {
+    animation: shrine-shake 400ms ease-in-out forwards;
+}
+
+/* ── Dominate Success Animations ── */
+@keyframes dominateRingIn {
+  0% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.0);
+    opacity: 1;
+  }
+}
+
+@keyframes dominateIconDescend {
+  0% {
+    transform: translateY(-80px) scale(0.2) rotate(-90deg);
+    opacity: 0;
+  }
+  40% {
+    transform: translateY(0px) scale(1.2) rotate(15deg);
+    opacity: 1;
+  }
+  60% {
+    transform: scale(1.0) rotate(0deg);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes dominateFlash {
+  0% {
+    transform: scale(0.1);
+    opacity: 1;
+  }
+  30% {
+    transform: scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes dominateParticleFly {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  20% {
+    transform: translate(-50%, -50%) scale(1.2);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--target-x)), calc(-50% + var(--target-y))) scale(0.3);
+    opacity: 0;
+  }
+}
+
+/* ── Dominate Failure Animations ── */
+@keyframes dominateFailRingIn {
+  0% {
+    transform: scale(2.2);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.0);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.0) translateX(-4px);
+  }
+  50% {
+    transform: scale(1.0) translateX(4px);
+  }
+  60% {
+    transform: scale(1.0) translateX(-2px);
+  }
+  70% {
+    transform: scale(0.95);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.7);
+    opacity: 0;
+  }
+}
+
+@keyframes dominateFailIconDescend {
+  0% {
+    transform: translateY(-80px) scale(0.2) rotate(-90deg);
+    opacity: 0;
+  }
+  30% {
+    transform: translateY(0px) scale(1.2) rotate(15deg);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.0) rotate(0deg);
+    opacity: 1;
+    filter: drop-shadow(0 0 15px #ff0055) saturate(2);
+  }
+  60% {
+    transform: scale(1.05) rotate(-10deg);
+    opacity: 0.9;
+  }
+  100% {
+    transform: scale(0.4) rotate(20deg);
+    opacity: 0;
+  }
+}
+
+@keyframes dominateFailFlash {
+  0% {
+    transform: scale(0.1);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+  }
+}
+
+/* ── Overload Animations ── */
+@keyframes overloadRingIn {
+  0% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.0);
+    opacity: 1;
+  }
+}
+
+@keyframes overloadShockwave {
+  0% {
+    transform: scale(0.1);
+    border-width: 8px;
+    opacity: 1;
+  }
+  40% {
+    border-width: 4px;
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.4);
+    border-width: 1px;
+    opacity: 0;
+  }
+}
+
+@keyframes overloadIconPulse {
+  0% {
+    transform: scale(0.2) rotate(-45deg);
+    filter: drop-shadow(0 0 5px #00f0ff);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.3) rotate(5deg);
+    filter: drop-shadow(0 0 25px #00f0ff) drop-shadow(0 0 35px #00f0ff);
+    opacity: 1;
+  }
+  40% {
+    transform: scale(0.9) rotate(0deg);
+    filter: drop-shadow(0 0 15px #00f0ff);
+  }
+  60% {
+    transform: scale(1.2) rotate(-5deg);
+    filter: drop-shadow(0 0 30px #ff3300) drop-shadow(0 0 40px #ff3300);
+    opacity: 1;
+  }
+  80% {
+    transform: scale(1.0) rotate(0deg);
+    filter: drop-shadow(0 0 15px #ff3300);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.8);
+    filter: drop-shadow(0 0 5px #ff3300);
+    opacity: 0;
+  }
+}
+
+@keyframes overloadBolt {
+  0% {
+    opacity: 0.2;
+    transform: translate(-50%, -50%) rotate(var(--rot)) scaleY(0.4);
+  }
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--rot)) scaleY(1.2);
+  }
+}
+
+@keyframes overloadParticleFly {
+  0% {
+    transform: translate(-50%, -50%) scale(0.2);
+    opacity: 0;
+  }
+  15% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(calc(-50% + var(--target-x)), calc(-50% + var(--target-y))) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes overloadFailRing {
+  0% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+  30% {
+    transform: scale(1.0);
+    opacity: 0.7;
+  }
+  70% {
+    transform: scale(1.05);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(0.85);
+    opacity: 0;
+  }
+}
+
+@keyframes overloadFailIcon {
+  0% {
+    transform: scale(0.2) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    transform: scale(1.1) rotate(-10deg);
+    opacity: 0.7;
+  }
+  40% {
+    transform: scale(0.95) rotate(15deg);
+    opacity: 0.5;
+  }
+  100% {
+    transform: scale(0.7) rotate(25deg);
+    opacity: 0;
+  }
+}
+
+@keyframes overloadFailText {
+  0% {
+    transform: translate(-50%, 10px) scale(0.5);
+    opacity: 0;
+  }
+  30% {
+    transform: translate(-50%, -15px) scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -35px) scale(0.9);
+    opacity: 0;
+  }
+}
+
+@keyframes overloadSmoke {
+  0% {
+    transform: translateY(0px) scale(0.5);
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(-40px) scale(1.8);
+    opacity: 0;
+  }
+}
+
 

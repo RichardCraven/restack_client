@@ -314,9 +314,60 @@ export function BoardManager(){
             e.name === config.keyName ||
             e.subtype === config.requires ||
             e.name === config.requires ||
-            (e.name && e.name.replace(/_/g, ' ') === config.keyName)
+            (e.name && e.name.replace(/_/g, ' ') === config.keyName) ||
+            e.name === 'master key' ||
+            e.subtype === 'master_key' ||
+            e._im_key === 'master_key'
         );
 
+        return !hasKey;
+    }
+
+    this.isChest = (subtype) => {
+        const chests = [
+            'silver_chest', 'gold_chest', 'ornate_chest',
+            'wooden_chest', 'iron_chest', 'steel_chest',
+            'gilded_casket', 'ancient_casket', 'treasury_chest', 'cryptic_chest'
+        ];
+        return chests.includes(subtype);
+    }
+
+    this.getRequiredKeyForChest = (subtype) => {
+        switch (subtype) {
+            case 'wooden_chest':
+            case 'iron_chest':
+            case 'steel_chest':
+            case 'ancient_casket':
+                return { keyName: 'minor key', requiredKeySubtype: 'minor_key' };
+            case 'gilded_casket':
+            case 'treasury_chest':
+                return { keyName: 'treasury key', requiredKeySubtype: 'treasury_key' };
+            case 'cryptic_chest':
+                return { keyName: 'cryptic key', requiredKeySubtype: 'cryptic_key' };
+            default:
+                return null;
+        }
+    }
+
+    this.isChestLocked = (subtype) => {
+        const keyDetails = this.getRequiredKeyForChest(subtype);
+        if (!keyDetails) return false;
+
+        let inventory = [];
+        try {
+            inventory = (typeof this.getCurrentInventory === 'function' && this.getCurrentInventory()) || [];
+        } catch (e) {
+            inventory = [];
+        }
+
+        const hasKey = inventory.some(e =>
+            e.subtype === keyDetails.requiredKeySubtype ||
+            e.name === keyDetails.keyName ||
+            (e.name && e.name.replace(/_/g, ' ') === keyDetails.keyName) ||
+            e.name === 'master key' ||
+            e.subtype === 'master_key' ||
+            e._im_key === 'master_key'
+        );
         return !hasKey;
     }
 
@@ -523,27 +574,22 @@ export function BoardManager(){
             // string -> monster key
             if (typeof raw === 'string') {
                 if ((this.monstersArr && this.monstersArr.includes(raw)) || (this.knownMonsterKeys && this.knownMonsterKeys.includes(raw))) {
-                    console.log('Restructuring malformed monster tile (string->object):', t.id, raw);
                     t.contains = { type: 'monster', subtype: raw };
                     changedIds.push(t.id);
                 } else if (raw === 'monster') {
-                    console.log('Restructuring legacy monster tile (assigning subtype):', t.id, raw);
                     t.contains = { type: 'monster', subtype: this.getRandomMonster() };
                     changedIds.push(t.id);
                 }
             } else if (raw && typeof raw === 'object') {
                 if ((!raw.type || raw.type === null) && raw.subtype && ((this.monstersArr && this.monstersArr.includes(raw.subtype)) || (this.knownMonsterKeys && this.knownMonsterKeys.includes(raw.subtype)))) {
-                    console.log('Restructuring malformed monster tile (object missing type):', t.id, raw);
                     t.contains = { type: 'monster', subtype: raw.subtype };
                     changedIds.push(t.id);
                 }
                 if (raw.type === 'monster' && (!raw.subtype || raw.subtype === null)) {
-                    console.log('Restructuring monster tile (missing subtype):', t.id, raw);
                     t.contains = { type: 'monster', subtype: this.getRandomMonster() };
                     changedIds.push(t.id);
                 }
                 if (raw.type && typeof raw.type === 'string' && ((this.monstersArr && this.monstersArr.includes(raw.type)) || (this.knownMonsterKeys && this.knownMonsterKeys.includes(raw.type)))) {
-                    console.log('Restructuring malformed monster tile (type contains monster key):', t.id, raw);
                     t.contains = { type: 'monster', subtype: raw.type };
                     changedIds.push(t.id);
                 }
@@ -816,7 +862,10 @@ export function BoardManager(){
     }
     this.handleChestPickup = (chestSubtype, destinationTile) => {
         switch (chestSubtype) {
-            case 'silver_chest': {
+            case 'silver_chest':
+            case 'wooden_chest':
+            case 'iron_chest':
+            case 'ancient_casket': {
                 const reward = this.resolveSilverChestReward();
                 if (reward.kind === 'gold') {
                     if (reward.amount > 0) {
@@ -831,7 +880,10 @@ export function BoardManager(){
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
             }
-            case 'gold_chest': {
+            case 'gold_chest':
+            case 'steel_chest':
+            case 'gilded_casket':
+            case 'treasury_chest': {
                 const reward = this.resolveGoldChestReward();
                 if (reward.kind === 'gold') {
                     if (reward.amount > 0) {
@@ -846,7 +898,8 @@ export function BoardManager(){
                 this.removeTileFromBoard(destinationTile)
                 return 'item';
             }
-            case 'ornate_chest': {
+            case 'ornate_chest':
+            case 'cryptic_chest': {
                 const rewards = this.resolveOrnateChestRewards();
                 rewards.forEach((reward) => {
                     if (!reward) return;
@@ -855,7 +908,7 @@ export function BoardManager(){
                             this.addCurrencyToInventory({
                                 type: 'gold',
                                 amount: reward.amount
-                            }, destinationTile);
+                              }, destinationTile);
                         }
                     } else if (reward.itemKey) {
                         this.addItemToInventory({ contains: reward.itemKey, id: destinationTile.id });
@@ -955,7 +1008,6 @@ export function BoardManager(){
         const currentBoardId = this.currentBoard && this.currentBoard.id != null ? this.currentBoard.id : null;
 
         if (!currentPlane || !Array.isArray(currentPlane.miniboards)) {
-            try { console.warn('respawnMonsters: current plane has no miniboards', { currentOrientation, currentLevelEntry }); } catch (e) {}
             return 0;
         }
 
@@ -992,12 +1044,10 @@ export function BoardManager(){
     
         if (!templateBoard) {
             // nothing to respawn from - template didn't contain a matching plane/board
-            try { console.warn('respawnMonsters: no templateBoard found for current board', { boardIndex, currentBoardId }); } catch (e) {}
             return 0;
         }
 
         if (!currentBoard || !Array.isArray(currentBoard.tiles)) {
-            try { console.warn('respawnMonsters: no currentBoard found for current board', { boardIndex, currentBoardId }); } catch (e) {}
             return 0;
         }
 
@@ -1016,7 +1066,6 @@ export function BoardManager(){
                 // If we couldn't locate an equivalent tile in the current board, skip this entry
                 if (!equivalentTile) {
                     // defensive: should not happen but don't throw
-                    console.debug('respawnMonsters: no equivalent tile found for templateTile.id', templateTile && templateTile.id);
                     return;
                 }
                 // If there's already a monster present, don't overwrite it
@@ -1116,7 +1165,6 @@ export function BoardManager(){
         try { this.cleanupMalformedMonsterTiles(templateBoard); } catch (e) {}
 
         if (!templateBoard) {
-            try { console.warn('respawnItems: no templateBoard found for current boardIndex', this.playerTile && this.playerTile.boardIndex); } catch (e) {}
             return;
         }
 
@@ -1182,6 +1230,122 @@ export function BoardManager(){
             if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
         } catch (e) {}
         try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
+    }
+    // Respawn shrines based on a template (separate flow from monsters/items)
+    this.respawnShrines = (template) => {
+        if(!template || !template.levels) return 0;
+        let currentOrientation = this.currentOrientation;
+        const currentLevelEntry = this.currentLevel;
+        const currentPlane = currentLevelEntry && (currentLevelEntry.front || currentLevelEntry.back)
+            ? (currentOrientation === 'F' ? currentLevelEntry.front : currentLevelEntry.back)
+            : currentLevelEntry;
+        const boardIndex = this.playerTile && this.playerTile.boardIndex != null ? this.playerTile.boardIndex : 0;
+        const currentBoardId = this.currentBoard && this.currentBoard.id != null ? this.currentBoard.id : null;
+
+        if (!currentPlane || !Array.isArray(currentPlane.miniboards)) {
+            return 0;
+        }
+
+        let foundTemplatePlane = null;
+        template.levels.forEach((templateLevel) => {
+            if (foundTemplatePlane) return;
+            let front = templateLevel.front;
+            let back = templateLevel.back;
+            let relevantPlane = currentOrientation === 'F' ? front : back;
+            if (!relevantPlane) return;
+            if (
+                (relevantPlane.id != null && currentPlane.id != null && String(relevantPlane.id) === String(currentPlane.id)) ||
+                (relevantPlane.name && currentPlane.name && relevantPlane.name === currentPlane.name)
+            ) {
+                foundTemplatePlane = relevantPlane;
+            }
+        });
+        const templateBoard = foundTemplatePlane && Array.isArray(foundTemplatePlane.miniboards)
+            ? (currentBoardId != null
+                ? foundTemplatePlane.miniboards.find((board) => board && String(board.id) === String(currentBoardId)) || foundTemplatePlane.miniboards[boardIndex]
+                : foundTemplatePlane.miniboards[boardIndex])
+            : null;
+        const currentBoard = Array.isArray(currentPlane.miniboards)
+            ? (currentBoardId != null
+                ? currentPlane.miniboards.find((board) => board && String(board.id) === String(currentBoardId)) || currentPlane.miniboards[boardIndex]
+                : currentPlane.miniboards[boardIndex])
+            : null;
+
+        if (!templateBoard) {
+            return 0;
+        }
+
+        if (!currentBoard || !Array.isArray(currentBoard.tiles)) {
+            return 0;
+        }
+
+        let respawnedCount = 0;
+
+        templateBoard.tiles.forEach(templateTile => {
+            let equivalentTile = currentBoard.tiles
+                ? currentBoard.tiles.find(tile => tile.id === templateTile.id)
+                : null;
+            if (templateTile && this.getContainsType(templateTile.contains) === 'shrine') {
+                if (!equivalentTile) return;
+                // If there's already a shrine or something else there, don't overwrite it
+                if (equivalentTile.contains) return;
+
+                equivalentTile.contains = {
+                    type: 'shrine',
+                    subtype: this.getContainsSubtype(templateTile.contains) || null,
+                    key: templateTile.contains.key || null
+                };
+                equivalentTile.image = this.getImageForContains(equivalentTile.contains, equivalentTile);
+                respawnedCount += 1;
+
+                try {
+                    const templateColor = templateTile && templateTile.color;
+                    const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id] && this.currentBoard.tiles[templateTile.id].color;
+                    const defaultColor = '#6b6057';
+                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black');
+                    const colorToUse = isValidColor(templateColor) ? templateColor : (isValidColor(boardColor) ? boardColor : defaultColor);
+                    equivalentTile.color = colorToUse;
+
+                    if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id]) {
+                        this.currentBoard.tiles[templateTile.id].color = colorToUse;
+                        this.currentBoard.tiles[templateTile.id].contains = equivalentTile.contains;
+                        this.currentBoard.tiles[templateTile.id].image = equivalentTile.image;
+                    }
+                    if (this.currentOrientation === 'F') {
+                        const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                        if (levelEntry && levelEntry.front && levelEntry.front.miniboards) {
+                            const b = levelEntry.front.miniboards.find(bi => bi.id === this.currentBoard.id);
+                            if (b && b.tiles && b.tiles[templateTile.id]) {
+                                b.tiles[templateTile.id].color = colorToUse;
+                                b.tiles[templateTile.id].contains = equivalentTile.contains;
+                                b.tiles[templateTile.id].image = equivalentTile.image;
+                            }
+                        }
+                    } else {
+                        const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                        if (levelEntry && levelEntry.back && levelEntry.back.miniboards) {
+                            const b = levelEntry.back.miniboards.find(bi => bi.id === this.currentBoard.id);
+                            if (b && b.tiles && b.tiles[templateTile.id]) {
+                                b.tiles[templateTile.id].color = colorToUse;
+                                b.tiles[templateTile.id].contains = equivalentTile.contains;
+                                b.tiles[templateTile.id].image = equivalentTile.image;
+                            }
+                        }
+                    }
+                } catch (e) {}
+
+                this.tiles[templateTile.id] = equivalentTile;
+            }
+        });
+
+        try { if (this.updateDungeon) this.updateDungeon(this.dungeon); } catch (e) {}
+        try {
+            const playerIdx = this.getIndexFromCoordinates(this.playerTile.location);
+            if (this.tiles[playerIdx]) this.handleFogOfWar(this.tiles[playerIdx]);
+        } catch (e) {}
+        try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
+
+        return respawnedCount;
     }
     this.initializeTilesFromMap = (boardIndex, spawnTileIndex) => {
         const getRandomItem = () => {
@@ -1482,27 +1646,55 @@ export function BoardManager(){
                 // visibly occupies the tile before the battle UI appears.
                 return 'monster';
             case 'item':
-                console.log('picked up item');
-                if (subtype === 'silver_chest' || subtype === 'gold_chest' || subtype === 'ornate_chest') {
-                    if (this.hasActiveUnlockSpell()) {
-                        this.messaging('The unlock spell shatters the chest lock!');
-                        this.consumeActiveUnlockSpell();
-                        if (this.saveCrew) this.saveCrew();
+                if (this.isChest(subtype)) {
+                    const keyDetails = this.getRequiredKeyForChest(subtype);
+                    if (keyDetails) {
+                        const inventory = (typeof this.getCurrentInventory === 'function' && this.getCurrentInventory()) || [];
+                        const keyItem = inventory.find(e =>
+                            e.subtype === keyDetails.requiredKeySubtype ||
+                            e.name === keyDetails.keyName ||
+                            (e.name && e.name.replace(/_/g, ' ') === keyDetails.keyName) ||
+                            e.name === 'master key' ||
+                            e.subtype === 'master_key' ||
+                            e._im_key === 'master_key'
+                        );
+                        if (keyItem) {
+                            this.messaging(`You unlock the chest using your ${keyItem.name.replace(/_/g, ' ')}!`);
+                            this.broadcastUseConsumableFromInventory(keyItem);
+                            if (this.saveCrew) this.saveCrew();
+                            
+                            this.chestPickupInProgress = true;
+                            const chestResult = this.handleChestPickup(subtype, destinationTile);
+                            this.chestPickupInProgress = false;
+                            if (chestResult) return chestResult;
+                        } else {
+                            this.messaging(`This chest is locked. You need a ${keyDetails.keyName} to open it.`);
+                            return null; // behave like empty passable tile
+                        }
+                    } else {
+                        // Regular chest (silver, gold, ornate) - no key required
+                        if (this.hasActiveUnlockSpell()) {
+                            this.messaging('The unlock spell shatters the chest lock!');
+                            this.consumeActiveUnlockSpell();
+                            if (this.saveCrew) this.saveCrew();
+                        }
+                        this.chestPickupInProgress = true;
+                        const chestResult = this.handleChestPickup(subtype, destinationTile);
+                        this.chestPickupInProgress = false;
+                        if (chestResult) return chestResult;
                     }
-                    this.chestPickupInProgress = true;
-                    const chestResult = this.handleChestPickup(subtype, destinationTile);
-                    this.chestPickupInProgress = false;
-                    if (chestResult) return chestResult;
+                } else {
+                    // destinationTile.contains may be object; callers expect string contains
+                    try {
+                        const tileForCallback = Object.assign({}, destinationTile, { contains: subtype });
+                        this.addItemToInventory(tileForCallback)
+                    } catch (e) {
+                        this.addItemToInventory(destinationTile)
+                    }
+                    this.removeTileFromBoard(destinationTile)
+                    return 'item';
                 }
-                // destinationTile.contains may be object; callers expect string contains
-                try {
-                    const tileForCallback = Object.assign({}, destinationTile, { contains: subtype });
-                    this.addItemToInventory(tileForCallback)
-                } catch (e) {
-                    this.addItemToInventory(destinationTile)
-                }
-                this.removeTileFromBoard(destinationTile)
-                return 'item';
+                break;
             case 'spell':
                 this.removeTileFromBoard(destinationTile)
                 this.triggerRitualEncounter();
@@ -1541,7 +1733,6 @@ export function BoardManager(){
                 this.removeTileFromBoard(destinationTile)
             break;
             case 'treasure':
-                console.log('picked up treasure');
                 this.treasurePickupInProgress = true;
                 let treasureFactor, treasureNum = Math.random();
                 if(treasureNum > .85){
@@ -1627,16 +1818,31 @@ export function BoardManager(){
         this.removeTileFromBoard(tile);
     }
     this.removeTileFromBoard = (tile) => {
-        // Clear runtime monster/image but preserve or restore an appropriate base color
+        // Clear runtime monster/image and restore floor appearance.
         tile.image = null;
         tile.contains = null;
-        // Prefer the currentBoard's color for this tile, otherwise fallback to white
-        // try {
-        //     const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color;
-        //     tile.color = boardColor || 'white';
-        // } catch (e) {
-            tile.color = 'white';
-        // }
+
+        // Restore the tile's original floor color from the persisted board data.
+        // 'white' was the previous hard-coded fallback — that value leaked into
+        // currentBoard.tiles[id].color and was then read back by handleFogOfWar as
+        // a valid (non-black) color, causing the cleared tile to render white or with
+        // a washed-out texture tint.  Use the board's own color for this tile, or the
+        // neutral stone fallback if none is stored.
+        try {
+            const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color;
+            const isValidFloorColor = (c) => c && c !== 'black' && c !== 'white';
+            tile.color = isValidFloorColor(boardColor) ? boardColor : '#6b6057';
+        } catch (e) {
+            tile.color = '#6b6057';
+        }
+
+        // Clear the cached terrain so refreshTiles re-assigns the correct texture
+        // variant for this slot now that it is an empty floor tile. Without this,
+        // the fast-path guard (`if (t.terrain) continue`) would keep whatever
+        // terrain was assigned while the monster occupied this tile — which may not
+        // match the texture the dungeon-level expects for a cleared floor.
+        try { delete tile.terrain; } catch (e) {}
+
         this.tiles[tile.id] = tile;
         // If this tile used to block the tile above (large monster), clear that marker
         try {
@@ -1729,6 +1935,14 @@ export function BoardManager(){
                 e.name === requiredKeySubtype ||
                 (e.name && e.name.replace(/_/g, ' ') === keyName)
             );
+            
+            if (!key) {
+                key = inventory.find(e =>
+                    e.name === 'master key' ||
+                    e.subtype === 'master_key' ||
+                    e._im_key === 'master_key'
+                );
+            }
             
             if(key){
                 hasKey = true;
@@ -2002,6 +2216,33 @@ export function BoardManager(){
                 break;
             }
         }
+        // Check for adjacent locked chests
+        try {
+            const [px, py] = this.playerTile.location;
+            const neighbors = [
+                [px - 1, py],
+                [px + 1, py],
+                [px, py - 1],
+                [px, py + 1]
+            ];
+            neighbors.forEach(([nx, ny]) => {
+                if (nx >= 0 && nx < 15 && ny >= 0 && ny < 15) {
+                    const nIdx = nx * 15 + ny;
+                    const nTile = this.tiles[nIdx];
+                    if (nTile && nTile.contains) {
+                        const subtype = this.getContainsSubtype(nTile.contains);
+                        if (this.isChest(subtype)) {
+                            const keyDetails = this.getRequiredKeyForChest(subtype);
+                            if (keyDetails) {
+                                this.messaging(`This chest is locked. You need a ${keyDetails.keyName} to open it.`);
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (e) {
+            console.error("Adjacency chest check failed:", e);
+        }
         // Recompute fog after updating the player's location so fog centers on the player.
         // Skip its immediate refresh and reuse the same reachable set in adjacency highlighting
         // to avoid duplicate work in one movement tick.
@@ -2221,7 +2462,12 @@ export function BoardManager(){
                     const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].borders);
                     const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
                     const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
-                    e.color = boardColor || (isVoid ? '#0e0e0e' : 'white');
+                    // Use persisted/runtime board color when available.  Fall back to a
+                    // neutral dark-stone tone rather than 'white' — white tiles were a
+                    // jarring visual glitch when server data had no explicit color saved.
+                    // The terrain texture overlay renders on top so this colour only shows
+                    // at tile edges / between renders.
+                    e.color = boardColor || (isVoid ? '#0e0e0e' : '#6b6057');
                     e.image = this.getImageForContains(e.contains, e);
                     e.borders = this.normalizeFogBorders(persistedBorders);
                 }

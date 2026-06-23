@@ -27,6 +27,8 @@ const MonstersCombatGrid = ({
     teleportingFighterId,
     fearCastingActive,
 }) => {
+    const getLiveCombatant = (id) => (combatManager && typeof combatManager.getCombatant === 'function') ? combatManager.getCombatant(id) : null;
+
     const getActiveEffects = (combatant) => {
         const list = [];
         if (!combatant) return list;
@@ -670,7 +672,7 @@ const MonstersCombatGrid = ({
                                 {/* Target indicator: tiny portrait of whoever this monster is targeting */}
                                 {(() => {
                                     const targetId = battleData[monster.id]?.targetId;
-                                    const target = targetId ? combatManager.getCombatant(targetId) : null;
+                                    const target = targetId ? getLiveCombatant(targetId) : null;
                                     return target?.portrait && !target?.invisible && !battleData[monster.id]?.dead ? (
                                         <div className="monster-target-indicator" style={{ zIndex: 10 }}>
                                             <div
@@ -707,35 +709,29 @@ const MonstersCombatGrid = ({
                             {battleData[monster.id] && !battleData[monster.id]?.dead && battleData[monster.id].isChargingTransform && (
                                 <Overlay animationType="transform_charging_overlay" data={battleData[monster.id]} />
                             )}
-                            <div className="indicators-wrapper">
-                                <div className="monster-hp-bar hp-bar">
-                                    {!battleData[monster.id]?.dead && (
+                            {!battleData[monster.id]?.dead && (
+                                <div className="indicators-wrapper" style={{ display: 'flex', flexDirection: 'column-reverse', position: 'absolute', bottom: 0, left: 0, width: '100%', pointerEvents: 'none' }}>
+                                    <div className="monster-hp-bar hp-bar" style={{ position: 'relative', height: '4px' }}>
                                         <div className="red-fill" style={{ width: `${(battleData[monster.id]?.hp / battleData[monster.id]?.stats.hp) * 100}%` }}></div>
+                                    </div>
+                                    {!(battleData[monster.id]?.type && String(battleData[monster.id]?.type).includes('spider')) && (
+                                        combatManager && combatManager.round !== undefined ? (
+                                            <div className="endurance-bar" style={{ height: '2px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', position: 'relative' }}>
+                                                <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(battleData[monster.id]?.endurance / battleData[monster.id]?.maxEndurance) * 100}%` }}></div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <div className="monster-energy-bar energy-bar" style={{ position: 'relative', height: '4px' }}>
+                                                    <div className="yellow-fill" style={{ width: `calc(${battleData[monster.id]?.energy}%)` }}></div>
+                                                </div>
+                                                <div className="tempo-bar" style={{ position: 'relative', height: '4px' }}>
+                                                    <div className="tempo-indicator" style={{ left: `calc(${battleData[monster.id]?.tempo}% - 4px)` }}></div>
+                                                </div>
+                                            </>
+                                        )
                                     )}
                                 </div>
-                                {!(battleData[monster.id]?.type && String(battleData[monster.id]?.type).includes('spider')) && (
-                                    combatManager && combatManager.round !== undefined ? (
-                                        <div className="endurance-bar" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
-                                            {!battleData[monster.id]?.dead && (
-                                                <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(battleData[monster.id]?.endurance / battleData[monster.id]?.maxEndurance) * 100}%` }}></div>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <>
-                                            <div className="monster-energy-bar energy-bar">
-                                                {!battleData[monster.id]?.dead && (
-                                                    <div className="yellow-fill" style={{ width: `calc(${battleData[monster.id]?.energy}%)` }}></div>
-                                                )}
-                                            </div>
-                                            <div className="tempo-bar">
-                                                {!battleData[monster.id]?.dead && (
-                                                    <div className="tempo-indicator" style={{ left: `calc(${battleData[monster.id]?.tempo}% - 4px)` }}></div>
-                                                )}
-                                            </div>
-                                        </>
-                                    )
-                                )}
-                            </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -924,7 +920,7 @@ const MonstersCombatGrid = ({
                                     </div>
                                     {/* Target indicator: tiny portrait of whoever this minion is targeting */}
                                     {(() => {
-                                        const target = minion.targetId ? combatManager.getCombatant(minion.targetId) : null;
+                                        const target = minion.targetId ? getLiveCombatant(minion.targetId) : null;
                                         return target?.portrait && !minion.dead ? (
                                             <div className="monster-target-indicator" style={{ zIndex: 10 }}>
                                                 <div
@@ -975,35 +971,29 @@ const MonstersCombatGrid = ({
                                         })}
                                     </div>
                                 </div>
-                                <div className="indicators-wrapper">
-                                    <div className="monster-hp-bar hp-bar">
-                                        {!minion.dead && (
+                                {!minion.dead && (
+                                    <div className="indicators-wrapper" style={{ display: 'flex', flexDirection: 'column-reverse', position: 'absolute', bottom: 0, left: 0, width: '100%', pointerEvents: 'none' }}>
+                                        <div className="monster-hp-bar hp-bar" style={{ position: 'relative', height: '4px' }}>
                                             <div className="red-fill" style={{ width: `${(minion.hp / minion.stats.hp) * 100}%` }}></div>
+                                        </div>
+                                        {!(minion.type && String(minion.type).includes('spider')) && (
+                                            combatManager && combatManager.round !== undefined ? (
+                                                <div className="endurance-bar" style={{ height: '2px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', position: 'relative' }}>
+                                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(minion.endurance / minion.maxEndurance) * 100}%` }}></div>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <div className="monster-energy-bar energy-bar" style={{ position: 'relative', height: '4px' }}>
+                                                        <div className="yellow-fill" style={{ width: `calc(${minion.energy}%)` }}></div>
+                                                    </div>
+                                                    <div className="tempo-bar" style={{ position: 'relative', height: '4px' }}>
+                                                        <div className="tempo-indicator" style={{ left: `calc(${minion.tempo}% - 4px)` }}></div>
+                                                    </div>
+                                                </>
+                                            )
                                         )}
                                     </div>
-                                    {!(minion.type && String(minion.type).includes('spider')) && (
-                                        combatManager && combatManager.round !== undefined ? (
-                                            <div className="endurance-bar" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
-                                                {!minion.dead && (
-                                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(minion.endurance / minion.maxEndurance) * 100}%` }}></div>
-                                                )}
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="monster-energy-bar energy-bar">
-                                                    {!minion.dead && (
-                                                        <div className="yellow-fill" style={{ width: `calc(${minion.energy}%)` }}></div>
-                                                    )}
-                                                </div>
-                                                <div className="tempo-bar">
-                                                    {!minion.dead && (
-                                                        <div className="tempo-indicator" style={{ left: `calc(${minion.tempo}% - 4px)` }}></div>
-                                                    )}
-                                                </div>
-                                            </>
-                                        )
-                                    )}
-                                </div>
+                                )}
                             </div>
                         </div>
                     </div>

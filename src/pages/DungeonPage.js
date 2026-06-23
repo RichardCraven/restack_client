@@ -1622,6 +1622,12 @@ class DungeonPage extends React.Component {
     cooldownAnimationFrame = null;
     constructor(props){
         super(props)
+        this._isMounted = true;
+        const origSetState = this.setState;
+        this.setState = (state, callback) => {
+            if (!this._isMounted) return;
+            origSetState.call(this, state, callback);
+        };
         this.monsterBattleComponentRef = React.createRef()
         this.devConsoleInputRef = React.createRef()
         this.devConsoleOutputRef = React.createRef()
@@ -1766,7 +1772,6 @@ class DungeonPage extends React.Component {
                 setTimeout(() => {
                     const outputDiv = this.devConsoleOutputRef.current;
                     if (outputDiv) {
-                        console.log('OUTPUT DIV: ', outputDiv);
                         outputDiv.scrollTop = outputDiv.scrollHeight;
                     }
                     if (
@@ -1800,7 +1805,6 @@ class DungeonPage extends React.Component {
             arr.push([])
         }
         const meta = getMeta();
-        console.log('META:', meta);
         // meta.crew[0].stats.hp = 1000;
         // remove this after debugging ^
 
@@ -1831,7 +1835,6 @@ class DungeonPage extends React.Component {
 
         
         if(!meta || !meta.dungeonId){
-            console.log('DungeonPage.componentWillMount: no dungeonId, calling initializeCrew with meta.crew=', meta && meta.crew);
             this.props.crewManager.initializeCrew(meta.crew);
             itemCleanup(null, meta.crew);
             if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
@@ -1843,7 +1846,6 @@ class DungeonPage extends React.Component {
 
             // this.props.inventoryManager.addItem(this.props.inventoryManager.allItems['minor_key'])
 
-            console.log('DungeonPage.componentWillMount: dungeonId=', meta.dungeonId, 'calling initializeCrew with meta.crew=', meta.crew);
             this.props.crewManager.initializeCrew(meta.crew);
             if (this.props.inventoryManager && typeof this.props.inventoryManager.refreshWeaponStats === 'function') {
                 this.props.crewManager.crew.forEach(m => { if (m && Array.isArray(m.inventory)) m.inventory = this.props.inventoryManager.refreshWeaponStats(m.inventory); });
@@ -1875,6 +1877,26 @@ class DungeonPage extends React.Component {
         // Consolidated check: mark finished special actions available and collect updates
         const { updates, modified } = this.checkAndCollectFinishedSpecialActions({ markNotified: false }); // eslint-disable-line no-unused-vars
         const initialExpanded = initialSelectedCrewMember ? (Array.isArray(initialSelectedCrewMember.actionMenuTypeExpanded) ? initialSelectedCrewMember.actionMenuTypeExpanded : (initialSelectedCrewMember.actionMenuTypeExpanded ? [initialSelectedCrewMember.actionMenuTypeExpanded] : [])) : [];
+        
+        // Build pending level-up queue on load
+        const pendingQueue = [];
+        try {
+            const crew = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew : [];
+            crew.forEach(member => {
+                if (member && Array.isArray(member.pendingLevelUpPicks) && member.pendingLevelUpPicks.length > 0) {
+                    member.pendingLevelUpPicks.forEach(lvl => {
+                        pendingQueue.push({
+                            crewMember: member,
+                            fromLevel: lvl - 1,
+                            toLevel: lvl
+                        });
+                    });
+                }
+            });
+        } catch (e) {
+            console.warn('DungeonPage: pending level-up check failed', e);
+        }
+
         this.setState((state, props) => {
             return {
                 tileSize,
@@ -1909,7 +1931,9 @@ class DungeonPage extends React.Component {
                 // second modal (quests popup) opens before CoreUI finishes the close animation.
                 // The interval will show it once the dungeon is loaded.
                 modalType: '',
-                showModal: false
+                showModal: false,
+                showDebugLevelUpScreen: pendingQueue.length > 0 ? true : false,
+                debugLevelUpQueue: pendingQueue
             };
         });
     }
@@ -1941,7 +1965,7 @@ class DungeonPage extends React.Component {
                 this.setState({ toastMessage: `Scrimmage finished — Outcome: ${result && result.winner === 'player' ? 'Victory!' : 'Defeat'}` });
             } else {
                 if(result && result.winner === 'player'){
-                    console.log('you win');
+                    // victory
                 } else if(result && result.winner === 'reaper'){
                     // Surface a toast informing of the pending tax, but DO NOT apply it here.
                     const taxPercent = 25;
@@ -1955,17 +1979,64 @@ class DungeonPage extends React.Component {
 
     preloadDungeonTiles() {
         try {
-            const terrainKeys = Object.keys(images).filter(key => key.startsWith('terrain_'));
-            terrainKeys.forEach(key => {
-                const src = images[key];
+            // getTerrainSetForLevel returns an array of 16 webpack-resolved image URLs.
+            // We pre-decode all 48 images (3 sets × 16 variants) so they are already in
+            // the browser's decode cache when the board renders them.  The previous
+            // implementation filtered Object.keys(images) for 'terrain_*' keys but those
+            // are not exported as named keys — only as arrays via getTerrainSetForLevel —
+            // so nothing was ever actually preloaded.
+            const allSets = [
+                images.getTerrainSetForLevel(0),  // base (stone)
+                images.getTerrainSetForLevel(1),  // light (upper levels)
+                images.getTerrainSetForLevel(-1), // dark (lower levels)
+            ];
+            allSets.forEach(set => {
+                if (!Array.isArray(set)) return;
+                set.forEach(src => {
+                    if (!src) return;
+                    const img = new Image();
+                    img.src = typeof src === 'string' ? src : (src.default || '');
+                });
+            });
+        } catch (e) {
+            console.warn('Failed to preload dungeon tiles', e);
+        }
+    }
+
+    // Preloads portrait / icon images for every tile visible on the current board
+    // section. Called on plane entry and board transitions so textures are already
+    // in the browser decode cache before the player walks close enough to see them,
+    // eliminating the per-tile load hitch the user was experiencing.
+    preloadBoardImages() {
+        try {
+            const bm = this.props.boardManager;
+            if (!bm || !Array.isArray(bm.tiles)) return;
+            const seen = new Set();
+            bm.tiles.forEach(tile => {
+                if (!tile) return;
+                const key = tile.image || tile.icon || null;
+                if (!key || seen.has(key)) return;
+                seen.add(key);
+                const src = images[key] || (typeof key === 'string' && key.includes('/') ? key : null);
                 if (src) {
                     const img = new Image();
                     img.src = typeof src === 'string' ? src : (src.default || '');
                 }
             });
         } catch (e) {
-            console.warn('Failed to preload dungeon tiles', e);
+            // Non-critical — preload failure is intentionally silent
         }
+    }
+
+    // Schedules preloadBoardImages on the next idle animation frame so it never
+    // blocks the movement animation that fired this turn.
+    _schedulePreloadBoardImages() {
+        if (this._preloadBoardImagesScheduled) return;
+        this._preloadBoardImagesScheduled = true;
+        requestAnimationFrame(() => {
+            this._preloadBoardImagesScheduled = false;
+            this.preloadBoardImages();
+        });
     }
 
     triggerDebugLevelUp = () => {
@@ -1991,7 +2062,6 @@ class DungeonPage extends React.Component {
             showDebugLevelUpScreen: true,
             debugLevelUpQueue: [{ crewMember: member, fromLevel, toLevel }]
         });
-        console.log(`[Console Command] Leveling up ${member.name} (${fromLevel} → ${toLevel})`);
     }
 
     handleDebugLevelUpComplete = () => {
@@ -2042,7 +2112,6 @@ class DungeonPage extends React.Component {
                             if (newSlot) {
                                 item.equippedSlot = newSlot;
                                 migrated = true;
-                                console.log(`[Migration] Mapped missing/invalid slot for ${item.name} to ${newSlot}`);
                             }
                         }
                     } catch (e) {}
@@ -2081,33 +2150,7 @@ class DungeonPage extends React.Component {
             }
         } catch (e) {}
         
-        // One-time debug initializer: add one of each sword to the player's inventory
-        try {
-            const metaDebug = getMeta() || {};
-            // Only run once: if debug flag is falsy, add swords and mark debug true
-            if (!metaDebug.debug && this.props && this.props.inventoryManager) {
-                try {
-                    const im = this.props.inventoryManager;
-                    // pick weapon keys that look like swords
-                    const swordKeys = (im.weapons_names || []).filter(k => typeof k === 'string' && k.endsWith('_sword'));
-                    if (swordKeys.length > 0) {
-                        im.addItemsByName(swordKeys);
-                        // persist inventory into meta and mark debug
-                        metaDebug.inventory = {
-                            items: im.inventory,
-                            gold: im.gold,
-                            shimmering_dust: im.shimmering_dust,
-                            totems: im.totems
-                        };
-                        metaDebug.debug = true;
-                        try { storeMeta(metaDebug); } catch(e) {}
-                        try { updateUserRequest(getUserId(), metaDebug).catch(()=>{}); } catch(e) {}
-                        // Trigger any higher-level save handler if provided
-                        try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
-                    }
-                } catch(e) { console.warn('One-time debug sword initialization failed', e); }
-            }
-        } catch(e) {}
+        // One-time debug initializer removed
         // Real-time check for completed special actions
     this.realTimeSpecialActionCheckInterval = this._setInterval(() => {
         try {
@@ -2404,10 +2447,7 @@ class DungeonPage extends React.Component {
                 }
             };
             window.addEventListener('keydown', this._debugKeydownListener);
-            console.log('[Level Up Dev Command] Registered: call window.levelUp() / window.lvlUp(), or simply type "level up" / "lvl up" on the keyboard.');
-        } catch (e) {
-            console.warn('[Console Command] failed to register debug commands', e);
-        }
+        } catch (e) {}
     }
 
     getScroungingRatLevel = () => {
@@ -2654,7 +2694,7 @@ class DungeonPage extends React.Component {
                 const before = [...bm.playerTile.location];
                 bm.moveUp();
                 const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                this.setState({ tiles: bm.tiles, overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
                     if (moved) this.recordBreadcrumb();
                     const playerIdx = bm.getIndexFromCoordinates(bm.playerTile.location);
@@ -2672,7 +2712,7 @@ class DungeonPage extends React.Component {
                 const before = [...bm.playerTile.location];
                 bm.moveDown();
                 const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                this.setState({ tiles: bm.tiles, overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
                     if (moved) this.recordBreadcrumb();
                     const playerIdx = bm.getIndexFromCoordinates(bm.playerTile.location);
@@ -2690,7 +2730,7 @@ class DungeonPage extends React.Component {
                 const before = [...bm.playerTile.location];
                 bm.moveLeft();
                 const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                this.setState({ tiles: bm.tiles, overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
                     if (moved) this.recordBreadcrumb();
                     const playerIdx = bm.getIndexFromCoordinates(bm.playerTile.location);
@@ -2708,7 +2748,7 @@ class DungeonPage extends React.Component {
                 const before = [...bm.playerTile.location];
                 bm.moveRight();
                 const moved = bm.playerTile.location[0] !== before[0] || bm.playerTile.location[1] !== before[1];
-                this.setState({ tiles: [...bm.tiles], overlayTiles: bm.overlayTiles }, () => {
+                this.setState({ tiles: bm.tiles, overlayTiles: bm.overlayTiles }, () => {
                     try { this.updateFloatingPlayerPosition(bm.playerTile.location); } catch (e) {}
                     if (moved) this.recordBreadcrumb();
                     const playerIdx = bm.getIndexFromCoordinates(bm.playerTile.location);
@@ -2743,6 +2783,10 @@ class DungeonPage extends React.Component {
             try { getMeta(); } catch (e) { /* ignore */ }
 
             // Apply logical move first, then animate overlay from old world position to new one.
+            // Set _batchingWithAnimation so refreshTiles (called synchronously inside
+            // bm.move* via checkAdjacency) skips its own setState — we'll include tiles
+            // in the animation setState below, merging both into a single render cycle.
+            this._batchingWithAnimation = true;
             switch (direction) {
                 case 'up': bm.moveUp(); break;
                 case 'down': bm.moveDown(); break;
@@ -2750,6 +2794,7 @@ class DungeonPage extends React.Component {
                 case 'right': bm.moveRight(); break;
                 default: break;
             }
+            this._batchingWithAnimation = false;
 
             const playerMoved = bm.playerTile.location[0] !== originCoords[0] || bm.playerTile.location[1] !== originCoords[1];
             
@@ -2782,9 +2827,9 @@ class DungeonPage extends React.Component {
             }
 
             if (!playerMoved) {
+                // Tiles unchanged on a blocked move — refreshTiles was not invoked by
+                // board-manager (move() returns early when blocked). Just reset UI state.
                 this.setState({
-                    tiles: [...bm.tiles],
-                    overlayTiles: bm.overlayTiles,
                     playerFloatVisible: true,
                     playerAnimating: false,
                     animOriginIndex: null,
@@ -2796,8 +2841,14 @@ class DungeonPage extends React.Component {
                 return;
             }
 
+            // Include tiles and overlayTiles here using the stable bm.tiles reference.
+            // Spreading [...bm.tiles] would create a new array, break React.memo's
+            // boardTiles comparison, and force all 225 Tile components to re-render.
+            // Combined setState: tiles (which refreshTiles held back via the
+            // _batchingWithAnimation flag) + animation state = one render cycle
+            // instead of two in React 16's un-batched native event context.
             this.setState({
-                tiles: [...bm.tiles],
+                tiles: bm.tiles,
                 overlayTiles: bm.overlayTiles,
                 playerFloatVisible: true,
                 playerAnimating: true,
@@ -2830,21 +2881,10 @@ class DungeonPage extends React.Component {
                             this._playerMoveSettleTimeout = null;
                         }
                         this._playerMoveSettleTimeout = this._setTimeout(() => {
-                            // After animation completes, reposition float to destination with 
-                            this.setState({
-                                playerAnimating: false,
-                                animOriginIndex: null,
-                                animDestIndex: null
-                             }, () => {
-                                 const playerIdx = bm.getIndexFromCoordinates(bm.playerTile.location);
-                                 const currentTile = bm.tiles[playerIdx];
-                                 const ctype = currentTile && currentTile.contains && (currentTile.contains.type || currentTile.contains);
-                                 if (ctype === 'dungeon_portal' || ctype === 'dungeon portal') {
-                                     this.executePortalTeleport(currentTile);
-                                 } else {
-                                     this.resolveQueuedMovement(true);
-                                 }
-                             });
+                            // Snap the floating player to the destination and instantly
+                            // reset the CSS transform (before the paint) so the avatar
+                            // lands cleanly.  DOM manipulation first, setState after so
+                            // there is only one React render at the end of each step.
                             this.updateFloatingPlayerPosition(bm.playerTile.location);
                             this.recordBreadcrumb();
                             const el2 = this.playerFloatRef.current;
@@ -2853,12 +2893,22 @@ class DungeonPage extends React.Component {
                                 el2.style.transform = 'translate3d(0px, 0px, 0px)';
                                 el2.style.willChange = 'auto';
                             }
+                            // Single setState clears animation lock, then chains the next
+                            // queued move.  Portal check is in the callback so keysLocked
+                            // is cleared before executePortalTeleport runs.
+                            const playerIdx = bm.getIndexFromCoordinates(bm.playerTile.location);
+                            const currentTile = bm.tiles[playerIdx];
+                            const ctype = currentTile && currentTile.contains && (currentTile.contains.type || currentTile.contains);
                             this.setState({
                                 playerAnimating: false,
                                 animOriginIndex: null,
-                                animDestIndex: null
+                                animDestIndex: null,
                             }, () => {
-                                this.resolveQueuedMovement(true);
+                                if (ctype === 'dungeon_portal' || ctype === 'dungeon portal') {
+                                    this.executePortalTeleport(currentTile);
+                                } else {
+                                    this.resolveQueuedMovement(true);
+                                }
                             });
                         }, TOTAL_MOVE_MS + BUFFER_MS);
                     } catch (e) {
@@ -3236,6 +3286,10 @@ class DungeonPage extends React.Component {
         }
     }
     componentWillUnmount(){
+        this._isMounted = false;
+        if (typeof this.props.registerMessaging === 'function') {
+            try { this.props.registerMessaging(null); } catch (e) {}
+        }
         // Clear any timers/intervals created via helpers
         try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch(e){}
         try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch(e){}
@@ -3338,6 +3392,54 @@ class DungeonPage extends React.Component {
                 } catch (err) {
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                 }
+            } else if (cmd === 'shrine respawn' || cmd === 'shrinerespawn') {
+                try {
+                    const meta = getMeta() || {};
+                    meta.shrinesUsed = [];
+                    storeMeta(meta);
+
+                    const allDungeons = await loadAllDungeonsRequest();
+                    let dungeons = [];
+                    allDungeons.data.forEach((e) => {
+                        let d = JSON.parse(e.content);
+                        d.id = e._id;
+                        dungeons.push(d);
+                    });
+
+                    const activeDungeon = this.props.boardManager?.dungeon;
+                    let selectedDungeon = null;
+                    if (activeDungeon) {
+                        const templateId = meta.selectedDungeonTemplateId;
+                        if (templateId) {
+                            selectedDungeon = dungeons.find(d => d.id === templateId);
+                        }
+                    }
+                    if (!selectedDungeon) {
+                        selectedDungeon = dungeons[0] || null;
+                    }
+
+                    if (selectedDungeon && this.props.boardManager && typeof this.props.boardManager.respawnShrines === 'function') {
+                        const respawned = this.props.boardManager.respawnShrines(selectedDungeon);
+                        try {
+                            if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
+                        } catch (e) {}
+
+                        this.setState(prev => ({
+                            devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Cleared visited shrines. Respawned ${respawned} shrine(s) on current board from template.`],
+                            devConsoleInput: ''
+                        }));
+                    } else {
+                        this.setState(prev => ({
+                            devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Cleared visited shrines list in metadata. (No template found or boardManager.respawnShrines not available)`],
+                            devConsoleInput: ''
+                        }));
+                    }
+                } catch (err) {
+                    this.setState(prev => ({
+                        devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`],
+                        devConsoleInput: ''
+                    }));
+                }
             } else {
                 // Developer: restore full health to all crew
                 if (cmd === 'fullhealth' || cmd === 'full-health' || cmd === 'revive') {
@@ -3390,8 +3492,10 @@ class DungeonPage extends React.Component {
                     const commands = [
                         'monster-spawn / monsterspawn / mspawn',
                         'item-spawn / itemspawn / ispawn',
+                        'shrine respawn / shrinerespawn',
                         'fullhealth / full-health / revive',
                         'food — fill food count to 55',
+                        'key — add 1 master key to inventory',
                         'kill reset — reset death tracker to 0',
                         'remove rituals — clear all learned rituals from every crew member',
                         'weapons t1 / weapons1 / weaponst1 — add 2 random tier-1 weapons',
@@ -3410,6 +3514,36 @@ class DungeonPage extends React.Component {
                         'list / help'
                     ];
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands], devConsoleInput: '' }));
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // key - spawn a single master key
+                if (cmd === 'key') {
+                    try {
+                        const im = this.props.inventoryManager;
+                        if (im && im.allItems && im.allItems['master_key']) {
+                            const masterKeyItem = { ...im.allItems['master_key'] };
+                            im.addItem(masterKeyItem);
+                            try {
+                                const meta = getMeta() || {};
+                                meta.inventory = {
+                                    items: im.inventory,
+                                    gold: im.gold,
+                                    shimmering_dust: im.shimmering_dust,
+                                    totems: im.totems,
+                                };
+                                storeMeta(meta);
+                                if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
+                            } catch(e){}
+                            this.forceUpdate();
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Spawned a Master Key in your inventory.'], devConsoleInput: '' }));
+                        } else {
+                            this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Error: master_key definition not found'], devConsoleInput: '' }));
+                        }
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
                     try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
                     e.preventDefault();
                     return;
@@ -4129,43 +4263,110 @@ class DungeonPage extends React.Component {
         return nextIndicators;
     }
     refreshTiles = (levelIdOverride) => {
-        let newTiles = this.props.boardManager.tiles,
-            newOverlayTiles = this.props.boardManager.overlayTiles
+        const bm = this.props.boardManager;
+        // Use the board-manager's array references directly — never spread them.
+        // Keeping a stable reference means React.memo can skip re-rendering Tile
+        // components that pass boardTiles={state.tiles} when the array hasn't changed.
+        const newTiles = bm.tiles;
+        const newOverlayTiles = bm.overlayTiles;
 
-        // Ensure each visible (non-void) tile has a randomly chosen terrain background
+        // ── Terrain assignment ─────────────────────────────────────────────────────
+        // Runs BEFORE the try/catch so any error in board-context detection cannot
+        // accidentally skip texture assignment (which was the root cause of intermittent
+        // white tiles).  Only touches tiles that don't yet have terrain assigned.
+        //
+        //   • Board transition: initializeTilesFromMap creates new tile objects with no
+        //     `terrain` property → ALL non-void visible tiles get terrain here.
+        //   • Interior step: handleFogOfWar runs first, coloring newly-revealed tiles.
+        //     Those tiles still have terrain===undefined → assigned here.  Already-
+        //     revealed tiles keep their terrain (fast-path guard).
+        //
+        // Cost: O(225) guard checks (single property read).  Actual assignments are
+        //       O(N_revealed) — typically 0-5 per interior step.
         try {
-            if (Array.isArray(newTiles) && this.props.boardManager && typeof this.props.boardManager.getContainsType === 'function') {
-                const meta = getMeta() || {};
-                const activeLevel = this.state.levelTracker ? this.state.levelTracker.find(e => e.active) : null;
-                const currentLevelId = levelIdOverride !== undefined ? Number(levelIdOverride) : (activeLevel !== null && activeLevel !== undefined ? Number(activeLevel.id) : Number(meta.location?.levelId ?? 0));
-                const terrainSet = images.getTerrainSetForLevel(currentLevelId);
+            if (Array.isArray(newTiles) && typeof bm.getContainsType === 'function') {
+                const meta2 = getMeta() || {};
+                const activeLevel2 = this.state.levelTracker ? this.state.levelTracker.find(e => e.active) : null;
+                const terrainLevelId = levelIdOverride !== undefined
+                    ? Number(levelIdOverride)
+                    : (activeLevel2 != null ? Number(activeLevel2.id) : Number(meta2.location?.levelId ?? 0));
+                const terrainSet = images.getTerrainSetForLevel(terrainLevelId);
                 for (let i = 0; i < newTiles.length; i++) {
                     const t = newTiles[i];
-                    if (!t) continue;
-                    const containsType = this.props.boardManager.getContainsType(t.contains);
-                    // skip void tiles or currently hidden (black) tiles — fog-of-war will mark hidden tiles as black
-                    if (containsType === 'void' || t.color === 'black') continue;
-                    // Always re-derive the terrain from the current level's set so that
-                    // switching levels updates tile visuals. Use tile id as a stable seed
-                    // so each tile always picks the same variant number across refreshes.
+                    if (!t || t.terrain) continue;  // already assigned — fast path
+                    const containsType = bm.getContainsType(t.contains);
+                    if (containsType === 'void') continue;
+                    // Pre-assign terrain to ALL non-void tiles, including currently-hidden
+                    // (black) ones.  This eliminates the one-frame gap where a newly-revealed
+                    // tile has no texture: by the time fog-of-war reveals it, terrain is
+                    // already set.  The Tile component only renders the terrain-bg overlay
+                    // when props.color !== 'black', so hidden tiles incur no visual cost.
                     const variantIndex = Math.abs(t.id * 2654435761 >>> 0) % 16;
                     t.terrain = terrainSet[variantIndex];
                 }
             }
-        } catch (e) {
-            // defensive: if anything goes wrong, don't block the refresh
-            console.warn('refreshTiles: failed to assign terrain:', e);
+        } catch (terrainErr) {
+            console.warn('refreshTiles: terrain assignment failed:', terrainErr);
         }
 
-        const syncedIndicators = this.syncVisibleVendorIndicators(newTiles);
-        const hasNewMonsterSightings = this.recordAdjacentMonsterSightings(newTiles, false);
+        try {
+            // Build a key that uniquely identifies the current board section + level.
+            const meta = getMeta() || {};
+            const activeLevel = this.state.levelTracker ? this.state.levelTracker.find(e => e.active) : null;
+            const currentLevelId = levelIdOverride !== undefined
+                ? Number(levelIdOverride)
+                : (activeLevel != null ? Number(activeLevel.id) : Number(meta.location?.levelId ?? 0));
+            const currentBoardIndex = bm.playerTile ? bm.playerTile.boardIndex : null;
+            const boardContextKey = `${currentBoardIndex}:${currentLevelId}`;
+            const boardChanged = this._lastRefreshBoardKey !== boardContextKey;
 
-        this.setState({
-            tiles: newTiles,
-            overlayTiles: newOverlayTiles,
-            minimapIndicators: syncedIndicators || this.state.minimapIndicators
-        })
-        if (hasNewMonsterSightings) this.persistBreadcrumbsToMeta();
+            if (boardChanged) {
+                this._lastRefreshBoardKey = boardContextKey;
+            }
+
+            if (boardChanged) {
+                // ── Board transition or level change ─────────────────────────────
+                // Sync minimap vendor indicators and schedule image preloading.
+                const syncedIndicators = this.syncVisibleVendorIndicators(newTiles);
+                const hasNewMonsterSightings = this.recordAdjacentMonsterSightings(newTiles, false);
+                this.setState({
+                    tiles: newTiles,
+                    overlayTiles: newOverlayTiles,
+                    minimapIndicators: syncedIndicators || this.state.minimapIndicators
+                });
+                if (hasNewMonsterSightings) this.persistBreadcrumbsToMeta();
+                // Preload portrait images for the new board on the next idle frame.
+                this._schedulePreloadBoardImages();
+            } else {
+                // ── Interior move — same board section ───────────────────────────
+                // Pass the stable bm.tiles reference so React.memo can skip re-rendering
+                // Tile components whose individual props haven't changed.
+                const hasNewMonsterSightings = this.recordAdjacentMonsterSightings(newTiles, false);
+                // If handleDirectionalMove set _batchingWithAnimation, it will include
+                // tiles in its own combined animation setState — skip the standalone
+                // setState here to avoid a redundant render cycle in React 16
+                // (which doesn't auto-batch setStates in native event handlers).
+                if (!this._batchingWithAnimation) {
+                    this.setState({ tiles: newTiles, overlayTiles: newOverlayTiles });
+                }
+                if (hasNewMonsterSightings) this.persistBreadcrumbsToMeta();
+            }
+        } catch (e) {
+            // Defensive fallback — if board-context detection fails run a full refresh.
+            console.warn('refreshTiles: board-context check failed, running full refresh:', e);
+            try {
+                const syncedIndicators = this.syncVisibleVendorIndicators(newTiles);
+                const hasNewMonsterSightings = this.recordAdjacentMonsterSightings(newTiles, false);
+                this.setState({
+                    tiles: newTiles,
+                    overlayTiles: newOverlayTiles,
+                    minimapIndicators: syncedIndicators || this.state.minimapIndicators
+                });
+                if (hasNewMonsterSightings) this.persistBreadcrumbsToMeta();
+            } catch (e2) {
+                console.warn('refreshTiles: fallback also failed:', e2);
+            }
+        }
     }
     triggerMonsterBattle = (bool, tileId) => {
         if (bool) {
@@ -5299,40 +5500,68 @@ class DungeonPage extends React.Component {
         }
     }
     outfitNewCrew = () => {
-        const meta = getMeta(),
-        crew = meta.crew;
+        const meta = getMeta();
+        const crew = meta.crew || [];
+        const allItems = this.props.inventoryManager?.allItems || {};
+        
         crew.forEach((c)=>{
-            let weapon;
-            switch(c.type){
-                case 'ranger':
-                    weapon = this.props.inventoryManager.allItems['longbow']
-                    c.inventory.push(weapon);
-                break;
-                case 'monk':
-                    weapon = this.props.inventoryManager.allItems['flail']
-                    c.inventory.push(weapon);
-                break;
-                case 'wizard':
-                    weapon = this.props.inventoryManager.allItems['scepter']
-                    c.inventory.push(weapon);
-                break;
-                case 'soldier':
-                    weapon = this.props.inventoryManager.allItems['sword']
-                    c.inventory.push(weapon);
-                break;
-                case 'sage':
-                    weapon = this.props.inventoryManager.allItems['scepter']
-                    c.inventory.push(weapon);
-                break;
-                case 'barbarian':
-                    weapon = this.props.inventoryManager.allItems['axe']
-                    c.inventory.push(weapon);
-                break;
-                default:
-                    break;
-            }
-        })
+            if (!c.inventory) c.inventory = [];
+            if (c.inventory.length === 0) {
+                let itemKey = null;
+                const isBow = (k, item) => k.endsWith('_bow') || k === 'merklins_peacekeeper' || item.range === 'far';
+                
+                if (c.type === 'soldier' || c.type === 'barbarian') {
+                    const pool = Object.keys(allItems).filter(k => {
+                        const item = allItems[k];
+                        if (!item || item.tier !== 1) return false;
+                        const isMartialWeapon = item.type === 'weapon' && !isBow(k, item);
+                        const isMartialArmor = item.type === 'armor' && (item.subtype === 'shield' || item.subtype === 'helm');
+                        return isMartialWeapon || isMartialArmor;
+                    });
+                    if (pool.length) itemKey = pool[Math.floor(Math.random() * pool.length)];
+                } else if (c.type === 'ranger') {
+                    const pool = Object.keys(allItems).filter(k => {
+                        const item = allItems[k];
+                        if (!item || item.tier !== 1) return false;
+                        const isRangerWeapon = item.type === 'weapon' && isBow(k, item);
+                        const isMartialArmor = item.type === 'armor' && (item.subtype === 'shield' || item.subtype === 'helm');
+                        return isRangerWeapon || isMartialArmor;
+                    });
+                    if (pool.length) itemKey = pool[Math.floor(Math.random() * pool.length)];
+                } else if (['sage', 'wizard', 'monk', 'summoner', 'engineer'].includes(c.type)) {
+                    const pool = Object.keys(allItems).filter(k => {
+                        const item = allItems[k];
+                        if (!item || item.tier !== 1) return false;
+                        return ['amulet', 'mask', 'tabard', 'boots'].includes(item.subtype);
+                    });
+                    if (pool.length) itemKey = pool[Math.floor(Math.random() * pool.length)];
+                }
 
+                if (itemKey && allItems[itemKey]) {
+                    const item = JSON.parse(JSON.stringify(allItems[itemKey]));
+                    item.equippedBy = c.id;
+                    
+                    if (item.type === 'weapon') {
+                        item.equippedSlot = 'right';
+                    } else if (item.subtype === 'shield') {
+                        item.equippedSlot = 'left';
+                    } else if (item.subtype === 'helm' || item.subtype === 'mask') {
+                        item.equippedSlot = 'head';
+                    } else if (item.subtype === 'tabard') {
+                        item.equippedSlot = 'chest';
+                    } else if (item.subtype === 'boots') {
+                        item.equippedSlot = 'boots';
+                    } else if (item.subtype === 'amulet' || item.subtype === 'charm') {
+                        item.equippedSlot = 'ancillary-left';
+                    } else {
+                        item.equippedSlot = 'right';
+                    }
+                    
+                    c.inventory.push(item);
+                }
+            }
+        });
+        storeMeta(meta);
     }
     getTileContainsType = (tile) => {
         if (!tile) return null;
@@ -5921,9 +6150,7 @@ class DungeonPage extends React.Component {
 
     // Delegates camping end to CampManager
     endCamp = async () => {
-        console.log('[DungeonPage.endCamp] wrapper called');
         await CampManager.endCamp(this);
-        console.log('[DungeonPage.endCamp] CampManager.endCamp resolved, calling forceUpdate');
         // After endCamp resolves, force another re-render so crew tiles pick up
         // the restored hp values from the new member objects in crewManager.crew.
         try { this.forceUpdate(); } catch(e) {}
@@ -5994,7 +6221,6 @@ class DungeonPage extends React.Component {
                         const selectedDungeon = meta2.selectedDungeon || (this.props.boardManager && this.props.boardManager.dungeon);
                         const resolvedRespawnPoints = this.getResolvedSpawnPoints(selectedDungeon);
                         const spawnPoint = resolvedRespawnPoints[0] || meta2.spawnPoint;
-                        console.log('battleOver respawn spawnPoint: ', spawnPoint);
                         if (spawnPoint && selectedDungeon) {
                             const levelId = spawnPoint.level;
                             const level = Array.isArray(selectedDungeon.levels)
@@ -6090,9 +6316,6 @@ class DungeonPage extends React.Component {
                         }, 2500);
                     }
             try {
-                
-                console.log('current location: ', meta2.location);
-                // debugger
                 if (meta2 && meta2.location && this.props && this.props.boardManager) {
                     try {
                         const bm = this.props.boardManager;
@@ -10393,6 +10616,8 @@ class DungeonPage extends React.Component {
                     crew={(this.props.crewManager && this.props.crewManager.crew) || []}
                     monsterManager={this.props.monsterManager}
                     onShrineComplete={this.onShrineComplete}
+                    overlayManager={this.props.overlayManager}
+                    animationManager={this.props.animationManager}
                 />
             )}
 

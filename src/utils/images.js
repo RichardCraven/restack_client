@@ -406,6 +406,7 @@ import ornate_key from '../assets/icons/staples/key.png'
 import minor_key from '../assets/icons/misc/keys/minor key.png'
 import major_key from '../assets/icons/misc/keys/major key.png'
 import treasury_key from '../assets/icons/misc/keys/treasury key.png'
+import cryptic_key from '../assets/icons/misc/keys/cryptic key.png'
 import lockbox_key from '../assets/icons/misc/keys/lockbox key.png'
 import necrotic_key from '../assets/icons/misc/keys/necrotic key.png'
 import necrotic_master_key from '../assets/icons/misc/keys/necrotic  master key.png'
@@ -503,6 +504,13 @@ import quest_48_pirate from '../assets/icons/misc/loot/gold/Quest_48_pirate.png'
 import silver_chest from '../assets/icons/misc/loot/silver chest.png'
 import gold_chest from '../assets/icons/misc/loot/gold chest.png'
 import ornate_chest from '../assets/icons/misc/loot/ornate chest.png'
+import wooden_chest from '../assets/icons/loot/chests/wooden_chest.png'
+import iron_chest from '../assets/icons/loot/chests/iron_chest.png'
+import steel_chest from '../assets/icons/loot/chests/steel_chest.png'
+import gilded_casket from '../assets/icons/loot/chests/gilded_casket.png'
+import ancient_casket from '../assets/icons/loot/chests/ancient_casket.png'
+import treasury_chest from '../assets/icons/loot/chests/treasury_chest.png'
+import cryptic_chest from '../assets/icons/loot/chests/cryptic_chest.png'
 import curse_doll from '../assets/icons/misc/loot/curse doll.png'
 import merchant from '../assets/icons/misc/vendors/merchant.png'
 import alchemist from '../assets/icons/misc/vendors/alchemist.png'
@@ -811,6 +819,12 @@ import serpent_vision from '../assets/icons/combat-icons/specials/monsters/drago
 import whirlwind from '../assets/icons/combat-icons/specials/monsters/dragon/whirlwinnd.png';
 import spineskin from '../assets/icons/combat-icons/specials/monsters/spineskin.png';
 
+// Blalok skills
+import blalok_claw_strike from '../assets/icons/combat-icons/specials/monsters/blalok/claw strike_2.png';
+import blalok_bite from '../assets/icons/combat-icons/specials/monsters/blalok/bite.png';
+import blalok_regenerate from '../assets/icons/combat-icons/specials/monsters/blalok/regenerate.png';
+import blalok_sacrificial_mending from '../assets/icons/combat-icons/specials/monsters/blalok/sacrificial_mending.png';
+
 // Sphinx
 import begin_trials from '../assets/icons/combat-icons/specials/monsters/sphinx/begin_the_trials.png';
 import polymorph from '../assets/icons/combat-icons/specials/monsters/sphinx/polymorph.png';
@@ -833,6 +847,22 @@ import spider1 from '../assets/icons/combat-icons/specials/monsters/witch/spider
 import spider2 from '../assets/icons/combat-icons/specials/monsters/witch/spider2.png';
 import spider3 from '../assets/icons/combat-icons/specials/monsters/witch/spider3.png';
 import witch_dispell from '../assets/icons/combat-icons/specials/monsters/witch/dispell.png';
+
+// Hagigah skills
+import hagigah_destitution from '../assets/icons/combat-icons/specials/monsters/hagigah/destitution.png';
+import hagigah_spineskin from '../assets/icons/combat-icons/specials/monsters/hagigah/spineskin.png';
+import hagigah_summon_skulls from '../assets/icons/combat-icons/specials/monsters/hagigah/summon_skulls.png';
+import hagigah_sphere_of_darkness from '../assets/icons/combat-icons/specials/monsters/hagigah/sphere_of_darkness.png';
+import hagigah_stomp from '../assets/icons/combat-icons/specials/monsters/hagigah/stomp.png';
+import hagigah_demon_mark from '../assets/icons/combat-icons/specials/monsters/hagigah/demon mark.png';
+
+// Hashmallim
+import hashmallim_dominate from '../assets/icons/combat-icons/specials/monsters/harshmalim/dominate.png';
+import hashmallim_entropic_kindred from '../assets/icons/combat-icons/specials/monsters/harshmalim/entropic kindred.png';
+import hashmallim_gore from '../assets/icons/combat-icons/specials/monsters/harshmalim/gore.png';
+import hashmallim_madness from '../assets/icons/combat-icons/specials/monsters/harshmalim/madness.png';
+import hashmallim_meteors from '../assets/icons/combat-icons/specials/monsters/harshmalim/meteors.png';
+import hashmallim_overload from '../assets/icons/combat-icons/specials/monsters/harshmalim/overload.png';
 import demonic_whispers from '../assets/icons/combat-icons/specials/monsters/witch/demonic_whispers.png';
 import transform from '../assets/icons/combat-icons/specials/monsters/witch/transform.png';
 import transform_transition_overlay from '../assets/icons/combat-icons/specials/monsters/witch/transform_transition_overlay.png';
@@ -870,6 +900,7 @@ import revive_sage from '../assets/icons/global skills/Sage/revive.png';
 import breacher_soldier from '../assets/icons/global skills/Soldier/breacher.png';
 import rally_soldier from '../assets/icons/global skills/Soldier/rally.png';
 import iron_will_soldier from '../assets/icons/global skills/Soldier/iron will.png';
+import arcane_sense_wizard from '../assets/icons/global skills/Wizard/unlock.png';
 import ley_tap_wizard from '../assets/icons/global skills/Wizard/ley tap.png';
 import dimensional_pocket_wizard from '../assets/icons/global skills/Wizard/dimensional pocket.png';
 import scry_wizard from '../assets/icons/global skills/Wizard/scry.png';
@@ -1432,6 +1463,7 @@ export {
     ornate_key,
     treasury_key,
     lockbox_key,
+    cryptic_key,
 
     tier_1_armor,
     tier_1_magical,
@@ -1533,6 +1565,13 @@ export {
     silver_chest,
     gold_chest,
     ornate_chest,
+    wooden_chest,
+    iron_chest,
+    steel_chest,
+    gilded_casket,
+    ancient_casket,
+    treasury_chest,
+    cryptic_chest,
     curse_doll,
     merchant,
     alchemist,
@@ -1619,6 +1658,10 @@ export {
     serpent_vision,
     whirlwind,
     induce_fear,
+    blalok_claw_strike,
+    blalok_bite,
+    blalok_regenerate,
+    blalok_sacrificial_mending,
 
     archway,
     bat_gate,
@@ -1878,6 +1921,14 @@ export {
     witch_dispell,
     demonic_whispers,
 
+    // Hashmallim
+    hashmallim_dominate,
+    hashmallim_entropic_kindred,
+    hashmallim_gore,
+    hashmallim_madness,
+    hashmallim_meteors,
+    hashmallim_overload,
+
     nether_bolt,
     undead_grasp,
     invoke_darkness,
@@ -1898,6 +1949,7 @@ export {
     breacher_soldier,
     rally_soldier,
     iron_will_soldier,
+    arcane_sense_wizard,
     ley_tap_wizard,
     dimensional_pocket_wizard,
     scry_wizard,
@@ -1926,6 +1978,14 @@ export {
     rake,
     silence,
     fear,
+
+    // ── Hagigah skills ────────────────────────────────────────────────────
+    hagigah_destitution,
+    hagigah_spineskin,
+    hagigah_summon_skulls,
+    hagigah_sphere_of_darkness,
+    hagigah_stomp,
+    hagigah_demon_mark,
 
     // ── Compound potions ───────────────────────────────────────────────────
     potion_healing_salve,

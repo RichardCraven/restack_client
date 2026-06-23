@@ -14,6 +14,7 @@ describe('Fireball Splash & Generic AI Basic Attack Range', () => {
     cm.animManagerRedux = { triggerAbility: jest.fn() };
     cm.hitCheck = jest.fn().mockReturnValue(true);
     cm.damageCheck = jest.fn((caller, target, dmg) => dmg);
+    cm._processCriticalStrike = jest.fn((attacker, target, damage) => ({ damage, isCrit: false }));
     cm.targetKilled = jest.fn();
     cm.wakeSleepingTarget = jest.fn();
   });

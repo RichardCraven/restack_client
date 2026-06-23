@@ -33,7 +33,10 @@ const teleportToBackLine = (caller, combatants, onTeleport) => {
     }
 }
 // const clone = (val) => { return JSON.parse(JSON.stringify(val)) }
-const MAX_DEPTH = 7
+export let MAX_DEPTH = 7;
+export function setMaxDepth(val) {
+    MAX_DEPTH = val;
+}
 // ^ index 7, actual col count is 8
 const MAX_LANES = 5
 const getSurroundings = (coords) => {

@@ -257,6 +257,7 @@ export function InventoryManager() {
         'major_key',
         'treasury_key',
         'lockbox_key',
+        'cryptic_key',
         'necrotic_key',
         'necrotic_master_key',
         'violet_key',
@@ -398,6 +399,13 @@ export function InventoryManager() {
             icon: 'treasury_key',
             name: 'treasury key',
             description: 'Treasury keys unlock treasure vaults and secure chambers'
+        },
+        cryptic_key: {
+            effect: 'key',
+            type: 'key',
+            icon: 'cryptic_key',
+            name: 'cryptic key',
+            description: 'A strange, cryptic key with mysterious runes etched upon its surface.'
         },
         lockbox_key: {
             effect: 'key',
@@ -1601,6 +1609,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: '+5 protection from curses',
             description: 'Crafted by the silver-tongued Elasi priestesses, this amulet whispers ancient wards against curses and binding magics.'
         },
         darkarrow_amulet: {
@@ -1611,6 +1620,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: '+5% increased ranged attack damage and +5% increased critical strike chance for ranged attacks',
             description: 'Named for the black arrows of the Shadow Wars, this amulet channels the swiftness and precision of those legendary archers.'
         },
         elemental_amulet: {
@@ -1621,6 +1631,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: 'gain 5% resistance to fire, cold, and lightning damage',
             description: 'A primal stone that channels the breath of all elements—fire, water, earth, and wind bound in harmonious balance.'
         },
         silver_amulet: {
@@ -1631,6 +1642,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: 'gain 5% resistance to piercing, slashing, and blunt damage',
             description: 'Forged from moonsilver and blessed by the Temple Wardens, this amulet glows softly and repels malevolent spirits.'
         },
         ruby_amulet: {
@@ -1641,6 +1653,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: 'gain 5% increased melee damage and +10% increased critical strike damage',
             description: 'A blood-red gem pulled from the volcanic heart of the Crimson Wastes, burning with primal fire and passion.'
         },
         acorn_amulet: {
@@ -1651,6 +1664,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: 'gain 5% increased damage to plants and beasts and +10% increased critical strike damage',
             description: 'A gift from the Fae, this acorn pulses with ancient forest magic and grants kinship with the natural world.'
         },
         voodoo_amulet: {
@@ -1660,7 +1674,7 @@ export function InventoryManager() {
             name: 'Voodoo Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 1,
+            effect: 'Doubles the duration of curses and debuffs on enemies, and reduces the duration of all boons on allies by half.',
             description: 'Imbued with sympathetic magic by the shadow priests of the Bayou, this amulet allows the wearer to touch distant threads of fate.'
         },
         yaga_amulet: {
@@ -1671,6 +1685,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: 'Critical hits on enemies have a 25% chance to trigger a hex that reduces their Armor and Magic Resistance by 20% for 10 seconds.',
             description: 'Given by the dreaded Yaga herself to those who survive her trials, this amulet carries her capricious blessing.'
         },
         temprance_amulet: {
@@ -1680,7 +1695,7 @@ export function InventoryManager() {
             name: 'Temprance Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 1,
+            effect: 'Reduces stamina cost of abilities by 20%.',
             description: 'Blessed by the monks of the Abstinent Order, this amulet brings clarity and balance to turbulent hearts.'
         },
         emerald_amulet: {
@@ -1690,7 +1705,7 @@ export function InventoryManager() {
             name: 'Emerald Amulet',
             equippedBy: null,
             subtype: 'amulet',
-            power: 1,
+            effect: 'Regenerates 2 HP per round.',
             description: 'A verdant stone treasured by the Druid circles, it thrums with the life force of eternal spring.'
         },
         maconic_amulet: {
@@ -1701,6 +1716,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 1,
+            effect: 'Grants +5 Defense.',
             description: 'Carved with the sacred symbols of the Stoneworkers\' Guild, this amulet draws strength from stone and mountain.'
         },
         warding_amulet: {
@@ -1711,6 +1727,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 2,
+            effect: 'Grants a shield of 25% max HP for 3 rounds on combat start.',
             description: 'A masterwork of protective enchantment from the Sentry Corps, it weaves barriers of pure force around the wearer.'
         },
         bloodvial_amulet: {
@@ -1721,6 +1738,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 2,
+            effect: 'Restores 50 HP if health falls below 30% (once per combat).',
             description: 'A chilling relic said to contain the essence of a fallen hero, it grants vitality bound to sacrifice and blood-debt.'
         },
         enchantress_amulet: {
@@ -1731,6 +1749,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 2,
+            effect: 'Reduces cooldowns of special abilities by 1 round.',
             description: 'Woven by the Enchantresses of the Coral Spire, this amulet bends the weave of magic itself around its bearer.'
         },
         goldclaw_amulet: {
@@ -1741,6 +1760,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 2,
+            effect: 'Critical hits on enemies have a 25% chance to trigger a 1x multiplier for gold rewards from combat.',
             description: 'Taken from the hoard of an ancient dragon, this amulet burns with avarice and grants the wearer uncanny fortune.'
         },
         clerics_amulet: {
@@ -1751,6 +1771,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 2,
+            effect: 'Healing amounts increased by 65%.',
             description: 'Sanctified in the High Cathedral, this amulet channels divine grace and mends the wounds of body and spirit.'
         },
         queens_amulet: {
@@ -1761,6 +1782,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 2,
+            effect: 'Increases Attack of adjacent allies by 15%.',
             description: 'Once worn by the last queen before the realm fractured, this amulet carries the weight of sovereignty and ancient command.'
         },
         ice_amulet: {
@@ -1771,6 +1793,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 3,
+            effect: 'Critical hits on enemies have a 25% chance to freeze them for 2 rounds.',
             description: 'Frozen from the very heart of the Eternal Glacier, this amulet imprisons a shard of primordial winter and slows all decay.'
         },
         hypnosis_amulet: {
@@ -1781,6 +1804,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 3,
+            effect: 'Critical hits on enemies have a 25% chance to charm them for 1 round.',
             description: 'Created by the Dream-Walkers of the Somnium, this amulet bends perception and weaves illusions of hauntingly beautiful deception.'
         },
         vampiric_amulet: {
@@ -1791,6 +1815,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 3,
+            effect: 'Critical hits restore HP equal to 50% of damage dealt. Passive: Melee attacks restore HP equal to 15% of damage dealt.',
             description: 'A terrible treasure from the Crimson Courts, this amulet thirsts for life and grants terrible strength to those who feed it.'
         },
         platinum_amulet: {
@@ -1801,6 +1826,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 3,
+            effect: 'Reduces incoming damage by 15%.',
             description: 'Forged from the rarest metal in the Star-Forges of the Celestial Smiths, this amulet blazes with otherworldly radiance.'
         },
         necrotic_amulet: {
@@ -1811,6 +1837,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 3,
+            effect: 'Critical hits have a 25% chance to poison target.',
             description: 'Crafted in the Catacombs by warlocks who dare commune with death itself, this amulet whispers promises of undying power.'
         },
         voidward_amulet: {
@@ -1821,6 +1848,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 4,
+            effect: 'Grants status ailment immunity.',
             description: 'A legendary artifact sealed with the last breath of a Void Guardian, it creates an impenetrable barrier against the abyss itself.'
         },
         celestial_amulet: {
@@ -1831,6 +1859,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 4,
+            effect: 'Critical hits have a 25% chance to cause a holy explosion (25 splash damage to adjacent).',
             description: 'Fallen from a distant star and blessed by the Heavenly Choir, this amulet bathes the wearer in divine light and cosmic purpose.'
         },
         dimensional_amulet: {
@@ -1841,6 +1870,7 @@ export function InventoryManager() {
             equippedBy: null,
             subtype: 'amulet',
             power: 4,
+            effect: '30% chance to immediately reset ability cooldown upon use.',
             description: 'Woven from the fabric of folded space by the Interdimensional Council, this amulet grants glimpses beyond the veil of reality.'
         },
 
@@ -2485,6 +2515,12 @@ export function InventoryManager() {
             icon: 'treasury_key',
             type: 'key',
             name: 'treasury key',
+            equippedBy: null,
+        },
+        cryptic_key: {
+            icon: 'cryptic_key',
+            type: 'key',
+            name: 'cryptic key',
             equippedBy: null,
         },
         lockbox_key: {

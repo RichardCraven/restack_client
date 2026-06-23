@@ -48,6 +48,8 @@ const getActiveEffects = (combatant, combatManager) => {
 };
 
 export default function FightersCombatGrid(props) {
+    const getLiveCombatant = (id) => (props.combatManager && typeof props.combatManager.getCombatant === 'function') ? props.combatManager.getCombatant(id) : null;
+
     // Delay removal of fighter portrait after death for death animation
     const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
     const [fullyDead, setFullyDead] = React.useState({});
@@ -262,7 +264,7 @@ export default function FightersCombatGrid(props) {
                                                 details?.berserkerActive && details?.feared && !details?.stunned ? 'berserk-feared' : '',
                                                 details?.berserkerActive && (!details?.feared || details?.stunned) ? 'berserk-active' : '',
                                                 !details?.berserkerActive && details?.feared ? 'feared' : '',
-                                                props.combatManager.getCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
+                                                getLiveCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
                                                 details?.stunned ? 'stunned' : '',
                                                 details?.drained ? 'drained' : '',
                                                 details?.regenerating ? 'regenerating' : '',
@@ -271,15 +273,15 @@ export default function FightersCombatGrid(props) {
                                                 details?.bleed ? 'bleeding' : '',
                                                 details?.frozen ? 'frozen' : '',
                                                 // ── Redux AI visual states ───────────────────────
-                                                props.combatManager.getCombatant(fighter.id)?.astralBeingActive ? 'astral-being' : '',
-                                                props.combatManager.getCombatant(fighter.id)?.astralProjectionActive ? 'astral-projection-active' : '',
+                                                getLiveCombatant(fighter.id)?.astralBeingActive ? 'astral-being' : '',
+                                                getLiveCombatant(fighter.id)?.astralProjectionActive ? 'astral-projection-active' : '',
                                             ].filter(Boolean).join(' ')
                                         }
                                         style={{
                                             backgroundImage: `url(${fighter.portrait})`,
                                             backgroundSize: (details?.berserkerActive && details?.feared && !details?.stunned) ? '100% 100%' : undefined,
                                             // Astral Being: portrait becomes translucent with cyan glow
-                                            opacity: props.combatManager.getCombatant(fighter.id)?.astralBeingActive ? 0.55 : 1,
+                                            opacity: getLiveCombatant(fighter.id)?.astralBeingActive ? 0.55 : 1,
                                             filter: [
                                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
                                                 `sepia(${props.portraitHoveredId === fighter.id ? '2' : '0'})`,
@@ -288,7 +290,7 @@ export default function FightersCombatGrid(props) {
                                             ].filter(Boolean).join(' '),
                                             zIndex: 300,
                                             // CSS transition for astral projection slide
-                                            transition: props.combatManager.getCombatant(fighter.id)?.astralProjectionActive
+                                            transition: getLiveCombatant(fighter.id)?.astralProjectionActive
                                                 ? 'opacity 0.4s ease-in-out'
                                                 : undefined,
                                             }} 
@@ -364,9 +366,9 @@ export default function FightersCombatGrid(props) {
 
                                         {/* Target indicator: tiny portrait of whoever this fighter is targeting */}
                                         {(() => {
-                                            const liveFighter = props.combatManager.getCombatant(fighter.id);
+                                            const liveFighter = getLiveCombatant(fighter.id);
                                             const targetId = liveFighter?.targetId;
-                                            const target = targetId ? props.combatManager.getCombatant(targetId) : null;
+                                            const target = targetId ? getLiveCombatant(targetId) : null;
                                             return target?.portrait && !target?.invisible && !details?.dead ? (
                                                 <div className="monster-target-indicator" style={{ zIndex: 310, position: 'absolute' }}>
                                                     <div
@@ -387,26 +389,26 @@ export default function FightersCombatGrid(props) {
                                             </div>
                                         )}
 
-                                        <div className="hp-bar">
-                                        {!props.getFighterDetails(fighter)?.dead && <div className="red-fill" 
-                                            style={{width: `${(props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%`}}
-                                            ></div>}
-                                        </div>
-                                        {props.combatManager && props.combatManager.round !== undefined ? (
-                                            <div className="endurance-bar" style={{ height: '6px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
-                                                {!props.getFighterDetails(fighter)?.dead && (
-                                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(props.getFighterDetails(fighter)?.endurance / props.getFighterDetails(fighter)?.maxEndurance) * 100}%` }}></div>
+                                        {!props.getFighterDetails(fighter)?.dead && (
+                                            <div className="indicators-wrapper" style={{ zIndex: 310, position: 'absolute', bottom: 0, left: 0, width: '100%', display: 'flex', flexDirection: 'column-reverse', pointerEvents: 'none' }}>
+                                                <div className="hp-bar" style={{ position: 'relative', height: '4px' }}>
+                                                    <div className="red-fill" style={{width: `${(props.getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%`}}></div>
+                                                </div>
+                                                {props.combatManager && props.combatManager.round !== undefined ? (
+                                                    <div className="endurance-bar" style={{ height: '2px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', position: 'relative' }}>
+                                                        <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(props.getFighterDetails(fighter)?.endurance / props.getFighterDetails(fighter)?.maxEndurance) * 100}%` }}></div>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <div className="energy-bar" style={{ position: 'relative', height: '4px' }}>
+                                                            <div className="yellow-fill" style={{width: `calc(${props.getFighterDetails(fighter)?.energy}%)`}}></div>
+                                                        </div>
+                                                        <div className="tempo-bar" style={{ position: 'relative', height: '4px' }}>
+                                                            <div className="tempo-indicator" style={{left: `calc(${props.getFighterDetails(fighter)?.tempo}% - 4px)`}}></div>
+                                                        </div>
+                                                    </>
                                                 )}
                                             </div>
-                                        ) : (
-                                            <>
-                                                <div className="energy-bar">
-                                                    {!props.getFighterDetails(fighter)?.dead && <div className="yellow-fill" style={{width: `calc(${props.getFighterDetails(fighter)?.energy}%)`}}></div>}
-                                                </div>
-                                                <div className="tempo-bar">
-                                                    {!props.getFighterDetails(fighter)?.dead &&  <div className="tempo-indicator" style={{left: `calc(${props.getFighterDetails(fighter)?.tempo}% - 4px)`}}></div>}
-                                                </div>
-                                            </>
                                         )}
 
 
@@ -419,7 +421,7 @@ export default function FightersCombatGrid(props) {
                     // Find any crew Summoner with an active rift portal
                     const summoner = props.crew.find(f => f.type === 'summoner');
                     if (!summoner) return null;
-                    const liveSummoner = props.combatManager.getCombatant(summoner.id);
+                    const liveSummoner = getLiveCombatant(summoner.id);
                     if (!liveSummoner?.riftPortalActive || !liveSummoner?.riftPortalPos) return null;
                     const { x, y } = liveSummoner.riftPortalPos; // {x, y} tile coords
                     const portalLeft = x * TILE_SIZE + (SHOW_TILE_BORDERS ? x * 2 : 0);

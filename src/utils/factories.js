@@ -81,7 +81,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     }
 
     let formattedAttacks = (typeof callbacks.formatAttacks === 'function')
-        ? callbacks.formatAttacks(rawAttacks)
+        ? callbacks.formatAttacks(rawAttacks, fighter)
         : rawAttacks;
 
     // Persisted Soldier records may contain duplicate sword swings from older data.
@@ -171,7 +171,7 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
         twinFingerStun_eras: 0,
     // Ensure attacks are always full objects, not just strings.
     attacks: formattedAttacks,
-    specials: (typeof formatSpecials === 'function') ? formatSpecials(rawSpecials) : rawSpecials,
+    specials: (typeof formatSpecials === 'function') ? formatSpecials(rawSpecials, fighter) : rawSpecials,
         specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
         targettedBy: [],
         passives: Array.isArray(fighter.passives) ? [...fighter.passives] : [],

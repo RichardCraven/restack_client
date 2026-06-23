@@ -85,7 +85,7 @@ export class AnimationManagerRedux {
    * @param {object} targetCoords  { x, y }
    * @param {string} abilityName   e.g. 'claw_strike', 'energy_drain'
    */
-   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null, hitResults = null, sphereCoords = null, negatedByBarrier = false) {
+   triggerAbility(sourceCoords, targetCoords, abilityName, isTargetLarge = false, targetOccupiedCoords = null, sourceUnitId = null, arrowType = null, customDuration = null, hitResults = null, sphereCoords = null, negatedByBarrier = false, casterId = null) {
     if (!sourceCoords || !targetCoords) return;
     const name = String(abilityName || '').toLowerCase().replace(/\s+/g, '_');
     this._currentTargetCoords = targetCoords;
@@ -100,6 +100,48 @@ export class AnimationManagerRedux {
       case 'betrayal_success':
         this._betrayalSuccess(targetCoords, sourceUnitId);
         break;
+      case 'dominate_success':
+        this._dominateSuccess(targetCoords, sourceUnitId, isTargetLarge, targetOccupiedCoords, casterId);
+        break;
+      case 'dominate_fail':
+        this._dominateFail(targetCoords, sourceUnitId, isTargetLarge, targetOccupiedCoords, casterId);
+        break;
+      case 'overload_success': {
+        const srcPx = this._px(sourceCoords);
+        const tgtPx = this._getImpactTargetPx(targetCoords);
+        const dx = tgtPx.x - srcPx.x;
+        const dy = tgtPx.y - srcPx.y;
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        this._emit({
+          type: 'overload_projectile',
+          srcPx,
+          tgtPx,
+          angle,
+          duration: 700
+        });
+        setTimeout(() => {
+          this._overloadSuccess(targetCoords, sourceUnitId, isTargetLarge, targetOccupiedCoords, casterId);
+        }, 700);
+        break;
+      }
+      case 'overload_fail': {
+        const srcPx = this._px(sourceCoords);
+        const tgtPx = this._getImpactTargetPx(targetCoords);
+        const dx = tgtPx.x - srcPx.x;
+        const dy = tgtPx.y - srcPx.y;
+        const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+        this._emit({
+          type: 'overload_projectile',
+          srcPx,
+          tgtPx,
+          angle,
+          duration: 700
+        });
+        setTimeout(() => {
+          this._overloadFail(targetCoords, sourceUnitId, isTargetLarge, targetOccupiedCoords, casterId);
+        }, 700);
+        break;
+      }
       case 'dragon_whirlwind':
         this._dragonWhirlwind(sourceCoords);
         break;
@@ -109,7 +151,7 @@ export class AnimationManagerRedux {
         this._meleeWhirlwind(sourceCoords, sourceUnitId, name);
         break;
       case 'bombard':
-        this._bombardEmission(sourceCoords, targetCoords, targetOccupiedCoords);
+        this._bombardEmission(sourceCoords, targetCoords, targetOccupiedCoords, sourceUnitId);
         break;
       case 'dragon_dispell':
         this._dragonDispell(sourceCoords, targetCoords);
@@ -319,6 +361,12 @@ export class AnimationManagerRedux {
       case 'shadow_curse':
         this._shadowCurse(sourceCoords, targetCoords);
         break;
+      case 'madness_cast':
+        this._madnessCast(sourceCoords, targetCoords);
+        break;
+      case 'madness_success':
+        this._madnessSuccess(targetCoords, sourceUnitId, isTargetLarge, targetOccupiedCoords);
+        break;
       default:
         // Generic melee hit for unknown abilities
         this._genericHit(sourceCoords, targetCoords);
@@ -397,6 +445,97 @@ export class AnimationManagerRedux {
       tgtPx,
       targetUnitId,
       duration: 1200
+    });
+  }
+
+  _dominateSuccess(targetCoords, targetUnitId, isTargetLarge, targetOccupiedCoords, casterId = null) {
+    const tgtPx = this._px(targetCoords, isTargetLarge);
+    this._emit({
+      type: 'dominate_success_overlay',
+      tgtPx,
+      targetUnitId,
+      isTargetLarge,
+      targetOccupiedCoords,
+      duration: 2000,
+      casterId
+    });
+  }
+
+  _dominateFail(targetCoords, targetUnitId, isTargetLarge, targetOccupiedCoords, casterId = null) {
+    const tgtPx = this._px(targetCoords, isTargetLarge);
+    this._emit({
+      type: 'dominate_fail_overlay',
+      tgtPx,
+      targetUnitId,
+      isTargetLarge,
+      targetOccupiedCoords,
+      duration: 1500,
+      casterId
+    });
+  }
+
+  _overloadSuccess(targetCoords, targetUnitId, isTargetLarge, targetOccupiedCoords, casterId = null) {
+    const tgtPx = this._px(targetCoords, isTargetLarge);
+    this._emit({
+      type: 'overload_success_overlay',
+      tgtPx,
+      targetUnitId,
+      isTargetLarge,
+      targetOccupiedCoords,
+      duration: 1800,
+      casterId: casterId || targetUnitId
+    });
+  }
+
+  _overloadFail(targetCoords, targetUnitId, isTargetLarge, targetOccupiedCoords, casterId = null) {
+    const tgtPx = this._px(targetCoords, isTargetLarge);
+    this._emit({
+      type: 'overload_fail_overlay',
+      tgtPx,
+      targetUnitId,
+      isTargetLarge,
+      targetOccupiedCoords,
+      duration: 1000,
+      casterId: casterId || targetUnitId
+    });
+  }
+
+  // ── Madness animations ──────────────────────────────────────────────────────
+  _madnessCast(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+    // Phase 1: Spiraling psychic orb projectile traveling to target center
+    this._emit({
+      type: 'madness_projectile',
+      srcPx,
+      tgtPx,
+      angle,
+      duration: 650
+    });
+
+    // Phase 2: Area fracture burst at the 2x2 center
+    setTimeout(() => {
+      this._emit({
+        type: 'madness_cast_overlay',
+        tgtPx,
+        duration: 1600
+      });
+    }, 550);
+  }
+
+  _madnessSuccess(targetCoords, targetUnitId, isTargetLarge, targetOccupiedCoords) {
+    const tgtPx = this._px(targetCoords, isTargetLarge);
+    this._emit({
+      type: 'madness_success_overlay',
+      tgtPx,
+      targetUnitId,
+      isTargetLarge,
+      targetOccupiedCoords,
+      duration: 1800
     });
   }
 
@@ -638,7 +777,7 @@ export class AnimationManagerRedux {
       fireMissile(300, 0, 2);
       fireMissile(450, 10, 3);
       fireMissile(600, 20, 4);
-    } else if (abilityName === 'nether_bolt') {
+    } else if (abilityName === 'nether_bolt' || abilityName === 'minor_magic_missile') {
       fireMissile(0, 0, 0);
     } else {
       fireMissile(0, -15, 0);
@@ -1354,6 +1493,21 @@ export class AnimationManagerRedux {
     }, sweepDelay);
   }
 
+  /**
+   * Emit a rift_pushback overlay for a single unit being pushed by the Djinn's rift.
+   * CombatGrid reads this to apply a fast, sweep-matched CSS transition instead of
+   * the default 1000ms spring, so the portrait slides smoothly with the sweeping line.
+   * @param {string} unitId         The combatant id being pushed
+   * @param {number} durationMs     Sweep duration in ms (so tile transition matches exactly)
+   */
+  triggerRiftPushback(unitId, durationMs) {
+    this._emit({
+      type: 'rift_pushback',
+      sourceUnitId: unitId,
+      duration: durationMs || 500,
+    });
+  }
+
   triggerTrialIconAppear(sphinxCoords) {
     const srcPx = this._px(sphinxCoords);
     // Place icon above sphinx's top row (offset by -TILE_SIZE * 1.5 in y)
@@ -1445,18 +1599,19 @@ export class AnimationManagerRedux {
     });
   }
 
-  _bombardEmission(sourceCoords, targetCoords, targetOccupiedCoords) {
+  _bombardEmission(sourceCoords, targetCoords, targetOccupiedCoords, casterId = null) {
     const centerPx = this._getHugeCenterPx(sourceCoords);
     const warningTilePxs = (targetOccupiedCoords || [targetCoords]).map(tc => this._px(tc));
     this._emit({
       type: 'bombard_emission',
       centerPx,
       warningTilePxs,
-      duration: 1500
+      duration: 1500,
+      casterId
     });
   }
 
-  triggerBombardStrike(targetCoords) {
+  triggerBombardStrike(targetCoords, isMeteors = false, casterId = null) {
     if (!Array.isArray(targetCoords)) return;
     const strikeTilePxs = targetCoords.map(tc => this._px(tc));
 
@@ -1470,7 +1625,9 @@ export class AnimationManagerRedux {
         // Random offsets in pixels (-30px to +30px)
         const left = Math.floor(Math.random() * 61) - 30;
         const top = Math.floor(Math.random() * 61) - 30;
-        const glowColor = Math.random() > 0.5 ? '#00ffff' : '#00bfff';
+        const glowColor = isMeteors 
+          ? (Math.random() > 0.5 ? '#ff4500' : '#ffffff') 
+          : (Math.random() > 0.5 ? '#00ffff' : '#00bfff');
         return { delay, width, left, top, glowColor };
       });
     };
@@ -1483,7 +1640,9 @@ export class AnimationManagerRedux {
     this._emit({
       type: 'bombard_strike',
       barrages,
-      duration: 1500
+      duration: 1500,
+      isMeteors,
+      casterId
     });
   }
 

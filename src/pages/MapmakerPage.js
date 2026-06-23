@@ -62,6 +62,7 @@ const KEYS = [
   { key: 'major_key',          name: 'major key' },
   { key: 'treasury_key',       name: 'treasury key' },
   { key: 'lockbox_key',        name: 'lockbox key' },
+  { key: 'cryptic_key',        name: 'cryptic key' },
   { key: 'necrotic_key',       name: 'necrotic key' },
   { key: 'necrotic_master_key',name: 'necrotic master key' },
   { key: 'violet_key',         name: 'violet key' },
@@ -135,6 +136,7 @@ class MapMakerPage extends React.Component {
       dungeons: [],
       miniboards: [],
       hoveredTileIdx: null,
+      previousHoveredTileIdx: null,
       hoveredTileFootprint: null,
       hoveredPaletteTileIdx: null,
       optionClickedIdx: null,
@@ -730,30 +732,40 @@ class MapMakerPage extends React.Component {
 
     const nextTiles = [...tiles];
     const sourceTile = nextTiles[fromTileId];
-    if (!sourceTile?.contains || sourceTile.contains.type !== 'passage') {
-      return tiles;
-    }
-
-    nextTiles[fromTileId] = {
-      ...sourceTile,
-      borders: {
-        ...this.getDefaultPassageBorders(sourceTile),
-        [fromSide]: '2px solid transparent'
-      }
-    };
-
     const targetTile = nextTiles[toTileId];
-    if (targetTile?.contains && targetTile.contains.type === 'passage') {
-      nextTiles[toTileId] = {
-        ...targetTile,
-        borders: {
-          ...this.getDefaultPassageBorders(targetTile),
-          [toSide]: '2px solid transparent'
-        }
-      };
+    let modified = false;
+
+    if (sourceTile && (sourceTile.contains?.type === 'passage' || sourceTile.contains?.type === 'obscured_space')) {
+      const currentBorder = sourceTile.borders?.[fromSide];
+      const isGold = currentBorder && String(currentBorder).includes('#d4a844');
+      if (!isGold) {
+        nextTiles[fromTileId] = {
+          ...sourceTile,
+          borders: {
+            ...this.getDefaultPassageBorders(sourceTile),
+            [fromSide]: '2px solid transparent'
+          }
+        };
+        modified = true;
+      }
     }
 
-    return nextTiles;
+    if (targetTile && (targetTile.contains?.type === 'passage' || targetTile.contains?.type === 'obscured_space')) {
+      const currentBorder = targetTile.borders?.[toSide];
+      const isGold = currentBorder && String(currentBorder).includes('#d4a844');
+      if (!isGold) {
+        nextTiles[toTileId] = {
+          ...targetTile,
+          borders: {
+            ...this.getDefaultPassageBorders(targetTile),
+            [toSide]: '2px solid transparent'
+          }
+        };
+        modified = true;
+      }
+    }
+
+    return modified ? nextTiles : tiles;
   }
 
   handleHover = (id, type) => {
@@ -869,6 +881,7 @@ class MapMakerPage extends React.Component {
         const pinnedIsVendor = this.state.pinnedOption && this.state.pinnedOption.type === 'vendor-tile';
         const vendorFootprint = pinnedIsVendor ? this.getVendorFootprintTileIds(id) : null;
         this.setState({
+          previousHoveredTileIdx: this.state.hoveredTileIdx !== id ? this.state.hoveredTileIdx : this.state.previousHoveredTileIdx,
           hoveredTileIdx: id,
           hoveredTileFootprint: vendorFootprint
         })
@@ -1464,6 +1477,15 @@ class MapMakerPage extends React.Component {
         })
         return
       } else if(passageToolOption){
+        if (passageToolOption.key === 'wall_breaker') {
+          if (this.state.previousHoveredTileIdx !== null && this.state.previousHoveredTileIdx !== undefined) {
+            const arr = this.breakPassageWall([...this.state.tiles], this.state.previousHoveredTileIdx, tile.id);
+            this.setState({
+              tiles: arr,
+              hoveredTileIdx: tile.id
+            });
+          }
+        }
         return
       } else if(shrineOption){
         let arr = [...this.state.tiles];

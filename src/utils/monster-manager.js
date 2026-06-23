@@ -193,7 +193,17 @@ export function MonsterManager() {
             key: 'ghoul',
             image_names: ['ghoul'],
             monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 4, str: 0, int: 0, dex: 0, fort: 0 },
+            stats: {
+                hp: 80,
+                atk: 7,
+                def: 6,
+                speed: 5,
+                willpower: 3,
+                str: 7,
+                int: 3,
+                dex: 6,
+                fort: 4
+            },
             level: 6,
             portrait: images['ghoul_portrait'],
             greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
@@ -205,10 +215,20 @@ export function MonsterManager() {
             key: 'blalok',
             image_names: ['blalok'],
             monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 3, str: 0, int: 0, dex: 0, fort: 0 },
+            stats: {
+                hp: 90,
+                atk: 7,
+                def: 6,
+                speed: 9,
+                willpower: 3,
+                str: 5,
+                int: 3,
+                dex: 6,
+                fort: 4
+            },
             level: 6,
             portrait: images['blalok'],
-            greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
+            greetings: [], deathCries: [], skills: ['claw_strike', 'bite', 'regenerate', 'sacrificial_mending'], weaknesses: [], drops: []
         },
         shade: {
             type: 'shade',
@@ -810,10 +830,10 @@ export function MonsterManager() {
             },
             level: 25,
             portrait: images['Hagigah'],
-            greetings: [],
-            deathCries: [],
-            skills: [],
-            weaknesses: [],
+            greetings: ['despair, puny ones.', 'It is finished.'],
+            deathCries: ['Noooooo!'],
+            skills: ['stomp', 'invoke_darkness', 'summon_skulls', 'destitution', 'hagigah_spineskin', 'demon_mark', 'rake'],
+            weaknesses: ['holy'],
             drops: []
         },
         hashmallim: {
@@ -828,7 +848,7 @@ export function MonsterManager() {
                 atk: 20,
                 def: 17,
                 speed: 6, // immense, slow but near-immune to damage
-                willpower: 0,
+                willpower: 20,
                 str: 12,
                 int: 6,
                 dex: 4,
@@ -836,10 +856,10 @@ export function MonsterManager() {
             },
             level: 25,
             portrait: images['Hashmallim'],
-            greetings: [],
-            deathCries: [],
-            skills: [],
-            weaknesses: [],
+            greetings: ['Another fly in the ointment...', 'I tire of these little gnats.'],
+            deathCries: ['Impossible...'],
+            skills: ['gore', 'rake', 'dominate', 'madness', 'overload', 'meteors', 'entropic_kindred'],
+            weaknesses: ['holy', 'fire'],
             drops: []
         },
     }

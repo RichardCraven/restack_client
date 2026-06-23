@@ -241,7 +241,7 @@ const skillsMatrix = {
         tier: 1,
         knownByDefault: true,
         name: 'Heal',
-        desc: 'Cast restorative magic on an ally.',
+        desc: 'Restore 30 HP to an ally.',
         icon: images['healing_hands'],
         cooldown: 2,
         initialCooldown: 1,
@@ -258,7 +258,7 @@ const skillsMatrix = {
         tier: 1,
         knownByDefault: true,
         name: 'Circle of Protection',
-        desc: 'Create a sanctuary shielding allies.',
+        desc: 'Create a sanctuary that increases the Defense of all allies within a 2.25-tile radius by 15 for 6 rounds.',
         icon: images['circle_of_protection'],
         cooldown: 12,
         duration: 'long',
@@ -551,8 +551,8 @@ const skillsMatrix = {
         id: 'arcane_sense',
         tier: 1,
         name: 'Arcane Sense',
-        desc: 'Identifies chest tier before opening.',
-        icon: images.eye,
+        desc: 'Magically read a chest\'s contents — reveals its tier and quality before you open it.',
+        icon: images.arcane_sense_wizard,
         cooldown: 0,
         type: 'passive',
         treePath: 'global',
@@ -800,7 +800,7 @@ const skillsMatrix = {
         name: 'Slash',
         desc: 'Execute a fast horizontal slash.',
         icon: images['barbarian_slash'],
-        cooldown: 2,
+        cooldown: 1,
         duration: 'instant',
         range: 'close',
         atkPercentage: 100,
@@ -1393,10 +1393,11 @@ const skillsMatrix = {
     sword_swing: {
         id: 'sword_swing',
         tier: 1,
+        knownByDefault: true,
         name: 'Sword Swing',
         desc: 'Execute a sword swing.',
         icon: images['shortsword'],
-        cooldown: 2,
+        cooldown: 1,
         duration: 'instant',
         range: 'close',
         atkPercentage: 100,
@@ -1426,6 +1427,21 @@ const skillsMatrix = {
         range: 'self',
         type: 'heal',
         effect: ['heal_self']
+    },
+    sacrificial_mending: {
+        id: 'sacrificial_mending',
+        tier: 2,
+        name: 'Sacrificial Mending',
+        desc: 'Drain 20 HP from self and grant it to an adjacent aberration ally, then trigger Regenerate on the recipient.',
+        icon: images.blalok_sacrificial_mending,
+        cooldown: 8,
+        initialCooldown: 4,
+        duration: 'instant',
+        range: 'close',
+        type: 'heal',
+        // Handled entirely by bespoke logic in _aiBlalok / useAbility.
+        // Only usable when an aberration/blalok ally is in close range.
+        effect: ['sacrificial_mending']
     },
     gore: {
         id: 'gore',
@@ -1512,7 +1528,7 @@ const skillsMatrix = {
         duration: 'short',
         range: 'medium',
         type: 'debuff',
-        effect: { type: 'poison', chance: 100, duration: 'short' }
+        effect: { type: 'drain', chance: 100 }
     },
     // Ogre
     stomp: {
@@ -1976,6 +1992,98 @@ const skillsMatrix = {
         icon: images.malevolent_presence,
         type: 'passive',
         isPassive: true
+    },
+    dominate: {
+        id: 'dominate',
+        name: 'Dominate',
+        desc: 'Cast a dominate spell on a crew member for 2 rounds. Upon expiration, the target makes a contested willpower check to break free; on failure, they remain dominated for 1 more round.',
+        icon: images.hashmallim_dominate,
+        cooldown: 15,
+        initialCooldown: 4,
+        duration: 2,
+        range: 'far',
+        type: 'debuff',
+        effect: { type: 'dominate', duration: 2 }
+    },
+    madness: {
+        id: 'madness',
+        name: 'Madness',
+        desc: 'Project a fracturing psychic field into a 2×2 area, pitting the Hashmallim\'s terrible will against the minds of all within. Those who fail the contested mentality check are consumed by the Madness debuff for 10 eras — each round they have a 50% chance to switch sides and attack their own allies in a fit of uncontrollable violence, and a 25% chance to turn on themselves, dealing self-inflicted damage in a moment of psychotic rage.',
+        icon: images.hashmallim_madness,
+        cooldown: 14,
+        initialCooldown: 6,
+        duration: 'long',
+        range: 'medium',
+        type: 'debuff',
+        effect: { type: 'madness', duration: 'long' }
+    },
+    overload: {
+        id: 'overload',
+        name: 'Overload',
+        desc: 'Unleash energy dealing raw damage equal to stamina used so far (max - current). Bypasses defense. If target is above 50% stamina, splits damage between HP and stamina, otherwise deals full damage to HP.',
+        icon: images.hashmallim_overload,
+        cooldown: 8,
+        initialCooldown: 2,
+        duration: 'instant',
+        range: 'medium',
+        type: 'damage'
+    },
+    meteors: {
+        id: 'meteors',
+        name: 'Meteors',
+        desc: 'Strike 3 delayed tiles dealing 120% ATK damage after 1 round. Uses a white/orange visual theme.',
+        icon: images.hashmallim_meteors,
+        cooldown: 8,
+        initialCooldown: 4,
+        duration: 'instant',
+        range: 'far',
+        type: 'damage'
+    },
+    entropic_kindred: {
+        id: 'entropic_kindred',
+        name: 'Entropic Kindred',
+        desc: 'Once per combat: Add three empty columns to the center of the board, pushing the monster and minion units right to distance them from enemies.',
+        icon: images.hashmallim_entropic_kindred,
+        cooldown: 15,
+        initialCooldown: 10,
+        duration: 'instant',
+        range: 'far',
+        type: 'utility'
+    },
+
+    // ── Hagigah skills ──────────────────────────────────────────────────────
+    destitution: {
+        id: 'destitution',
+        name: 'Destitution',
+        desc: 'Drain all enemies of 50% of their current stamina and convert it into raw damage bypassing defense.',
+        icon: images['hagigah_destitution'],
+        cooldown: 10,
+        initialCooldown: 3,
+        duration: 'instant',
+        range: 'all',
+        type: 'damage'
+    },
+    hagigah_spineskin: {
+        id: 'hagigah_spineskin',
+        name: 'Spineskin',
+        desc: 'Hagigah sprouts a dense layer of bone spines. For 3 rounds, any melee attack against Hagigah deals 25% of its own raw damage back to the attacker.',
+        icon: images['hagigah_spineskin'],
+        cooldown: 10,
+        initialCooldown: 5,
+        duration: 'short',
+        range: 'self',
+        type: 'buff'
+    },
+    summon_skulls: {
+        id: 'summon_skulls',
+        name: 'Summon Skulls',
+        desc: 'Conjure 1–2 flaming skull minions on adjacent free tiles.',
+        icon: images['hagigah_summon_skulls'],
+        cooldown: 8,
+        initialCooldown: 2,
+        duration: 'instant',
+        range: 'self',
+        type: 'utility'
     }
 };
 

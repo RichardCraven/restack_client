@@ -317,7 +317,9 @@ export function CrewManager(){
         crewMember.justLeveled = true;
         crewMember._recentLevelGains = crewMember._recentLevelGains || [];
         crewMember._recentLevelGains.push(gains);
-    // Increase baseHp by 5 on level-up, then recompute derived stats
+        crewMember.pendingLevelUpPicks = crewMember.pendingLevelUpPicks || [];
+        crewMember.pendingLevelUpPicks.push(crewMember.level);
+        // Increase baseHp by 5 on level-up, then recompute derived stats
     try {
         crewMember.stats.baseHp = (typeof crewMember.stats.baseHp === 'number') ? crewMember.stats.baseHp + 5 : ((crewMember.type === 'barbarian') ? 12 + 5 : 10 + 5);
     } catch (e) {
@@ -616,7 +618,7 @@ export function CrewManager(){
             portrait: images['soldier_portrait'],
             inventory: [],
             passives: ['inspiring_force', 'fortify'],
-            skills: ['slash', 'shield_slam', 'fist_of_honor', 'imbued_strike'],
+            skills: ['sword_swing', 'shield_slam', 'fist_of_honor', 'imbued_strike'],
             weaknesses: ['ice', 'electricity', 'blood_magic'],
             description: "Once the captain of the royal army's legendary vangard battalion, Sardonis has a reputation for fair leadership and honor.",
             specialActions: [],
@@ -689,7 +691,7 @@ export function CrewManager(){
             stats: { str: 8, int: 3, dex: 4, fort: 6, baseHp: 52, experience: 0, attackSpeedMult: 2 },
             portrait: images['barbarian_portrait'],
             inventory: [],
-            skills: ['barbarian_slash', 'barbarian_cleave', 'barbarian_berserker'],
+            skills: ['sword_swing', 'barbarian_cleave', 'barbarian_berserker'],
             passives: ['fury', 'iron_gut'],
             weaknesses: ['ice', 'curse', 'psionic'],
             description: "Ulaf is the son of the chieftan of the Rootsnarl Clan. He is on a journey to prove his mettle and one day take his father's place",

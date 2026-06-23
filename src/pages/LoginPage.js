@@ -176,12 +176,9 @@ export default function LoginPage(props) {
       setPane('confirmation')
     }, 90)
 
-    console.log('loginName', loginName, 'loginPass', 'validUser: ', validUser);
-    console.log('ok but registername: ', registerName, 'registerPass: ', registerPass1);
     props.refreshAllUsers()
     let scopedValidUser = validUser
     setTimeout(()=>{
-      console.log('barnacle baily');
       // setSuccessConfirmation({x: '200px', opacity: 0})
 
       // setLname({x: '0px', opacity: 1})
@@ -189,9 +186,6 @@ export default function LoginPage(props) {
       //       setLpass({x: '0px', opacity: 1})
       //     }, 90)
       // props.login({username: registerName, password:registerPass1})
-      console.log('valid user',   );
-      console.log('scopedValidUser', scopedValidUser);
-      console.log('ok try this: ', registerRes);
       props.loginFromRegister(registerRes)
     },1500)
 

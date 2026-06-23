@@ -24,6 +24,75 @@ const WEAKNESS_SYMBOLS = {
     curse: '💀'
 };
 
+const showWeaknessPopup = (type, label) => {
+    const existing = document.getElementById('weakness-popup');
+    if (existing) existing.remove();
+    const existingOverlay = document.getElementById('weakness-popup-overlay');
+    if (existingOverlay) existingOverlay.remove();
+
+    const definitions = {
+        fire: 'Deals fire damage and can burn targets, causing damage over time.',
+        ice: 'Deals cold damage and slows down movement and action speeds.',
+        electricity: 'Deals lightning damage, with potential to chain to nearby units.',
+        arcane: 'Pure magical energy that bypasses standard physical armor.',
+        psionic: 'Attacks the target\'s mind, triggering mental debuffs or bypassing physical defenses.',
+        holy: 'Sacred energy that is highly effective against undead, demons, and aberrations.',
+        physical: 'Standard physical damage from weapons, heavily reduced by armor.',
+        crushing: 'Heavy blunt force that damages stamina and has a high chance to stun.',
+        cutting: 'Sharp physical damage that can cause targets to bleed over time.',
+        blood_magic: 'Dark magic that drains the target\'s health to heal the caster.',
+        curse: 'Malevolent magic that reduces target statistics or infects them with debuffs.'
+    };
+
+    const desc = definitions[type.toLowerCase().replace('-', '_')] || 'A damage type that this unit is vulnerable to, taking increased damage.';
+
+    const popup = document.createElement('div');
+    popup.id = 'weakness-popup';
+    popup.style.position = 'fixed';
+    popup.style.left = '50%';
+    popup.style.top = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.style.zIndex = '999999';
+    popup.style.background = '#18181b';
+    popup.style.color = '#fff';
+    popup.style.padding = '20px';
+    popup.style.borderRadius = '12px';
+    popup.style.border = '1px solid #c084fc';
+    popup.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(192, 132, 252, 0.2)';
+    popup.style.maxWidth = '300px';
+    popup.style.fontFamily = "'Inter', system-ui, -apple-system, sans-serif";
+    popup.style.textAlign = 'center';
+
+    popup.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 8px;">${WEAKNESS_SYMBOLS[type.toLowerCase().replace('-', '_')] || '❓'}</div>
+        <div style="font-weight: 700; font-size: 18px; color: #c084fc; margin-bottom: 8px;">${label}</div>
+        <div style="font-size: 14px; color: #d4d4d8; line-height: 1.5; margin-bottom: 16px;">${desc}</div>
+        <button id="close-weakness-popup" style="background: #c084fc; color: #18181b; border: none; padding: 6px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">Close</button>
+    `;
+
+    document.body.appendChild(popup);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'weakness-popup-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.left = '0';
+    overlay.style.top = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.zIndex = '999998';
+    overlay.style.background = 'rgba(0, 0, 0, 0.6)';
+    overlay.style.backdropFilter = 'blur(2px)';
+    document.body.appendChild(overlay);
+
+    const closePopup = () => {
+        popup.remove();
+        overlay.remove();
+    };
+
+    document.getElementById('close-weakness-popup').onclick = closePopup;
+    overlay.onclick = closePopup;
+};
+
 const renderWeaknessSymbols = (weaknesses) => {
     if (!weaknesses || !Array.isArray(weaknesses)) return null;
     return weaknesses.map((w, idx) => {
@@ -35,10 +104,11 @@ const renderWeaknessSymbols = (weaknesses) => {
             <span 
                 key={idx} 
                 title={label} 
+                onClick={() => showWeaknessPopup(type, label)}
                 style={{ 
                     marginRight: '6px', 
                     fontSize: '1.2em', 
-                    cursor: 'help', 
+                    cursor: 'pointer', 
                     display: 'inline-block' 
                 }}
             >
@@ -179,24 +249,59 @@ submit = async () => {
         if (!member.inventory) member.inventory = [];
         if (member.inventory.length === 0) {
             let itemKey = null;
+            const isBow = (k, item) => k.endsWith('_bow') || k === 'merklins_peacekeeper' || item.range === 'far';
+            
             if (member.type === 'soldier' || member.type === 'barbarian') {
-                const wKeys = Object.keys(allItems).filter(k => allItems[k] && allItems[k].type === 'weapon' && allItems[k].tier === 1);
-                if (wKeys.length) itemKey = wKeys[Math.floor(Math.random() * wKeys.length)];
-            } else if (member.type === 'sage' || member.type === 'wizard') {
-                const aKeys = Object.keys(allItems).filter(k => allItems[k] && allItems[k].type === 'armor' && allItems[k].tier === 1);
-                if (aKeys.length) itemKey = aKeys[Math.floor(Math.random() * aKeys.length)];
-            } else if (['ranger', 'monk', 'summoner', 'engineer'].includes(member.type)) {
-                const combined = Object.keys(allItems).filter(k => allItems[k] && (allItems[k].type === 'boots' || allItems[k].type === 'helmet') && allItems[k].tier === 1);
-                if (combined.length) itemKey = combined[Math.floor(Math.random() * combined.length)];
+                // Melee Fighter: swords/axes (no bows) and helms/shields
+                const pool = Object.keys(allItems).filter(k => {
+                    const item = allItems[k];
+                    if (!item || item.tier !== 1) return false;
+                    const isMartialWeapon = item.type === 'weapon' && !isBow(k, item);
+                    const isMartialArmor = item.type === 'armor' && (item.subtype === 'shield' || item.subtype === 'helm');
+                    return isMartialWeapon || isMartialArmor;
+                });
+                if (pool.length) itemKey = pool[Math.floor(Math.random() * pool.length)];
+            } else if (member.type === 'ranger') {
+                // Ranger Fighter: bows only and helms/shields
+                const pool = Object.keys(allItems).filter(k => {
+                    const item = allItems[k];
+                    if (!item || item.tier !== 1) return false;
+                    const isRangerWeapon = item.type === 'weapon' && isBow(k, item);
+                    const isMartialArmor = item.type === 'armor' && (item.subtype === 'shield' || item.subtype === 'helm');
+                    return isRangerWeapon || isMartialArmor;
+                });
+                if (pool.length) itemKey = pool[Math.floor(Math.random() * pool.length)];
+            } else if (['sage', 'wizard', 'monk', 'summoner', 'engineer'].includes(member.type)) {
+                // Non-martial: amulets, masks, tabards, boots
+                const pool = Object.keys(allItems).filter(k => {
+                    const item = allItems[k];
+                    if (!item || item.tier !== 1) return false;
+                    return ['amulet', 'mask', 'tabard', 'boots'].includes(item.subtype);
+                });
+                if (pool.length) itemKey = pool[Math.floor(Math.random() * pool.length)];
             }
 
             if (itemKey && allItems[itemKey]) {
                 const item = JSON.parse(JSON.stringify(allItems[itemKey]));
                 item.equippedBy = member.id;
-                if (item.type === 'weapon') item.equippedSlot = 'right';
-                if (item.type === 'armor') item.equippedSlot = 'body';
-                if (item.type === 'helmet') item.equippedSlot = 'head';
-                if (item.type === 'boots') item.equippedSlot = 'feet';
+                
+                // Determine accurate equippedSlot
+                if (item.type === 'weapon') {
+                    item.equippedSlot = 'right';
+                } else if (item.subtype === 'shield') {
+                    item.equippedSlot = 'left';
+                } else if (item.subtype === 'helm' || item.subtype === 'mask') {
+                    item.equippedSlot = 'head';
+                } else if (item.subtype === 'tabard') {
+                    item.equippedSlot = 'chest';
+                } else if (item.subtype === 'boots') {
+                    item.equippedSlot = 'boots';
+                } else if (item.subtype === 'amulet' || item.subtype === 'charm') {
+                    item.equippedSlot = 'ancillary-left';
+                } else {
+                    item.equippedSlot = 'right'; // fallback
+                }
+                
                 member.inventory.push(item);
             }
         }

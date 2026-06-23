@@ -29,6 +29,106 @@ const STAT_META = {
     fort: { label: 'FORT', full: 'Fortitude',  color: '#fb923c', glyph: '⛉' },
 };
 
+// ─── Stat explanations ────────────────────────────────────────────────────────
+const STAT_DESCRIPTIONS = {
+    str: {
+        title: 'Strength (STR)',
+        color: '#ef4444',
+        glyph: '⚔',
+        points: [
+            { label: 'Primary Class Stat', text: 'Main stat for Soldier and Barbarian. Secondary for Monk, Ranger, and Engineer.' },
+            { label: 'Physical Damage', text: 'Directly scales damage for melee attacks and physical weapon abilities.' },
+            { label: 'Defense Scaling', text: 'Provides base Defense for Soldier, Barbarian, Wizard, Ranger, and Sage.' },
+            { label: 'Gear Requirement', text: 'Required to equip heavier weapons and protective armor.' }
+        ]
+    },
+    int: {
+        title: 'Intelligence (INT)',
+        color: '#818cf8',
+        glyph: '✦',
+        points: [
+            { label: 'Primary Class Stat', text: 'Main stat for Wizard, Summoner, and Sage. Secondary for Engineer.' },
+            { label: 'Spell Damage', text: 'Scales all elemental spells, magic missiles, and arcane ability damage.' },
+            { label: 'Willpower Stat', text: 'Scales max Willpower to resist status effects and spell checks.' },
+            { label: 'Arcane Mastery', text: 'Powers scroll scribing, glyph etching, and advanced spell slots.' }
+        ]
+    },
+    dex: {
+        title: 'Dexterity (DEX)',
+        color: '#34d399',
+        glyph: '◈',
+        points: [
+            { label: 'Primary Class Stat', text: 'Main stat for Monk, Ranger, and Engineer. Secondary for Wizard and Sage.' },
+            { label: 'Action Speed', text: 'Directly increases turn-queue Speed, allowing more frequent actions.' },
+            { label: 'Defense Stat', text: 'Primary Defense scaling for Monk and Wizard. Secondary for Soldier and Engineer.' },
+            { label: 'Finesse Attacks', text: 'Scales physical projectile attacks like arrows and throwing daggers.' }
+        ]
+    },
+    fort: {
+        title: 'Fortitude (FORT)',
+        color: '#fb923c',
+        glyph: '⛉',
+        points: [
+            { label: 'Primary Class Stat', text: 'Main stat for Sage. Secondary for Soldier, Barbarian, and Ranger.' },
+            { label: 'Maximum HP & Energy', text: 'Directly increases max Hitpoints and skill Energy.' },
+            { label: 'Vitality / Endurance', text: 'Increases Vitality (max combat rounds before exhaustion).' },
+            { label: 'Ailment Resistance', text: 'Grants % chance to resist Poison, Stun, and Sleep.' }
+        ]
+    }
+};
+
+function renderStatTooltip(statKey, positionClass = '') {
+    const desc = STAT_DESCRIPTIONS[statKey];
+    if (!desc) return null;
+    return (
+        <div className={`lus-stat-tooltip ${positionClass}`} style={{ borderColor: desc.color }}>
+            <div className="lus-tooltip-header" style={{ color: desc.color }}>
+                <span className="lus-tooltip-glyph">{desc.glyph}</span>
+                <span className="lus-tooltip-title">{desc.title}</span>
+            </div>
+            <div className="lus-tooltip-body">
+                {desc.points.map((p, i) => (
+                    <div key={i} className="lus-tooltip-row">
+                        <div className="lus-tooltip-row-title">{p.label}</div>
+                        <div className="lus-tooltip-row-desc">{p.text}</div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function renderTooltipForStats(stats, positionClass = '') {
+    const statKeys = stats.map(s => s.stat);
+    if (statKeys.length === 1) {
+        return renderStatTooltip(statKeys[0], positionClass);
+    }
+    return (
+        <div className={`lus-stat-tooltip lus-stat-tooltip-multi ${positionClass}`}>
+            {statKeys.map((k, idx) => {
+                const desc = STAT_DESCRIPTIONS[k];
+                if (!desc) return null;
+                return (
+                    <div key={k} className="lus-tooltip-section" style={{ borderLeft: idx > 0 ? '1px solid rgba(255,255,255,0.1)' : 'none', paddingLeft: idx > 0 ? '12px' : '0' }}>
+                        <div className="lus-tooltip-header" style={{ color: desc.color }}>
+                            <span className="lus-tooltip-glyph">{desc.glyph}</span>
+                            <span className="lus-tooltip-title">{desc.title}</span>
+                        </div>
+                        <div className="lus-tooltip-body">
+                            {desc.points.map((p, i) => (
+                                <div key={i} className="lus-tooltip-row">
+                                    <div className="lus-tooltip-row-title">{p.label}</div>
+                                    <div className="lus-tooltip-row-desc">{p.text}</div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
 // ─── Class primary stat pools ─────────────────────────────────────────────────
 const CLASS_STAT_POOLS = {
     wizard:    ['int', 'dex'],
@@ -304,6 +404,11 @@ class LevelUpScreen extends Component {
             });
         }
 
+        // Clear this level from pending picks
+        if (crewMember && Array.isArray(crewMember.pendingLevelUpPicks)) {
+            crewMember.pendingLevelUpPicks = crewMember.pendingLevelUpPicks.filter(lvl => lvl !== entry.toLevel);
+        }
+
         // Persist to meta
         try {
             const meta = getMeta() || {};
@@ -331,11 +436,12 @@ class LevelUpScreen extends Component {
                         {['str', 'fort'].map(stat => (
                             <button
                                 key={stat}
-                                className={`lus-sub-btn ${dustSubChoice === stat ? 'selected' : ''}`}
+                                className={`lus-sub-btn lus-tooltip-trigger ${dustSubChoice === stat ? 'selected' : ''}`}
                                 onClick={() => this.setState({ dustSubChoice: stat })}
                             >
                                 <span className="lus-sub-glyph" style={{ color: STAT_META[stat].color }}>{STAT_META[stat].glyph}</span>
                                 +2 {STAT_META[stat].label}
+                                {renderStatTooltip(stat)}
                             </button>
                         ))}
                     </div>
@@ -351,11 +457,12 @@ class LevelUpScreen extends Component {
                         {['int', 'dex'].map(stat => (
                             <button
                                 key={stat}
-                                className={`lus-sub-btn ${dustSubChoice === stat ? 'selected' : ''}`}
+                                className={`lus-sub-btn lus-tooltip-trigger ${dustSubChoice === stat ? 'selected' : ''}`}
                                 onClick={() => this.setState({ dustSubChoice: stat })}
                             >
                                 <span className="lus-sub-glyph" style={{ color: STAT_META[stat].color }}>{STAT_META[stat].glyph}</span>
                                 +2 {STAT_META[stat].label}
+                                {renderStatTooltip(stat)}
                             </button>
                         ))}
                     </div>
@@ -475,10 +582,14 @@ class LevelUpScreen extends Component {
                                     <span className="lus-level-to">{toLevel}</span>
                                 </div>
                                 <div className="lus-base-gains">
-                                    <span className="lus-gain-item">+5 HP</span>
+                                    <span className="lus-gain-item lus-tooltip-trigger" style={{ color: STAT_META.fort.color }}>
+                                        +5 HP
+                                        {renderStatTooltip('fort', 'lus-tooltip-down')}
+                                    </span>
                                     {Object.keys(aggGains).map(k => (
-                                        <span key={k} className="lus-gain-item" style={{ color: STAT_META[k]?.color || '#fff' }}>
+                                        <span key={k} className="lus-gain-item lus-tooltip-trigger" style={{ color: STAT_META[k]?.color || '#fff' }}>
                                             +{aggGains[k]} {k.toUpperCase()}
+                                            {renderStatTooltip(k, 'lus-tooltip-down')}
                                         </span>
                                     ))}
                                 </div>
@@ -499,7 +610,7 @@ class LevelUpScreen extends Component {
                                 return (
                                     <button
                                         key={opt.key}
-                                        className={`lus-attr-card ${isSelected ? 'selected' : ''}`}
+                                        className={`lus-attr-card lus-tooltip-trigger ${isSelected ? 'selected' : ''}`}
                                         onClick={() => this.setState({ selectedAttr: idx })}
                                         style={{ '--card-color': statColor }}
                                     >
@@ -511,6 +622,7 @@ class LevelUpScreen extends Component {
                                             {opt.stats.map(s => STAT_META[s.stat]?.full).join(' & ')}
                                         </div>
                                         {isSelected && <div className="lus-attr-check">✓</div>}
+                                        {renderTooltipForStats(opt.stats)}
                                     </button>
                                 );
                             })}

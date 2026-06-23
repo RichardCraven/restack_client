@@ -1089,6 +1089,16 @@ button{
         background: rgba(255,255,255,0.05);
         border: 1px solid rgba(255,255,255,0.1);
         border-radius: 4px;
+        height: 102px;
+        max-height: 102px;
+        min-height: 102px;
+        box-sizing: border-box;
+        overflow: hidden;
+
+        &.enemy-info-panel--empty {
+          background: transparent;
+          border-color: transparent;
+        }
 
         .enemy-info-portrait{
           width: 80px;
@@ -1103,11 +1113,28 @@ button{
           flex-direction: column;
           gap: 4px;
           text-align: left;
+          height: 80px;
+          max-height: 80px;
+          overflow: hidden;
+          flex: 1;
+
+          .enemy-info-columns {
+            height: 100%;
+            overflow: hidden;
+
+            .enemy-info-col-right {
+              overflow-y: auto;
+              max-height: 80px;
+              &::-webkit-scrollbar { width: 4px; }
+              &::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 2px; }
+            }
+          }
 
           .enemy-info-type{
             font-size: 15px;
             font-weight: bold;
             text-transform: capitalize;
+            white-space: nowrap;
           }
 
           .enemy-info-stat{
@@ -1116,6 +1143,7 @@ button{
           }
         }
       }
+
 
       .monster-roster-label{
         font-size: 11px;

@@ -102,6 +102,13 @@ export function MapMaker(props){
         { key: 'silver_chest', name: 'Silver chest', image: 'silver_chest' },
         { key: 'gold_chest', name: 'Gold chest', image: 'gold_chest' },
         { key: 'ornate_chest', name: 'Ornate chest', image: 'ornate_chest' },
+        { key: 'wooden_chest', name: 'Wooden chest', image: 'wooden_chest' },
+        { key: 'iron_chest', name: 'Iron chest', image: 'iron_chest' },
+        { key: 'steel_chest', name: 'Steel chest', image: 'steel_chest' },
+        { key: 'ancient_casket', name: 'Ancient casket', image: 'ancient_casket' },
+        { key: 'gilded_casket', name: 'Gilded casket', image: 'gilded_casket' },
+        { key: 'treasury_chest', name: 'Treasury chest', image: 'treasury_chest' },
+        { key: 'cryptic_chest', name: 'Cryptic chest', image: 'cryptic_chest' }
     ];
 
     this.vendorOptions = [

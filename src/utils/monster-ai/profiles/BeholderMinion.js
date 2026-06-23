@@ -552,8 +552,8 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
         // ── check for cloning specials ──────────────────────────────────────
         if (!caller._hasCloned && !caller.dead && Array.isArray(caller.specials)) {
             // bifurcate fires as soon as energy is full (100) — no cooldown gate needed
-            const bifSpecial = caller.specials.find(s => s && s.name === 'bifurcate');
-            const dupSpecial = caller.specials.find(s => s && s.name === 'duplicate');
+            const bifSpecial = caller.specials.find(s => s && (s.id === 'bifurcate' || (s.name || '').toLowerCase() === 'bifurcate'));
+            const dupSpecial = caller.specials.find(s => s && (s.id === 'duplicate' || (s.name || '').toLowerCase() === 'duplicate'));
 
             if (bifSpecial && (caller.energy || 0) >= 100) {
                 // Pass cooldown_position = 100 so the guard inside triggerBifurcate passes
@@ -572,7 +572,7 @@ export function BeholderMinion(data, utilMethods, animationManager, overlayManag
         // in far-range same lane, AND a 33% dice roll passes.
         // If the roll fails we save the energy toward bifurcate instead.
         if (!caller.dead && Array.isArray(caller.specials)) {
-            const mmSpecial = caller.specials.find(s => s && s.name === 'minor magic missile');
+            const mmSpecial = caller.specials.find(s => s && (s.id === 'minor_magic_missile' || (s.name || '').toLowerCase() === 'minor magic missile'));
             const target = combatants[caller.targetId];
             if (mmSpecial && mmSpecial.cooldown_position >= 100 && target && !target.dead) {
                 const sameLane = (caller.coordinates.y === target.coordinates.y);

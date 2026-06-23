@@ -721,3 +721,155 @@
         justify-content: center;
     }
 }
+
+/* ── Stat Tooltip System ── */
+.lus-tooltip-trigger {
+    position: relative;
+    cursor: help;
+}
+
+.lus-stat-tooltip {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    width: 290px;
+    background: linear-gradient(145deg, rgba(16, 12, 30, 0.98) 0%, rgba(9, 6, 18, 0.99) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    padding: 14px;
+    box-shadow: 
+        0 15px 35px rgba(0, 0, 0, 0.65), 
+        0 0 0 1px rgba(255, 255, 255, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.08);
+    z-index: 10000;
+    transition: all 0.22s cubic-bezier(0.25, 0.8, 0.25, 1);
+    font-family: 'Inter', sans-serif;
+    color: #e2e0e8;
+    text-shadow: none;
+    text-transform: none;
+    font-weight: normal;
+    text-align: left;
+    backdrop-filter: blur(10px);
+    line-height: normal;
+    
+    /* Position above trigger by default */
+    bottom: 115%;
+    left: 50%;
+    transform: translateX(-50%) translateY(10px) scale(0.96);
+    
+    &::after {
+        content: '';
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 6px;
+        border-style: solid;
+        border-color: rgba(9, 6, 18, 0.99) transparent transparent transparent;
+    }
+}
+
+.lus-tooltip-trigger:hover .lus-stat-tooltip {
+    visibility: visible;
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Tooltip Downward Placement */
+.lus-stat-tooltip.lus-tooltip-down {
+    bottom: auto;
+    top: 125%;
+    transform: translateX(-50%) translateY(-10px) scale(0.96);
+    
+    &::after {
+        top: auto;
+        bottom: 100%;
+        border-color: transparent transparent rgba(16, 12, 30, 0.98) transparent;
+    }
+}
+
+.lus-tooltip-trigger:hover .lus-tooltip-down {
+    transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Multi-Stat Tooltip */
+.lus-stat-tooltip-multi {
+    width: 520px;
+    display: flex;
+    gap: 16px;
+    
+    .lus-tooltip-section {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+/* Tooltip Details */
+.lus-tooltip-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 8px;
+    letter-spacing: 0.02em;
+}
+
+.lus-tooltip-glyph {
+    font-size: 16px;
+    filter: drop-shadow(0 0 6px currentColor);
+}
+
+.lus-tooltip-title {
+    font-size: 13px;
+}
+
+.lus-tooltip-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.lus-tooltip-row {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.lus-tooltip-row-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.lus-tooltip-row-desc {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.55);
+    line-height: 1.35;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 600px) {
+    .lus-stat-tooltip-multi {
+        width: 290px;
+        flex-direction: column;
+        gap: 14px;
+        
+        .lus-tooltip-section {
+            border-left: none !important;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-left: 0 !important;
+            padding-top: 12px;
+            
+            &:first-child {
+                border-top: none;
+                padding-top: 0;
+            }
+        }
+    }
+}
+

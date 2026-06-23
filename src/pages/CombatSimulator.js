@@ -59,6 +59,75 @@ const WEAKNESS_SYMBOLS = {
     curse: '💀'
 };
 
+const showWeaknessPopup = (type, label) => {
+    const existing = document.getElementById('weakness-popup');
+    if (existing) existing.remove();
+    const existingOverlay = document.getElementById('weakness-popup-overlay');
+    if (existingOverlay) existingOverlay.remove();
+
+    const definitions = {
+        fire: 'Deals fire damage and can burn targets, causing damage over time.',
+        ice: 'Deals cold damage and slows down movement and action speeds.',
+        electricity: 'Deals lightning damage, with potential to chain to nearby units.',
+        arcane: 'Pure magical energy that bypasses standard physical armor.',
+        psionic: 'Attacks the target\'s mind, triggering mental debuffs or bypassing physical defenses.',
+        holy: 'Sacred energy that is highly effective against undead, demons, and aberrations.',
+        physical: 'Standard physical damage from weapons, heavily reduced by armor.',
+        crushing: 'Heavy blunt force that damages stamina and has a high chance to stun.',
+        cutting: 'Sharp physical damage that can cause targets to bleed over time.',
+        blood_magic: 'Dark magic that drains the target\'s health to heal the caster.',
+        curse: 'Malevolent magic that reduces target statistics or infects them with debuffs.'
+    };
+
+    const desc = definitions[type.toLowerCase().replace('-', '_')] || 'A damage type that this unit is vulnerable to, taking increased damage.';
+
+    const popup = document.createElement('div');
+    popup.id = 'weakness-popup';
+    popup.style.position = 'fixed';
+    popup.style.left = '50%';
+    popup.style.top = '50%';
+    popup.style.transform = 'translate(-50%, -50%)';
+    popup.style.zIndex = '999999';
+    popup.style.background = '#18181b';
+    popup.style.color = '#fff';
+    popup.style.padding = '20px';
+    popup.style.borderRadius = '12px';
+    popup.style.border = '1px solid #c084fc';
+    popup.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.5), 0 0 15px rgba(192, 132, 252, 0.2)';
+    popup.style.maxWidth = '300px';
+    popup.style.fontFamily = "'Inter', system-ui, -apple-system, sans-serif";
+    popup.style.textAlign = 'center';
+
+    popup.innerHTML = `
+        <div style="font-size: 24px; margin-bottom: 8px;">${WEAKNESS_SYMBOLS[type.toLowerCase().replace('-', '_')] || '❓'}</div>
+        <div style="font-weight: 700; font-size: 18px; color: #c084fc; margin-bottom: 8px;">${label}</div>
+        <div style="font-size: 14px; color: #d4d4d8; line-height: 1.5; margin-bottom: 16px;">${desc}</div>
+        <button id="close-weakness-popup" style="background: #c084fc; color: #18181b; border: none; padding: 6px 16px; border-radius: 6px; font-weight: 600; cursor: pointer; transition: background 0.2s;">Close</button>
+    `;
+
+    document.body.appendChild(popup);
+
+    const overlay = document.createElement('div');
+    overlay.id = 'weakness-popup-overlay';
+    overlay.style.position = 'fixed';
+    overlay.style.left = '0';
+    overlay.style.top = '0';
+    overlay.style.width = '100vw';
+    overlay.style.height = '100vh';
+    overlay.style.zIndex = '999998';
+    overlay.style.background = 'rgba(0, 0, 0, 0.6)';
+    overlay.style.backdropFilter = 'blur(2px)';
+    document.body.appendChild(overlay);
+
+    const closePopup = () => {
+        popup.remove();
+        overlay.remove();
+    };
+
+    document.getElementById('close-weakness-popup').onclick = closePopup;
+    overlay.onclick = closePopup;
+};
+
 const renderWeaknessSymbols = (weaknesses) => {
     if (!weaknesses || !Array.isArray(weaknesses)) return null;
     return weaknesses.map((w, idx) => {
@@ -70,10 +139,11 @@ const renderWeaknessSymbols = (weaknesses) => {
             <span 
                 key={idx} 
                 title={label} 
+                onClick={() => showWeaknessPopup(type, label)}
                 style={{ 
                     marginRight: '6px', 
                     fontSize: '1.2em', 
-                    cursor: 'help', 
+                    cursor: 'pointer', 
                     display: 'inline-block' 
                 }}
             >
@@ -1007,30 +1077,37 @@ class CrewManagerPage extends React.Component {
                                     })}
                                 </div>
 
-                                {/* Info panel for selected enemy */}
-                                {this.state.selectedEnemyForInfo && (
-                                    <div className="enemy-info-panel" style={{ flex: '1', margin: 0, boxSizing: 'border-box' }}>
+                                {/* Info panel for selected enemy — always rendered at fixed height so roster never shifts */}
+                                <div className={`enemy-info-panel${this.state.selectedEnemyForInfo ? '' : ' enemy-info-panel--empty'}`} style={{ flex: '1', margin: 0, boxSizing: 'border-box' }}>
+                                    {this.state.selectedEnemyForInfo && (<>
                                         <div className="enemy-info-portrait" style={{ backgroundImage: `url(${this.state.selectedEnemyForInfo.portrait})` }}></div>
                                         <div className="enemy-info-details">
-                                            <div className="enemy-info-type">{formatMonsterType(this.state.selectedEnemyForInfo.type)}</div>
-                                            <div className="enemy-info-stat">HP: {this.state.selectedEnemyForInfo.stats?.hp} | ATK: {this.state.selectedEnemyForInfo.stats?.atk} | DEF: {this.state.selectedEnemyForInfo.stats?.def}</div>
-                                            <div className="enemy-info-stat">Level: {this.state.selectedEnemyForInfo.level}</div>
-                                             {((this.state.selectedEnemyForInfo.skills?.length > 0) || (this.state.selectedEnemyForInfo.specials?.length > 0)) && (
-                                                 <div className="enemy-info-stat">Skills: {((this.state.selectedEnemyForInfo.skills || this.state.selectedEnemyForInfo.specials) || []).map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
-                                             )}
-                                            {this.state.selectedEnemyForInfo.weaknesses?.length > 0 && (
-                                                <div className="enemy-info-stat" style={{ display: 'flex', alignItems: 'center' }}>Weaknesses: &nbsp; {renderWeaknessSymbols(this.state.selectedEnemyForInfo.weaknesses)}</div>
-                                            )}
+                                            <div className="enemy-info-columns" style={{ display: 'flex', flexDirection: 'row', gap: '16px', width: '100%' }}>
+                                                {/* Left Column: Type, Level and Stats */}
+                                                <div className="enemy-info-col-left" style={{ minWidth: '160px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    <div className="enemy-info-type">{formatMonsterType(this.state.selectedEnemyForInfo.type)}</div>
+                                                    <div className="enemy-info-stat" style={{ whiteSpace: 'nowrap' }}>Level: {this.state.selectedEnemyForInfo.level} &nbsp;|&nbsp; HP: {this.state.selectedEnemyForInfo.stats?.hp} &nbsp;|&nbsp; ATK: {this.state.selectedEnemyForInfo.stats?.atk} &nbsp;|&nbsp; DEF: {this.state.selectedEnemyForInfo.stats?.def}</div>
+                                                </div>
+                                                {/* Right Column: Skills and Weaknesses */}
+                                                <div className="enemy-info-col-right" style={{ flex: '1', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                    {((this.state.selectedEnemyForInfo.skills?.length > 0) || (this.state.selectedEnemyForInfo.specials?.length > 0)) && (
+                                                        <div className="enemy-info-stat">Skills: {((this.state.selectedEnemyForInfo.skills || this.state.selectedEnemyForInfo.specials) || []).map(s => s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')).join(', ')}</div>
+                                                    )}
+                                                    {this.state.selectedEnemyForInfo.weaknesses?.length > 0 && (
+                                                        <div className="enemy-info-stat" style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}>Weaknesses: &nbsp; {renderWeaknessSymbols(this.state.selectedEnemyForInfo.weaknesses)}</div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    </>)}
+                                </div>
                             </div>
 
                             {/* Monster roster */}
                             <div className="monster-roster-label">Monster Roster — click to select, click again to add to slot</div>
                             <div className="monster-roster">
                                 {Object.values(this.props.monsterManager.monsters)
-                                    .filter(m => ['skeleton', 'goblin', 'ogre', 'troll', 'mummy', 'wraith', 'vampire', 'gorgon', 'witch', 'beholder', 'beholder_minion', 'kabuki_demon', 'djinn', 'dragon', 'sphinx', 'goat_demon', 'horned_pet', 'high_priest_of_the_basilisk', 'basilisk_cultists', 'shade'].includes(m.key))
+                                    .filter(m => ['skeleton', 'goblin', 'ogre', 'troll', 'mummy', 'wraith', 'vampire', 'gorgon', 'witch', 'beholder', 'beholder_minion', 'kabuki_demon', 'djinn', 'dragon', 'sphinx', 'goat_demon', 'horned_pet', 'high_priest_of_the_basilisk', 'basilisk_cultists', 'shade', 'hashmallim', 'hagigah', 'blalok'].includes(m.key))
                                     .map((m, i) => (
                                         <div
                                             key={i}

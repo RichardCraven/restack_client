@@ -1,20 +1,21 @@
 /**
  * ShrineScreen.js
  *
- * Full-screen animated shrine encounter. Replaces the old popup + timer overlay.
+ * Full-screen animated shrine encounter running on the actual combat engine.
  *
  * Layout:
  *   - 8 × 6 grid (same tile size as combat = 100px)
  *   - Stone floor tiles at low opacity as background per cell
  *   - Shrine icon centered at top row (row 0, col 4)
- *   - Crew units start at bottom row (row 5), shrine-class member centered
- *   - Cinematic: shrine unit walks upward; monsters spawn at mid-point from edges
- *   - Concentration phase: 6 rounds of auto-combat
- *   - Success / failure callbacks
+ *   - Crew units and guardians spawn, real combat runs using CombatManagerRedux
+ *   - Success / failure callbacks based on actual combat outcome
  */
 
 import React from 'react';
 import * as images from '../../utils/images';
+import { CombatManagerRedux } from '../../utils/combat-manager-redux';
+import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
+import CombatGrid from '../../components/combat-panes/CombatGrid';
 
 // ── Grid constants ────────────────────────────────────────────────────────────
 const COLS = 8;
@@ -23,14 +24,8 @@ const TILE_SIZE = 100;
 
 const SHRINE_COL = Math.floor(COLS / 2); // col 4
 const SHRINE_ROW = 0;
-const CREW_ROW = ROWS - 1; // row 5
 
 const TOTAL_ROUNDS = 6;
-const ROUND_DURATION_MS = 2000;
-const MOVE_INTERVAL_MS = 800; // ms per tile move in cinematic
-
-// How close (rows) the shrine unit needs to be to start concentrating
-const CONCENTRATE_DISTANCE = 1;
 
 // Seed stone tile assignment per cell
 const STONE_TILES_COUNT = 16; // terrain_1 … terrain_16
@@ -47,38 +42,6 @@ const resolvePortrait = (portraitVal) => {
     return '';
 };
 
-// Get a crew member's portrait image
-const crewPortrait = (member) => {
-    if (!member) return '';
-    const type = (member.type || member.image || '').toLowerCase();
-    // Try portrait key first, then type-named image
-    const key = type + '_portrait';
-    if (images[key]) return images[key].default || images[key];
-    if (images[type]) return images[type].default || images[type];
-    return '';
-};
-
-// HP for crew: use stats.hp, starting_hp or a default
-const getMemberHp = (member) => {
-    if (!member) return 60;
-    const s = member.stats || {};
-    return s.hp || member.starting_hp || 60;
-};
-
-// ATK for crew
-const getMemberAtk = (member) => {
-    if (!member) return 8;
-    const s = member.stats || {};
-    return s.atk || 8;
-};
-
-// DEF for crew
-const getMemberDef = (member) => {
-    if (!member) return 5;
-    const s = member.stats || {};
-    return s.def || 5;
-};
-
 const capitalize = (s) => s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -88,23 +51,12 @@ class ShrineScreen extends React.Component {
     //   shrineData   - { tile, shrineClass, shrineKey, matchingMember }
     //   crew         - array of crew member objects
     //   monsterManager - for getRandomMonsterByTier
+    //   overlayManager - from DungeonPage
+    //   animationManager - from DungeonPage
     //   onShrineComplete(result) - called with { success, shrineData, selectedSkill? }
 
     constructor(props) {
         super(props);
-
-        const { shrineData, crew } = props;
-        const shrineClass = shrineData && shrineData.shrineClass;
-
-        // --- Build crew unit list ---
-        // shrine-class member goes to center col, flankers around it
-        const crewMembers = (crew || []).filter(m => m && (m.type || m.image));
-        const shrineUnitIdx = shrineClass
-            ? crewMembers.findIndex(m => (m.type || m.image || '').toLowerCase() === shrineClass.toLowerCase())
-            : -1;
-
-        // Arrange positions: center = SHRINE_COL, then alternate left/right
-        const crewPositions = this._buildCrewPositions(crewMembers, shrineUnitIdx);
 
         // --- Stone tile assignment (seeded by position) ---
         const stoneTileMap = {};
@@ -115,20 +67,18 @@ class ShrineScreen extends React.Component {
         }
 
         this.state = {
-            // ── Phase: 'enter' | 'cinematic' | 'concentration' | 'done'
+            // ── Phase: 'enter' | 'communion' | 'done'
             phase: 'enter',
 
             // ── Stone floor
             stoneTileMap,
 
-            // ── Units (crew + monsters): { id, role:'crew'|'shrine_unit'|'monster', type, name, portrait, col, row, hp, maxHp, atk, def, dead: false, isConcentrating: false }
-            units: crewPositions,
-
-            // ── Monsters (spawned later)
-            monstersSpawned: false,
+            // ── Real combat engine state
+            battleData: {},
+            activeAnimations: [],
 
             // ── Progress (concentration rounds)
-            currentRound: 0,
+            currentRound: 1,
             totalRounds: TOTAL_ROUNDS,
 
             // ── Log messages
@@ -139,298 +89,296 @@ class ShrineScreen extends React.Component {
 
             // ── Skill-select (after success)
             showSkillSelect: false,
+
+            // ── Speech bubble message
+            message: '',
+            messageSource: null,
+
+            // ── Selection states for CombatGrid (dummy/view-only)
+            selectedFighter: null,
+            selectedMonster: null
         };
 
-        this._moveInterval = null;
-        this._roundInterval = null;
-    }
-
-    // Distribute crew across bottom row, centering the shrine-class unit
-    _buildCrewPositions(crewMembers, shrineUnitIdx) {
-        if (!crewMembers.length) return [];
-
-        const centerCol = SHRINE_COL;
-        // Generate column offsets from center: 0, +1, -1, +2, -2, …
-        const offsets = [0];
-        for (let i = 1; i <= Math.ceil(crewMembers.length / 2); i++) {
-            offsets.push(i);
-            offsets.push(-i);
-        }
-
-        // Rotate so shrine unit is at offset 0 (center)
-        // Put shrine unit first in order, then others
-        const ordered = [];
-        if (shrineUnitIdx >= 0) {
-            ordered.push(crewMembers[shrineUnitIdx]);
-            crewMembers.forEach((m, i) => { if (i !== shrineUnitIdx) ordered.push(m); });
-        } else {
-            ordered.push(...crewMembers);
-        }
-
-        return ordered.map((member, i) => {
-            const col = Math.max(0, Math.min(COLS - 1, centerCol + offsets[i]));
-            const role = i === 0 && shrineUnitIdx >= 0 ? 'shrine_unit' : 'crew';
-            const maxHp = getMemberHp(member);
-            const type = (member.type || member.image || '').toLowerCase();
-            return {
-                id: `crew_${member.id || type || i}`,
-                role,
-                type,
-                name: member.name || capitalize(type),
-                portrait: crewPortrait(member),
-                col,
-                row: CREW_ROW,
-                hp: maxHp,
-                maxHp,
-                atk: getMemberAtk(member),
-                def: getMemberDef(member),
-                dead: false,
-                isConcentrating: false,
-                member,
-            };
-        });
+        this.combatManager = null;
+        this._animManagerRedux = null;
+        this.shrineUnitId = null;
+        this._enterTimeout = null;
     }
 
     componentDidMount() {
-        // Short enter delay, then start cinematic
-        setTimeout(() => {
-            this.setState({ phase: 'cinematic' }, () => {
-                this._startCinematic();
-            });
+        this._isMounted = true;
+        // Short enter delay, then initialize and start real combat
+        this._enterTimeout = setTimeout(() => {
+            if (this._isMounted) {
+                this.setState({ phase: 'communion' }, () => {
+                    this._initializeCombatEngine();
+                });
+            }
         }, 1800);
     }
 
     componentWillUnmount() {
-        clearInterval(this._moveInterval);
-        clearInterval(this._roundInterval);
+        this._isMounted = false;
+        if (this._enterTimeout) clearTimeout(this._enterTimeout);
+        if (this.combatManager) {
+            this.combatManager.shutdown();
+        }
     }
 
-    // ── Cinematic Phase ───────────────────────────────────────────────────────
+    _initializeCombatEngine() {
+        const { shrineData, monsterManager, overlayManager, animationManager } = this.props;
+        const shrineClass = shrineData && shrineData.shrineClass;
 
-    _startCinematic() {
-        // Tick: move units each MOVE_INTERVAL_MS
-        this._moveInterval = setInterval(() => {
-            this._cinematicTick();
-        }, MOVE_INTERVAL_MS);
-    }
+        // 1. Instantiate CombatManagerRedux
+        this.combatManager = new CombatManagerRedux();
+        this.combatManager.initialize();
 
-    _cinematicTick() {
-        this.setState(prev => {
-            if (prev.phase !== 'cinematic') return null;
+        if (overlayManager) {
+            this.combatManager.connectOverlayManager(overlayManager);
+        }
+        if (animationManager) {
+            this.combatManager.connectAnimationManager(animationManager);
+        }
 
-            const units = prev.units.map(u => ({ ...u }));
-            const shrineUnit = units.find(u => u.role === 'shrine_unit');
-            let monstersSpawned = prev.monstersSpawned;
-            let newLog = [...prev.log];
-            let nextPhase = 'cinematic';
+        // 2. Wire AnimationManagerRedux
+        this._animManagerRedux = new AnimationManagerRedux();
+        this._animManagerRedux.connect((anims) => {
+            if (this._isMounted) this.setState({ activeAnimations: anims });
+        });
+        if (typeof this.combatManager.connectAnimationManagerRedux === 'function') {
+            this.combatManager.connectAnimationManagerRedux(this._animManagerRedux);
+        }
 
-            if (!shrineUnit || shrineUnit.dead) {
-                clearInterval(this._moveInterval);
-                return { phase: 'done', outcome: 'failure' };
+        // 3. Establish callbacks
+        this.combatManager.establishMessageCallback((msgData) => {
+            if (this._isMounted) {
+                this.setState({
+                    message: msgData?.message || '',
+                    messageSource: msgData?.source || null
+                });
             }
+        });
 
-            // Move shrine unit toward shrine (decrease row)
-            if (shrineUnit.row > SHRINE_ROW + CONCENTRATE_DISTANCE) {
-                shrineUnit.row -= 1;
-            }
-
-            // Once shrine unit reaches midpoint (row 3), spawn monsters
-            if (!monstersSpawned && shrineUnit.row <= Math.floor(ROWS / 2)) {
-                monstersSpawned = true;
-                const newMonsters = this._createMonsters();
-                newMonsters.forEach(m => units.push(m));
-                newLog = [...newLog, `⚠️ Guardians of the shrine emerge from the shadows!`];
-            }
-
-            // Move monsters toward shrine unit
-            units.filter(u => u.role === 'monster' && !u.dead).forEach(mob => {
-                const dx = shrineUnit.col - mob.col;
-                const dy = shrineUnit.row - mob.row;
-                // Move one step per tick (prefer row movement first)
-                if (Math.abs(dy) >= Math.abs(dx)) {
-                    mob.row += Math.sign(dy);
-                } else {
-                    mob.col += Math.sign(dx);
+        this.combatManager.establishUpdateDataCallback((battleData) => {
+            if (!this._isMounted) return;
+            const cloned = JSON.parse(JSON.stringify(battleData));
+            
+            // Normalize/fill missing fields like portrait
+            Object.values(cloned).forEach(entry => {
+                if (!entry) return;
+                if (typeof entry.portrait === 'undefined' || entry.portrait === null) {
+                    entry.portrait = images['avatar'];
                 }
-                mob.col = Math.max(0, Math.min(COLS - 1, mob.col));
-                mob.row = Math.max(0, Math.min(ROWS - 1, mob.row));
+                if (!Array.isArray(entry.damageIndicators)) {
+                    entry.damageIndicators = [];
+                }
             });
 
-            // Move crew members toward nearest monster
-            units.filter(u => u.role === 'crew' && !u.dead).forEach(crew => {
-                const mobs = units.filter(u => u.role === 'monster' && !u.dead);
-                if (!mobs.length) return;
-                const target = mobs.reduce((closest, mob) => {
-                    const distA = Math.abs(crew.col - mob.col) + Math.abs(crew.row - mob.row);
-                    const distB = Math.abs(crew.col - closest.col) + Math.abs(crew.row - closest.row);
-                    return distA < distB ? mob : closest;
-                }, mobs[0]);
-                const dx = target.col - crew.col;
-                const dy = target.row - crew.row;
-                if (Math.abs(dy) >= Math.abs(dx)) {
-                    crew.row += Math.sign(dy);
-                } else {
-                    crew.col += Math.sign(dx);
-                }
-                crew.col = Math.max(0, Math.min(COLS - 1, crew.col));
-                crew.row = Math.max(0, Math.min(ROWS - 1, crew.row));
+            const combatLog = this.combatManager && typeof this.combatManager.getCombatLog === 'function'
+                ? this.combatManager.getCombatLog()
+                : [];
+
+            this.setState({
+                battleData: cloned,
+                currentRound: this.combatManager.round,
+                log: combatLog
+            }, () => {
+                this._checkCommunionOutcome();
             });
+        });
 
-            // Check: is shrine unit adjacent to shrine?
-            if (shrineUnit.row <= SHRINE_ROW + CONCENTRATE_DISTANCE) {
-                shrineUnit.row = SHRINE_ROW + CONCENTRATE_DISTANCE;
-                shrineUnit.isConcentrating = true;
-                clearInterval(this._moveInterval);
-                nextPhase = 'concentration';
-                newLog = [...newLog, `🧘 ${shrineUnit.name} kneels before the shrine and begins the communion…`];
-            }
+        this.combatManager.establishOnFighterDeathCallback(() => {
+            this._checkCommunionOutcome();
+        });
 
-            return {
-                units,
-                monstersSpawned,
-                log: newLog.slice(-6),
-                phase: nextPhase,
+        // 4. Generate the monsters/guardians for the shrine communion
+        let mob1 = null, mob2 = null;
+        try {
+            mob1 = monsterManager && monsterManager.getRandomMonsterByTier(1);
+            mob2 = monsterManager && monsterManager.getRandomMonsterByTier(1);
+        } catch (e) {}
+
+        if (!mob1) {
+            mob1 = {
+                type: 'goblin',
+                key: 'goblin',
+                stats: { hp: 45, atk: 7, def: 4 },
+                portrait: images['goblin_portrait'],
+                monster_names: ['Wiggit']
             };
-        }, () => {
-            if (this.state.phase === 'concentration') {
-                this._startConcentration();
+        }
+        if (!mob2) {
+            mob2 = {
+                type: 'skeleton',
+                key: 'skeleton',
+                stats: { hp: 40, atk: 6, def: 5 },
+                portrait: images['skeleton_portrait'],
+                monster_names: ['Bones']
+            };
+        }
+
+        const name1 = (mob1.monster_names && mob1.monster_names.length)
+            ? mob1.monster_names[Math.floor(Math.random() * mob1.monster_names.length)]
+            : capitalize(mob1.type);
+        const name2 = (mob2.monster_names && mob2.monster_names.length)
+            ? mob2.monster_names[Math.floor(Math.random() * mob2.monster_names.length)]
+            : capitalize(mob2.type);
+
+        const monster = {
+            id: `shrine_guardian_1_${Date.now()}`,
+            type: mob1.type || mob1.key || 'monster',
+            name: name1,
+            stats: { ...mob1.stats },
+            portrait: resolvePortrait(mob1.portrait),
+            inventory: [],
+            greetings: ["Guardians of the shrine emerge from the shadows!"],
+            isShrineGuardian: true
+        };
+
+        const minions = [
+            {
+                id: `shrine_guardian_2_${Date.now()}`,
+                type: mob2.type || mob2.key || 'monster',
+                name: name2,
+                stats: { ...mob2.stats },
+                portrait: resolvePortrait(mob2.portrait),
+                inventory: [],
+                isShrineGuardian: true
             }
+        ];
+
+        // Prepare the player's crew (deep copy so we don't mutate global state directly during combat)
+        const crewList = (this.props.crew || []).map(m => JSON.parse(JSON.stringify(m)));
+
+        // Find the matching shrine-class member
+        const shrineUnitIdx = shrineClass
+            ? crewList.findIndex(m => (m.type || m.image || '').toLowerCase() === shrineClass.toLowerCase())
+            : -1;
+
+        // Initialize combat
+        this.combatManager.initializeCombat({
+            crew: crewList,
+            leader: crewList.find(m => m.isLeader) || crewList[0],
+            monster,
+            minions
+        });
+
+        // Let's reposition the combatants on the 8x6 grid
+        const combatantsList = Object.values(this.combatManager.combatants);
+        const shrineUnit = shrineUnitIdx >= 0
+            ? combatantsList.find(c => c.id === crewList[shrineUnitIdx].id)
+            : null;
+
+        if (shrineUnit) {
+            shrineUnit.coordinates = { x: 4, y: 1 };
+            shrineUnit.depth = 4;
+            shrineUnit.position = 1;
+            shrineUnit.skipAI = true;
+            shrineUnit.isConcentrating = true;
+            this.combatManager._setCombatantOccupiedCoords(shrineUnit, this.combatManager.combatants);
+            this.shrineUnitId = shrineUnit.id;
+        }
+
+        // Position the other crew members on row 4 and row 5 around col 4 to defend the shrine unit
+        const defenders = combatantsList.filter(c => !c.isMonster && (!shrineUnit || c.id !== shrineUnit.id));
+        const defenderCoords = [
+            { x: 3, y: 4 },
+            { x: 5, y: 4 },
+            { x: 2, y: 5 },
+            { x: 6, y: 5 },
+            { x: 1, y: 5 },
+            { x: 7, y: 5 }
+         ];
+        defenders.forEach((c, idx) => {
+            const coord = defenderCoords[idx] || { x: idx % 8, y: 5 };
+            c.coordinates = { ...coord };
+            c.depth = coord.x;
+            c.position = coord.y;
+            this.combatManager._setCombatantOccupiedCoords(c, this.combatManager.combatants);
+        });
+
+        // Position the guardians on the left and right sides
+        const guardians = combatantsList.filter(c => c.isMonster);
+        guardians.forEach((c, idx) => {
+            const startX = (idx % 2 === 0) ? 0 : 7;
+            const startY = 2 + (idx % 3);
+            c.coordinates = { x: startX, y: startY };
+            c.depth = startX;
+            c.position = startY;
+            this.combatManager._setCombatantOccupiedCoords(c, this.combatManager.combatants);
+        });
+
+        // Force a state sync to initialize the grid rendering
+        this.setState({
+            battleData: JSON.parse(JSON.stringify(this.combatManager.combatants))
         });
     }
 
-    _createMonsters() {
-        const { monsterManager } = this.props;
-        const monsters = [];
-        for (let i = 0; i < 2; i++) {
-            let mob = null;
-            try {
-                mob = monsterManager && monsterManager.getRandomMonsterByTier(1);
-            } catch (e) {}
-            if (!mob) {
-                mob = {
-                    type: i === 0 ? 'goblin' : 'skeleton',
-                    key: i === 0 ? 'goblin' : 'skeleton',
-                    stats: { hp: 38, atk: 6, def: 4 },
-                    portrait: i === 0 ? images['goblin_portrait'] : images['skeleton_portrait'],
-                    monster_names: [i === 0 ? 'Wiggit' : 'Bones'],
-                };
-            }
-            const maxHp = mob.stats ? mob.stats.hp : 40;
-            const name = (mob.monster_names && mob.monster_names.length)
-                ? mob.monster_names[Math.floor(Math.random() * mob.monster_names.length)]
-                : (mob.type ? capitalize(mob.type) : 'Guardian');
-            monsters.push({
-                id: `monster_${i}_${Date.now()}`,
-                role: 'monster',
-                type: mob.type || mob.key || 'monster',
-                name,
-                portrait: resolvePortrait(mob.portrait),
-                col: i === 0 ? 0 : COLS - 1,
-                row: 2 + Math.floor(Math.random() * 2),
-                hp: maxHp,
-                maxHp,
-                atk: mob.stats ? mob.stats.atk : 6,
-                def: mob.stats ? mob.stats.def : 3,
-                dead: false,
-                isConcentrating: false,
-            });
-        }
-        return monsters;
-    }
+    _checkCommunionOutcome() {
+        if (this.state.phase !== 'communion' || this.state.outcome) return;
 
-    // ── Concentration Phase ───────────────────────────────────────────────────
+        const { battleData } = this.state;
+        if (!battleData || Object.keys(battleData).length === 0) return;
 
-    _startConcentration() {
-        this._roundInterval = setInterval(() => {
-            this._doRound();
-        }, ROUND_DURATION_MS);
-    }
-
-    _doRound() {
-        this.setState(prev => {
-            if (prev.phase !== 'concentration') return null;
-
-            const units = prev.units.map(u => ({ ...u }));
-            const shrineUnit = units.find(u => u.role === 'shrine_unit');
-            const aliveMonsters = units.filter(u => u.role === 'monster' && !u.dead);
-            const aliveCrewDefenders = units.filter(u => u.role === 'crew' && !u.dead);
-
-            let newLog = [...prev.log];
-            let newRound = prev.currentRound + 1;
-
-            if (!shrineUnit || shrineUnit.dead) {
-                clearInterval(this._roundInterval);
-                return { phase: 'done', outcome: 'failure', log: [...newLog, `💀 The communion has been broken!`].slice(-6) };
-            }
-
-            // --- Monsters attack shrine unit ---
-            aliveMonsters.forEach(mob => {
-                if (shrineUnit.dead) return;
-                const baseDmg = mob.atk || 6;
-                const dmg = Math.max(1, Math.floor(baseDmg * (0.7 + Math.random() * 0.6)) - Math.floor((shrineUnit.def || 3) * 0.3));
-                const unitInState = units.find(u => u.id === shrineUnit.id);
-                if (unitInState) {
-                    unitInState.hp = Math.max(0, unitInState.hp - dmg);
-                    newLog = [...newLog, `⚔️ ${mob.name} strikes ${shrineUnit.name} for ${dmg} damage!`];
-                    if (unitInState.hp <= 0) {
-                        unitInState.dead = true;
-                        unitInState.isConcentrating = false;
-                    }
-                }
-            });
-
-            // Check shrine unit died
-            const shrineUnitUpdated = units.find(u => u.role === 'shrine_unit');
-            if (shrineUnitUpdated && shrineUnitUpdated.dead) {
-                clearInterval(this._roundInterval);
-                return {
-                    units,
-                    currentRound: newRound,
-                    log: [...newLog, `💀 The communion was broken. ${shrineUnitUpdated.name} has fallen.`].slice(-6),
+        // 1. Check if the shrine unit died
+        if (this.shrineUnitId) {
+            const shrineUnit = battleData[this.shrineUnitId];
+            if (shrineUnit && (shrineUnit.dead || shrineUnit.hp <= 0)) {
+                if (this.combatManager) this.combatManager.shutdown();
+                this.setState({
                     phase: 'done',
                     outcome: 'failure',
-                };
+                    message: ''
+                });
+                return;
             }
+        }
 
-            // --- Crew attack monsters ---
-            aliveCrewDefenders.forEach(crewMember => {
-                const liveMobs = units.filter(u => u.role === 'monster' && !u.dead);
-                if (!liveMobs.length) return;
-                const target = liveMobs[0];
-                const baseDmg = crewMember.atk || 8;
-                const dmg = Math.max(1, Math.floor(baseDmg * (0.6 + Math.random() * 0.8)) - Math.floor((target.def || 3) * 0.4));
-                const mobInState = units.find(u => u.id === target.id);
-                if (mobInState) {
-                    mobInState.hp = Math.max(0, mobInState.hp - dmg);
-                    newLog = [...newLog, `🗡️ ${crewMember.name} attacks ${target.name} for ${dmg} damage!`];
-                    if (mobInState.hp <= 0) {
-                        mobInState.dead = true;
-                        newLog = [...newLog, `💀 ${target.name} has been slain!`];
-                    }
-                }
+        // 2. Check if 6 rounds have completed
+        if (this.combatManager && this.combatManager.round >= 7) {
+            if (this.combatManager) this.combatManager.shutdown();
+            this.setState({
+                phase: 'done',
+                outcome: 'success',
+                showSkillSelect: true,
+                message: ''
             });
+            return;
+        }
 
-            // Check if all rounds complete → success
-            if (newRound >= TOTAL_ROUNDS) {
-                clearInterval(this._roundInterval);
-                // Kill all monsters
-                units.filter(u => u.role === 'monster').forEach(m => { m.dead = true; });
-                return {
-                    units,
-                    currentRound: newRound,
-                    log: [...newLog, `✨ The communion is complete! The shrine's power flows through ${shrineUnitUpdated ? shrineUnitUpdated.name : 'the champion'}!`].slice(-6),
-                    phase: 'done',
-                    outcome: 'success',
-                    showSkillSelect: true,
-                };
-            }
+        // 3. Check if all monsters/guardians are defeated
+        const aliveMonsters = Object.values(battleData).filter(
+            c => c && c.isMonster && !c.dead && c.hp > 0
+        );
+        if (aliveMonsters.length === 0) {
+            if (this.combatManager) this.combatManager.shutdown();
+            this.setState({
+                phase: 'done',
+                outcome: 'success',
+                showSkillSelect: true,
+                message: ''
+            });
+        }
+    }
 
-            return {
-                units,
-                currentRound: newRound,
-                log: newLog.slice(-6),
-            };
-        });
+    getActionBarLeftValForFighter = (id) => {
+        if (!this.state.battleData) return 0;
+        const selectedFighter = this.state.battleData[id];
+        const details = this.state.battleData[id];
+        const baseX = (details?.coordinates.x || 0) * 100;
+        const rangeWidth = this.combatManager?.getRangeWidthVal(details) || 0;
+        const offset = (selectedFighter?.facing === 'left') ? (0 - (rangeWidth * 100)) : 100;
+        return baseX + offset;
+    }
+
+    getFighterDetails = (fighter) => {
+        if (!fighter || !this.state.battleData) return null;
+        return this.state.battleData[fighter.id];
+    }
+
+    getHitAnimation = (combatant) => {
+        if (!combatant || !combatant.wounded) return '';
+        return `hit-from-${combatant.wounded.sourceDirection}-${combatant.wounded.severity}`;
     }
 
     // ── Skill-select helpers (mirrored from DungeonPage globalSkillsByClass) ──
@@ -466,11 +414,10 @@ class ShrineScreen extends React.Component {
 
     render() {
         const { shrineData } = this.props;
-        const { phase, units, stoneTileMap, currentRound, totalRounds, log, outcome, showSkillSelect } = this.state;
+        const { phase, stoneTileMap, currentRound, totalRounds, log, outcome, showSkillSelect } = this.state;
 
         const shrineClass = shrineData && shrineData.shrineClass;
         const classLabel = shrineClass ? capitalize(shrineClass) : 'Unknown';
-        const shrineUnit = units.find(u => u.role === 'shrine_unit');
         const terrainTiles = images.getTerrainSetForLevel(0);
 
         // Skill select data
@@ -520,7 +467,7 @@ class ShrineScreen extends React.Component {
                         <img src={images.shrine} alt="shrine" style={{ width: '20px', height: '20px', objectFit: 'contain' }} />
                         <span>{classLabel} Communion</span>
                     </div>
-                    {phase === 'concentration' && (
+                    {phase === 'communion' && (
                         <div style={{ color: '#c9a227', fontSize: '12px', marginTop: '4px', letterSpacing: '1px' }}>
                             Concentration — Round {currentRound} / {totalRounds}
                         </div>
@@ -573,34 +520,144 @@ class ShrineScreen extends React.Component {
                     {/* Shrine tile at top */}
                     {this._renderShrineTile()}
 
-                    {/* Unit tiles */}
-                    {units.filter(u => !u.dead).map(unit => this._renderUnit(unit))}
+                    {/* Unified Combat Grid — renders actual fighters & guardians */}
+                    {phase === 'communion' && (
+                        <CombatGrid
+                            crew={this.props.crew}
+                            combatManager={this.combatManager}
+                            battleData={this.state.battleData}
+                            selectedFighter={this.state.selectedFighter}
+                            selectedMonster={this.state.selectedMonster}
+                            portraitHoveredId={null}
+                            animationOverlays={{}}
+                            getAllOverlaysById={() => null}
+                            portraitHovered={() => {}}
+                            fighterPortraitClicked={(fighter) => this.setState({ selectedFighter: fighter })}
+                            monsterCombatPortraitClicked={(monster) => this.setState({ selectedMonster: monster })}
+                            onDragStart={() => {}}
+                            getActionBarLeftValForFighter={this.getActionBarLeftValForFighter}
+                            getManualMovementArc={() => null}
+                            getManualMovementArcColor={() => 'rgba(255,255,255,0)'}
+                            getFighterDetails={this.getFighterDetails}
+                            getHitAnimation={this.getHitAnimation}
+                            teleportingFighterId={null}
+                            fearCastingActive={false}
+                            greetingInProcess={this.state.message !== ''}
+                            SHOW_MONSTER_IDS={false}
+                            activeAnimations={this.state.activeAnimations}
+                            TILE_SIZE={TILE_SIZE}
+                            SHOW_TILE_BORDERS={true}
+                        />
+                    )}
 
                     {/* Concentration progress bar */}
-                    {phase === 'concentration' && shrineUnit && !shrineUnit.dead && (
-                        <div style={{
-                            position: 'absolute',
-                            left: `${shrineUnit.col * (TILE_SIZE + 2) - 10}px`,
-                            top: `${shrineUnit.row * (TILE_SIZE + 2) - 20}px`,
-                            width: `${TILE_SIZE + 20}px`,
-                            zIndex: 30,
-                            transition: 'top 0.5s ease, left 0.5s ease',
-                        }}>
-                            <div style={{ fontSize: '9px', color: '#c9a227', textAlign: 'center', letterSpacing: '1px', marginBottom: '2px', textShadow: '0 0 8px rgba(201,162,39,0.8)' }}>
-                                CONCENTRATING
+                    {phase === 'communion' && this.shrineUnitId && this.state.battleData[this.shrineUnitId] && !this.state.battleData[this.shrineUnitId].dead && (() => {
+                        const sUnit = this.state.battleData[this.shrineUnitId];
+                        const left = sUnit.coordinates.x * (TILE_SIZE + 2) - 10;
+                        const top = sUnit.coordinates.y * (TILE_SIZE + 2) - 20;
+                        return (
+                            <div style={{
+                                position: 'absolute',
+                                left: `${left}px`,
+                                top: `${top}px`,
+                                width: `${TILE_SIZE + 20}px`,
+                                zIndex: 30,
+                                transition: 'top 0.5s ease, left 0.5s ease',
+                            }}>
+                                <div style={{ fontSize: '9px', color: '#c9a227', textAlign: 'center', letterSpacing: '1px', marginBottom: '2px', textShadow: '0 0 8px rgba(201,162,39,0.8)' }}>
+                                    CONCENTRATING
+                                </div>
+                                <div style={{ background: 'rgba(0,0,0,0.7)', borderRadius: '3px', height: '8px', border: '1px solid rgba(201,162,39,0.4)', overflow: 'hidden' }}>
+                                    <div style={{
+                                        height: '100%',
+                                        width: `${Math.min(100, (currentRound / totalRounds) * 100)}%`,
+                                        background: 'linear-gradient(90deg, #7b5ea7, #c9a227)',
+                                        borderRadius: '3px',
+                                        transition: 'width 0.8s ease',
+                                        boxShadow: '0 0 6px rgba(201,162,39,0.6)',
+                                    }} />
+                                </div>
                             </div>
-                            <div style={{ background: 'rgba(0,0,0,0.7)', borderRadius: '3px', height: '8px', border: '1px solid rgba(201,162,39,0.4)', overflow: 'hidden' }}>
+                        );
+                    })()}
+
+                    {/* Speech bubble message from the guardians */}
+                    {this.state.message && (() => {
+                        const mainMonster = Object.values(this.state.battleData).find(c => c && c.isMonster && !c.isMinion);
+                        if (!mainMonster || !mainMonster.coordinates) return null;
+                        
+                        const mx = mainMonster.coordinates.x;
+                        const my = mainMonster.coordinates.y;
+                        
+                        const isHuge = mainMonster.tier === 4 || mainMonster.type === 'dragon' || mainMonster.key === 'dragon' || mainMonster.huge === true || mainMonster.size === 3;
+                        
+                        let bubbleCenterX = 0;
+                        let bubbleCenterY = 0;
+
+                        if (isHuge) {
+                            // 3x3 footprint: top row is my - 2, middle column is mx + hDir
+                            const hDir = (mx >= 4) ? -1 : 1;
+                            const middleCol = mx + hDir;
+                            const topRow = my - 2;
+
+                            bubbleCenterX = middleCol * TILE_SIZE + TILE_SIZE / 2;
+                            bubbleCenterY = topRow * TILE_SIZE;
+                        } else if (mainMonster.isLarge || mainMonster.size === 2) {
+                            // 2x2 footprint
+                            const hOffset = (mx >= 4) ? -TILE_SIZE : 0;
+                            const leftPos = mx * TILE_SIZE + hOffset;
+                            const topPos = my * TILE_SIZE - TILE_SIZE; // Top row of the 2x2
+
+                            bubbleCenterX = leftPos + TILE_SIZE;
+                            bubbleCenterY = topPos; // Directly above the top row
+                        } else {
+                            // 1x1 footprint
+                            bubbleCenterX = mx * TILE_SIZE + TILE_SIZE / 2;
+                            bubbleCenterY = my * TILE_SIZE;
+                        }
+
+                        return (
+                            <div
+                                className="message-container speech-bubble"
+                                style={{
+                                    position: 'absolute',
+                                    left: `${bubbleCenterX}px`,
+                                    top: `${bubbleCenterY - 45}px`,
+                                    transform: 'translateX(-50%)',
+                                    width: 'max-content',
+                                    maxWidth: '220px',
+                                    height: 'auto',
+                                    padding: '10px 14px',
+                                    background: 'rgba(20, 20, 22, 0.96)',
+                                    border: '2px solid #ff5400',
+                                    borderRadius: '12px',
+                                    color: '#ffffff',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    textAlign: 'center',
+                                    boxShadow: '0 8px 24px rgba(0,0,0,0.8), 0 0 15px rgba(255, 84, 0, 0.4)',
+                                    zIndex: 450,
+                                    pointerEvents: 'none',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                {this.state.message}
                                 <div style={{
-                                    height: '100%',
-                                    width: `${(currentRound / totalRounds) * 100}%`,
-                                    background: 'linear-gradient(90deg, #7b5ea7, #c9a227)',
-                                    borderRadius: '3px',
-                                    transition: 'width 0.8s ease',
-                                    boxShadow: '0 0 6px rgba(201,162,39,0.6)',
+                                    position: 'absolute',
+                                    bottom: '-8px',
+                                    left: '50%',
+                                    transform: 'translateX(-50%)',
+                                    width: '0',
+                                    height: '0',
+                                    borderLeft: '8px solid transparent',
+                                    borderRight: '8px solid transparent',
+                                    borderTop: '8px solid #ff5400',
                                 }} />
                             </div>
-                        </div>
-                    )}
+                        );
+                    })()}
                 </div>
 
                 {/* Combat log */}
@@ -611,14 +668,14 @@ class ShrineScreen extends React.Component {
                     zIndex: 1,
                 }}>
                     {log.slice(-3).map((msg, i) => (
-                        <div key={i} style={{
+                        <div key={msg?.id || i} style={{
                             color: i === log.slice(-3).length - 1 ? '#e8d5a3' : '#7a6a50',
                             fontSize: '11px',
                             lineHeight: '1.5',
                             textAlign: 'center',
                             transition: 'color 0.5s',
                         }}>
-                            {msg}
+                            {msg?.message || msg}
                         </div>
                     ))}
                 </div>
@@ -638,8 +695,7 @@ class ShrineScreen extends React.Component {
                             Communion Failed
                         </div>
                         <div style={{ color: '#999', fontSize: '13px', maxWidth: '320px', textAlign: 'center', lineHeight: 1.6, marginBottom: '24px', fontStyle: 'italic' }}>
-                            {shrineUnit ? `${shrineUnit.name} fell before the communion could be completed.` : 'The shrine guardians were too powerful.'}
-                            {' '}The shrine's power fades.
+                            The communion was broken by the guardians. The shrine's power fades.
                         </div>
                         <button
                             onClick={() => this.props.onShrineComplete({ success: false, shrineData })}
@@ -684,7 +740,7 @@ class ShrineScreen extends React.Component {
                             Communion Complete
                         </div>
                         <div style={{ color: '#ccc', fontSize: '13px', fontStyle: 'italic', marginBottom: '24px', maxWidth: '320px', textAlign: 'center', lineHeight: 1.6 }}>
-                            The ancestors have heard {shrineUnit ? shrineUnit.name : 'the champion'}'s prayer.
+                            The ancestors have heard the champion's prayer.
                             A gift of ancient wisdom is bestowed.
                         </div>
 
@@ -746,7 +802,7 @@ class ShrineScreen extends React.Component {
         const left = SHRINE_COL * (TILE_SIZE + 2);
         const top = SHRINE_ROW * (TILE_SIZE + 2);
         const { phase, currentRound, totalRounds } = this.state;
-        const isConcentrating = phase === 'concentration';
+        const isConcentrating = phase === 'communion' || (phase === 'done' && this.state.outcome === 'success');
         return (
             <div key="shrine-tile" style={{
                 position: 'absolute',
@@ -776,7 +832,7 @@ class ShrineScreen extends React.Component {
                     }}>
                         <div style={{
                             height: '100%',
-                            width: `${(currentRound / totalRounds) * 100}%`,
+                            width: `${Math.min(100, (currentRound / totalRounds) * 100)}%`,
                             background: 'linear-gradient(90deg, #c9a227, #fff8dc)',
                             borderRadius: '2px',
                             boxShadow: '0 0 4px rgba(201,162,39,0.8)',
@@ -784,94 +840,6 @@ class ShrineScreen extends React.Component {
                         }} />
                     </div>
                 )}
-            </div>
-        );
-    }
-
-    _renderUnit(unit) {
-        const left = unit.col * (TILE_SIZE + 2);
-        const top = unit.row * (TILE_SIZE + 2);
-        const hpPct = Math.max(0, unit.hp / unit.maxHp);
-        const isShrineUnit = unit.role === 'shrine_unit';
-        const isMonster = unit.role === 'monster';
-
-        const borderColor = isShrineUnit
-            ? 'rgba(201,162,39,0.8)'
-            : isMonster
-                ? 'rgba(192,57,43,0.7)'
-                : 'rgba(100,160,220,0.5)';
-
-        const hpColor = hpPct > 0.5
-            ? '#2ecc71'
-            : hpPct > 0.25
-                ? '#f39c12'
-                : '#e74c3c';
-
-        return (
-            <div key={unit.id} style={{
-                position: 'absolute',
-                left: `${left}px`,
-                top: `${top}px`,
-                width: `${TILE_SIZE}px`,
-                height: `${TILE_SIZE}px`,
-                zIndex: 20,
-                transition: 'top 0.5s ease, left 0.5s ease',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-            }}>
-                {/* Portrait */}
-                <div style={{
-                    width: '70px', height: '70px',
-                    borderRadius: '6px',
-                    border: `2px solid ${borderColor}`,
-                    backgroundImage: unit.portrait ? `url(${unit.portrait})` : 'none',
-                    backgroundSize: 'cover',
-                    backgroundPosition: 'center top',
-                    backgroundRepeat: 'no-repeat',
-                    backgroundColor: unit.portrait ? 'transparent' : 'rgba(40,20,60,0.6)',
-                    boxShadow: isShrineUnit && unit.isConcentrating
-                        ? '0 0 16px rgba(201,162,39,0.6), 0 0 32px rgba(201,162,39,0.3)'
-                        : `0 0 8px rgba(0,0,0,0.5)`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    filter: isMonster ? 'hue-rotate(330deg) saturate(1.3)' : 'none',
-                    animation: isShrineUnit && unit.isConcentrating ? 'shrine-concentrate-pulse 2s ease-in-out infinite' : 'none',
-                }}>
-                    {!unit.portrait && (
-                        <span style={{ fontSize: '28px' }}>
-                            {isShrineUnit ? '🧙' : isMonster ? '👹' : '⚔️'}
-                        </span>
-                    )}
-                </div>
-
-                {/* HP bar */}
-                <div style={{
-                    width: '70px', height: '5px',
-                    background: 'rgba(0,0,0,0.6)',
-                    borderRadius: '3px', marginTop: '3px',
-                    overflow: 'hidden',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                }}>
-                    <div style={{
-                        height: '100%',
-                        width: `${hpPct * 100}%`,
-                        background: hpColor,
-                        borderRadius: '3px',
-                        transition: 'width 0.4s ease',
-                    }} />
-                </div>
-
-                {/* Name label */}
-                <div style={{
-                    fontSize: '8px', color: '#ccc',
-                    textAlign: 'center', marginTop: '2px',
-                    maxWidth: '90px', overflow: 'hidden',
-                    textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    textShadow: '0 1px 3px rgba(0,0,0,0.9)',
-                }}>
-                    {unit.name}
-                </div>
             </div>
         );
     }

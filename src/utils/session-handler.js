@@ -71,7 +71,8 @@ function sanitizeMeta(metadata){
             lastTrained: c && c.lastTrained,
             trainingActive: c && c.trainingActive,
             specialActions: c && c.specialActions,
-            passives: c && c.passives
+            passives: c && c.passives,
+            pendingLevelUpPicks: c && c.pendingLevelUpPicks
         }));
     }
     // If inventory present, keep only counts/names

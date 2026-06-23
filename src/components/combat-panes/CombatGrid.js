@@ -10,7 +10,7 @@
 import React from 'react';
 import * as images from '../../utils/images';
 import Overlay from '../Overlay';
-import { ROCK_DURATION } from '../../utils/shared-constants';
+
 
 const TILE_SIZE = 100;
 const SHOW_TILE_BORDERS = true;
@@ -558,7 +558,7 @@ const computeHitVars = (combatant, getHitAnimation) => {
         '--portrait-bulge-x': bulgeX,
         '--portrait-bulge-y': bulgeY,
         '--portrait-transform-origin': transformOrigin,
-        '--portrait-base-scale': combatant.type === 'spider_minion' ? '0.5' : ((combatant.isMinion && combatant.tier !== 3 && combatant.tier !== 4) ? '1' : '2'),
+        '--portrait-base-scale': combatant.isShrineGuardian ? '1' : (combatant.type === 'spider_minion' ? '0.5' : ((combatant.isMinion && combatant.tier !== 3 && combatant.tier !== 4) ? '1' : '2')),
         '--portrait-flip': combatant.facing === 'right' ? '-1' : '1',
         '--portrait-animation-duration': (combatant.isMinion && combatant.tier !== 3 && combatant.tier !== 4) ? '520ms' : '420ms',
         '--portrait-animation-timing': (combatant.isMinion && combatant.tier !== 3 && combatant.tier !== 4) ? 'cubic-bezier(.18,.9,.22,1)' : 'cubic-bezier(.2,.8,.2,1)'
@@ -612,6 +612,8 @@ export default function CombatGrid(props) {
         // Sandbox-style CSS animation events from AnimationManagerRedux
         activeAnimations = [],
     } = props;
+
+    const getLiveCombatant = (id) => (combatManager && typeof combatManager.getCombatant === 'function') ? combatManager.getCombatant(id) : null;
 
     // ── Mounted check Ref ─────────────────────────────────────────────────────
     const isMountedRef = React.useRef(true);
@@ -816,7 +818,7 @@ export default function CombatGrid(props) {
                                 entityRef.damageIndicators = entityRef.damageIndicators.filter(e => e && e.id !== next.id);
                             }
                             delete indicatorTimeouts.current[next.id];
-                        }, ROCK_DURATION || 1800);
+                        }, 2000);
                     }
                 } else {
                     const neededDelay = STAGGER_DELAY - timeDiff;
@@ -1046,7 +1048,7 @@ export default function CombatGrid(props) {
     const activeCrew = crew.filter(f => {
         const details = getFighterDetails(f);
         // Hide fighters who are currently in a Sphinx trial (off-board)
-        const liveFighter = combatManager.getCombatant(f.id) || details || f;
+        const liveFighter = getLiveCombatant(f.id) || details || f;
         if (typeof liveFighter?.inTrial === 'number') return false;
         return battleData[f.id] && !details?.invisible && (!details?.dead || (showDeathAnimation[f.id] && !fullyDead[f.id]));
     });
@@ -1065,7 +1067,12 @@ export default function CombatGrid(props) {
         prevCoordsRef.current[fighter.id] = true;
         const shouldTransition = !isFirstRender;
 
-        const liveFighter = combatManager.getCombatant(fighter.id) || details || fighter;
+        // Detect rift pushback overlay — use sweep-matched transition instead of the normal spring
+        const riftPushbackAnim = activeAnimations.find(a =>
+            a.type === 'rift_pushback' && a.sourceUnitId === fighter.id
+        );
+
+        const liveFighter = getLiveCombatant(fighter.id) || details || fighter;
         const berserkerBuffActive = Array.isArray(liveFighter.activeBuffs)
             && liveFighter.activeBuffs.some(b => b && ['barbarian_berserker', 'berserker'].includes((b.name || '').toLowerCase().replace(/\s+/g, '_')));
         const fighterSleepDebuff = Array.isArray(liveFighter.activeDebuffs)
@@ -1120,7 +1127,7 @@ export default function CombatGrid(props) {
             berserkerBuffActive && details?.feared && !details?.stunned ? 'berserk-feared' : '',
             berserkerBuffActive && (!details?.feared || details?.stunned) ? 'berserk-active' : '',
             !berserkerBuffActive && details?.feared ? 'feared' : '',
-            combatManager.getCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
+            getLiveCombatant(fighter.id)?.shieldWallActive ? 'shield-wall-active' : '',
             details?.drained ? 'drained' : '',
             details?.regenerating ? 'regenerating' : '',
             details?.healPulse ? 'heal-pulse' : '',
@@ -1128,8 +1135,8 @@ export default function CombatGrid(props) {
             details?.bleed ? 'bleeding' : '',
             details?.frozen ? 'frozen' : '',
             details?.activeDebuffs?.some(d => d && d.name === 'shadow_curse') ? 'shadow-cursed' : '',
-            combatManager.getCombatant(fighter.id)?.astralBeingActive ? 'astral-being' : '',
-            combatManager.getCombatant(fighter.id)?.astralProjectionActive ? 'astral-projection-active' : '',
+            getLiveCombatant(fighter.id)?.astralBeingActive ? 'astral-being' : '',
+            getLiveCombatant(fighter.id)?.astralProjectionActive ? 'astral-projection-active' : '',
             fighter.isLeader ? 'leader-portrait' : '',
         ].filter(Boolean).join(' ');
 
@@ -1147,7 +1154,11 @@ export default function CombatGrid(props) {
                     overflow: 'visible',
                     pointerEvents: 'none',
                     zIndex: activeLeapAnim ? 350 : 300,
-                    transition: (isTelep || isBatFlying || activeReturnTrialAnim || activeLeapAnim || liveFighter.attacking || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                    transition: (isTelep || isBatFlying || activeReturnTrialAnim || activeLeapAnim || liveFighter.attacking || !shouldTransition)
+                        ? 'none'
+                        : riftPushbackAnim
+                            ? `transform ${riftPushbackAnim.duration}ms ease-out`
+                            : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
                     opacity: isBatFlying ? 0 : 1,
                     ...computeHitVars(details || fighter, getHitAnimation),
                 }}
@@ -1191,7 +1202,7 @@ export default function CombatGrid(props) {
                         className={portraitClasses}
                         style={{
                             backgroundImage: `url(${resolvePortrait(fighter.portrait)})`,
-                            opacity: combatManager.getCombatant(fighter.id)?.astralBeingActive ? 0.55 : 1,
+                            opacity: getLiveCombatant(fighter.id)?.astralBeingActive ? 0.55 : 1,
                             filter: [
                                 details?.chargingUpActive ? "url('#ripple-effect')" : null,
                                 `sepia(${portraitHoveredId === fighter.id ? '2' : '0'})`,
@@ -1371,6 +1382,52 @@ export default function CombatGrid(props) {
                             border: '2px solid rgba(255, 0, 255, 0.6)'
                         }} />
                     )}
+                    {/* Dominated Overlay (pulsing gold glow) */}
+                    {(details?.dominated || (details?.activeDebuffs && details.activeDebuffs.some(d => d && (d.name === 'Dominated' || d.name === 'dominated')))) && !details?.dead && (
+                        <div style={{
+                            boxSizing: 'border-box',
+                            position: 'absolute',
+                            top: 0, left: 0, width: '100%', height: '100%',
+                            borderRadius: '6px',
+                            pointerEvents: 'none',
+                            zIndex: 314,
+                            animation: 'dominatedPulseGlow 1.5s ease-in-out infinite alternate',
+                            border: '2px solid rgba(255, 215, 0, 0.6)'
+                        }} />
+                    )}
+                    {/* Madness Overlay (cycling purple/magenta/teal glow + floating glyphs) */}
+                    {(details?.madness || (details?.activeDebuffs && details.activeDebuffs.some(d => d && (d.name === 'Madness' || d.name === 'madness')))) && !details?.dead && (
+                        <>
+                            <div style={{
+                                boxSizing: 'border-box',
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                borderRadius: '6px',
+                                pointerEvents: 'none',
+                                zIndex: 314,
+                                animation: 'madnessPulseGlow 2.5s ease-in-out infinite alternate',
+                                border: '2.5px solid rgba(176, 96, 255, 0.8)'
+                            }} />
+                            {/* Floating psyche-fracture glyphs */}
+                            {[{ char: '?', left: '18%', delay: '0s', color: '#b060ff' },
+                              { char: '!', left: '60%', delay: '0.9s', color: '#ff00c8' },
+                              { char: '※', left: '38%', delay: '1.7s', color: '#00e6ff' }].map((g, gi) => (
+                                <div key={gi} style={{
+                                    position: 'absolute',
+                                    bottom: '75%',
+                                    left: g.left,
+                                    fontSize: '13px',
+                                    fontWeight: 'bold',
+                                    color: g.color,
+                                    textShadow: `0 0 6px ${g.color}`,
+                                    pointerEvents: 'none',
+                                    zIndex: 315,
+                                    animation: `madnessSymbolFloat 2.2s ease-out infinite ${g.delay}`,
+                                    userSelect: 'none'
+                                }}>{g.char}</div>
+                            ))}
+                        </>
+                    )}
                     {/* Dripping Acid Drops */}
                     {details?.poison && !details?.dead && (images.acid_drop || images.poison) && (
                         <div style={{
@@ -1428,7 +1485,7 @@ export default function CombatGrid(props) {
                         }
                         return null;
                     })()}
-                    {fighter.type === 'monk' && combatManager.getCombatant(fighter.id)?.etherealSpeedActive && (
+                    {fighter.type === 'monk' && getLiveCombatant(fighter.id)?.etherealSpeedActive && (
                         <div style={{
                             position: 'absolute',
                             top: '-10px', left: '-10px', right: '-10px', bottom: '-10px',
@@ -1441,18 +1498,14 @@ export default function CombatGrid(props) {
                             pointerEvents: 'none'
                         }} />
                     )}
-                    {fighter.type !== 'darkness_sphere' && (
-                        <div className="indicators-wrapper" style={{ zIndex: 310, position: 'absolute', bottom: 0, left: 0, width: '100%', pointerEvents: 'none' }}>
-                            <div className="hp-bar">
-                                {!getFighterDetails(fighter)?.dead && (
-                                    <div className="red-fill" style={{ width: `${(getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%` }} />
-                                )}
+                    {!details?.dead && fighter.type !== 'darkness_sphere' && (
+                        <div className="indicators-wrapper" style={{ zIndex: 310, position: 'absolute', bottom: 0, left: 0, width: '100%', display: 'flex', flexDirection: 'column-reverse', pointerEvents: 'none' }}>
+                            <div className="hp-bar" style={{ position: 'relative', height: '4px' }}>
+                                <div className="red-fill" style={{ width: `${(getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%` }} />
                             </div>
                             {combatManager && combatManager.round !== undefined ? (
-                                <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
-                                    {!getFighterDetails(fighter)?.dead && (
-                                        <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(getFighterDetails(fighter)?.endurance / getFighterDetails(fighter)?.maxEndurance) * 100}%` }} />
-                                    )}
+                                <div className="endurance-bar" style={{ height: '2px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', position: 'relative' }}>
+                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(getFighterDetails(fighter)?.endurance / getFighterDetails(fighter)?.maxEndurance) * 100}%` }} />
                                 </div>
                             ) : null}
                         </div>
@@ -1507,7 +1560,7 @@ export default function CombatGrid(props) {
                             </div>
                         </div>
                     )}
-                    {combatManager.getCombatant(fighter.id)?.arcaneBarrierActive && (
+                    {getLiveCombatant(fighter.id)?.arcaneBarrierActive && (
                         <div style={{
                             position: 'absolute',
                             width: '130%',
@@ -1572,8 +1625,8 @@ export default function CombatGrid(props) {
                 </div>
                 {/* Target indicator */}
                 {(() => {
-                    const liveFighter = combatManager.getCombatant(fighter.id);
-                    const target = liveFighter?.targetId ? combatManager.getCombatant(liveFighter.targetId) : null;
+                    const liveFighter = getLiveCombatant(fighter.id);
+                    const target = liveFighter?.targetId ? getLiveCombatant(liveFighter.targetId) : null;
                     return target?.portrait && !target?.invisible && !details?.dead ? (
                         <div className="monster-target-indicator" style={{ zIndex: 310, position: 'absolute' }}>
                             <div className="monster-target-portrait" style={{ backgroundImage: `url(${resolvePortrait(target.portrait)})` }} />
@@ -1705,8 +1758,8 @@ export default function CombatGrid(props) {
         const yPos = tilePos(unit.coordinates.y);
         const isTelep = isTeleporting(unit.id);
 
-        const isHuge = (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
-        const isLarge = (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
+        const isHuge = !unit.isShrineGuardian && (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
+        const isLarge = !unit.isShrineGuardian && (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
         const width = isHuge 
             ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
             : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
@@ -1728,6 +1781,11 @@ export default function CombatGrid(props) {
         prevCoordsRef.current[unit.id] = true;
         const shouldTransition = !isFirstRender;
 
+        // Detect rift pushback overlay — use sweep-matched transition instead of the normal spring
+        const riftPushbackAnim = activeAnimations.find(a =>
+            a.type === 'rift_pushback' && a.sourceUnitId === unit.id
+        );
+
         const isDisintegrating = activeAnimations.some(a => a.type === 'disintegrate_beam' && a.tgtPx && Math.abs(a.tgtPx.x - (leftPos + width/2)) < 15 && Math.abs(a.tgtPx.y - (topPos + height/2)) < 15);
         const isBatFlying = activeAnimations.some(a => a.type === 'bat_fly_anim' && a.sourceUnitId === unit.id);
         const activeShieldSlamAnim = activeAnimations.find((anim) => {
@@ -1738,7 +1796,7 @@ export default function CombatGrid(props) {
             if (anim.type !== 'stomp_cast') return false;
             return anim.sourceUnitId === unit.id;
         });
-        const liveMonster = combatManager.getCombatant(unit.id) || unit;
+        const liveMonster = getLiveCombatant(unit.id) || unit;
         const monsterSleepDebuff = Array.isArray(liveMonster.activeDebuffs)
             && liveMonster.activeDebuffs.some(d => d && d.name && ['sleep', 'sleep_spell'].includes(d.name.toLowerCase()) && (d.roundsLeft || 0) > 0);
         const isAsleepMonster = !!liveMonster.asleep || (liveMonster.sleepRounds || 0) > 0 || monsterSleepDebuff;
@@ -1786,6 +1844,33 @@ export default function CombatGrid(props) {
             unit.image === 'witch_transformed' ? 'witch-demon-portrait' : '',
         ].filter(Boolean).join(' ');
 
+        let hashmallimFilter = '';
+        if (unit.type === 'hashmallim' || unit.key === 'hashmallim') {
+            const hasSaturateAnim = activeAnimations.some(anim => {
+                const isCaster = anim.casterId === unit.id;
+                return isCaster && (
+                    anim.type === 'dominate_success_overlay' ||
+                    anim.type === 'dominate_fail_overlay' ||
+                    anim.type === 'bombard_emission' ||
+                    (anim.type === 'bombard_strike' && anim.isMeteors)
+                );
+            });
+
+            const hasInvertAnim = activeAnimations.some(anim => {
+                const isCaster = anim.casterId === unit.id;
+                return isCaster && (
+                    anim.type === 'overload_success_overlay' ||
+                    anim.type === 'overload_fail_overlay'
+                );
+            });
+
+            if (hasInvertAnim) {
+                hashmallimFilter = 'invert(1)';
+            } else if (hasSaturateAnim) {
+                hashmallimFilter = 'saturate(46.5)';
+            }
+        }
+
         return (
             <div
                 key={unit.id}
@@ -1798,7 +1883,11 @@ export default function CombatGrid(props) {
                     overflow: 'visible',
                     pointerEvents: 'none',
                     zIndex: isDead ? 0 : (isMonster ? 200 : 100),
-                    transition: (isTelep || isBatFlying || activeReturnTrialAnim || !shouldTransition) ? 'none' : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                    transition: (isTelep || isBatFlying || activeReturnTrialAnim || !shouldTransition)
+                        ? 'none'
+                        : riftPushbackAnim
+                            ? `transform ${riftPushbackAnim.duration}ms ease-out`
+                            : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
                     opacity: isBatFlying ? 0 : 1,
                     ...computeHitVars(unit, getHitAnimation),
                 }}
@@ -1835,13 +1924,14 @@ export default function CombatGrid(props) {
                             backgroundImage: unit.portrait ? `url(${resolvePortrait(unit.portrait)})` : 'none',
                             backgroundSize: undefined,
                             backgroundPosition: undefined,
-                            filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${liveMonster.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''} ${meltScales[unit.id] !== undefined ? `url(#melt-effect-${unit.id})` : ''}`,
+                            filter: `${unit.portraitFilter || ''} sepia(${portraitHoveredId === unit.id ? '2' : '0'}) ${liveMonster.frozen ? 'hue-rotate(165deg) saturate(1.35) brightness(1.08) contrast(1.05)' : ''} ${meltScales[unit.id] !== undefined ? `url(#melt-effect-${unit.id})` : ''} ${hashmallimFilter}`.trim(),
                             zIndex: isMinion ? 2 : 1,
                             position: 'relative',
                             width: '100%',
                             height: '100%',
                             transform: unit.type === 'spider_minion' ? 'scale(0.5)' : 'none',
                             borderRadius: '0',
+                            transition: 'filter 0.25s ease-in-out',
                             animation: unit.type === 'darkness_sphere'
                                 ? 'sphereOfDarknessFadeIn 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards'
                                 : ((unit.stunned && !isAsleepMonster && !isDead)
@@ -1974,6 +2064,52 @@ export default function CombatGrid(props) {
                                 animation: 'betrayalPulseGlow 1.5s ease-in-out infinite alternate',
                                 border: '2px solid rgba(255, 0, 255, 0.6)'
                             }} />
+                        )}
+                        {/* Dominated Overlay (pulsing gold glow) */}
+                        {(liveMonster?.dominated || liveMonster?.activeDebuffs?.some(d => d && d.name === 'Dominated')) && !isDead && (
+                            <div style={{
+                                boxSizing: 'border-box',
+                                position: 'absolute',
+                                top: 0, left: 0, width: '100%', height: '100%',
+                                borderRadius: '6px',
+                                pointerEvents: 'none',
+                                zIndex: 14,
+                                animation: 'dominatedPulseGlow 1.5s ease-in-out infinite alternate',
+                                border: '2px solid rgba(255, 215, 0, 0.6)'
+                            }} />
+                        )}
+                        {/* Madness Overlay (cycling purple/magenta/teal glow + floating glyphs) */}
+                        {(liveMonster?.madness || liveMonster?.activeDebuffs?.some(d => d && d.name === 'Madness')) && !isDead && (
+                            <>
+                                <div style={{
+                                    boxSizing: 'border-box',
+                                    position: 'absolute',
+                                    top: 0, left: 0, width: '100%', height: '100%',
+                                    borderRadius: '6px',
+                                    pointerEvents: 'none',
+                                    zIndex: 14,
+                                    animation: 'madnessPulseGlow 2.5s ease-in-out infinite alternate',
+                                    border: '2.5px solid rgba(176, 96, 255, 0.8)'
+                                }} />
+                                {/* Floating psyche-fracture glyphs */}
+                                {[{ char: '?', left: '18%', delay: '0s', color: '#b060ff' },
+                                  { char: '!', left: '60%', delay: '0.9s', color: '#ff00c8' },
+                                  { char: '※', left: '38%', delay: '1.7s', color: '#00e6ff' }].map((g, gi) => (
+                                    <div key={gi} style={{
+                                        position: 'absolute',
+                                        bottom: '75%',
+                                        left: g.left,
+                                        fontSize: '13px',
+                                        fontWeight: 'bold',
+                                        color: g.color,
+                                        textShadow: `0 0 6px ${g.color}`,
+                                        pointerEvents: 'none',
+                                        zIndex: 15,
+                                        animation: `madnessSymbolFloat 2.2s ease-out infinite ${g.delay}`,
+                                        userSelect: 'none'
+                                    }}>{g.char}</div>
+                                ))}
+                            </>
                         )}
                     </div>
                     {liveMonster?.marked && !isDead && (
@@ -2280,23 +2416,23 @@ export default function CombatGrid(props) {
                     );
                 })()}
 
-                {unit.type !== 'darkness_sphere' && (
-                    <div className="indicators-wrapper" style={{ zIndex: 10 }}>
-                        <div className="monster-hp-bar hp-bar">
-                            {!isDead && <div className="red-fill" style={{ width: `${(unit.hp / (unit.stats?.hp || unit.starting_hp || 1)) * 100}%` }} />}
+                {!isDead && unit.type !== 'darkness_sphere' && (
+                    <div className="indicators-wrapper" style={{ zIndex: 10, display: 'flex', flexDirection: 'column-reverse', position: 'absolute', bottom: 0, left: 0, width: '100%', pointerEvents: 'none' }}>
+                        <div className="monster-hp-bar hp-bar" style={{ position: 'relative', height: '4px' }}>
+                            <div className="red-fill" style={{ width: `${(unit.hp / (unit.stats?.hp || unit.starting_hp || 1)) * 100}%` }} />
                         </div>
                         {!(unit.type && String(unit.type).includes('spider')) && (
                             combatManager && combatManager.round !== undefined ? (
-                                <div className="endurance-bar" style={{ height: '4px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', marginTop: '2px', position: 'relative' }}>
-                                    {!isDead && <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(unit.endurance / unit.maxEndurance) * 100}%` }} />}
+                                <div className="endurance-bar" style={{ height: '2px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', position: 'relative' }}>
+                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(unit.endurance / unit.maxEndurance) * 100}%` }} />
                                 </div>
                             ) : (
                                 <>
-                                    <div className="monster-energy-bar energy-bar">
-                                        {!isDead && <div className="yellow-fill" style={{ width: `calc(${unit.energy}%)` }} />}
+                                    <div className="monster-energy-bar energy-bar" style={{ position: 'relative', height: '4px' }}>
+                                        <div className="yellow-fill" style={{ width: `calc(${unit.energy}%)` }} />
                                     </div>
-                                    <div className="tempo-bar">
-                                        {!isDead && <div className="tempo-indicator" style={{ left: `calc(${unit.tempo}% - 4px)` }} />}
+                                    <div className="tempo-bar" style={{ position: 'relative', height: '4px' }}>
+                                        <div className="tempo-indicator" style={{ left: `calc(${unit.tempo}% - 4px)` }} />
                                     </div>
                                 </>
                             )
@@ -2330,6 +2466,641 @@ export default function CombatGrid(props) {
                     zIndex: 2500,
                     animation: 'betrayalHitFade 1.2s ease-out forwards'
                 }} />
+            );
+        }
+
+        if (anim.type === 'dominate_success_overlay' && anim.tgtPx) {
+            const imgUrl = images.hashmallim_dominate?.default || images.hashmallim_dominate;
+            const size = anim.isTargetLarge ? TILE_SIZE * 2.5 : TILE_SIZE * 1.5;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                }}>
+                    {/* Golden Runic Ring spinning clockwise */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '-10%',
+                        border: '3px double #ffd700',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 25px rgba(255, 215, 0, 0.8), inset 0 0 20px rgba(255, 215, 0, 0.6)',
+                        animation: 'geomSpinClockwise 2s linear infinite, dominateRingIn 0.8s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }}>
+                        {/* Golden Runes inside the ring */}
+                        <div style={{
+                            width: '100%',
+                            height: '100%',
+                            position: 'relative',
+                            animation: 'spin-slow 20s linear infinite',
+                        }}>
+                            {['\u16A0', '\u16A8', '\u16B1', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                                const angle = (i / 8) * 360;
+                                const rad = (angle - 90) * (Math.PI / 180);
+                                return (
+                                    <span
+                                        key={i}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${50 + 40 * Math.cos(rad)}%`,
+                                            top: `${50 + 40 * Math.sin(rad)}%`,
+                                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                                            color: '#ffd700',
+                                            fontSize: anim.isTargetLarge ? '26px' : '16px',
+                                            textShadow: '0 0 8px #ffd700',
+                                        }}
+                                    >
+                                        {rune}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Concentric smaller counter-spinning dashed ring */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '10%',
+                        border: '2px dashed #ffb700',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 15px rgba(255, 183, 0, 0.7)',
+                        animation: 'geomSpinCounter 1.5s linear infinite, dominateRingIn 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+
+                    {/* Descending & Pulsing Golden Eye/Crown icon (using hashmallim_dominate) */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '20%',
+                        backgroundImage: `url(${imgUrl})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        filter: 'drop-shadow(0 0 15px #ffd700) drop-shadow(0 0 30px #ffb700)',
+                        animation: 'dominateIconDescend 2s cubic-bezier(0.19, 1, 0.22, 1) forwards',
+                    }} />
+
+                    {/* Dramatic flash burst overlay */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, #ffffff 0%, #ffd700 60%, transparent 100%)',
+                        animation: 'dominateFlash 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                    }} />
+
+                    {/* Golden particles exploding outwards */}
+                    {[...Array(8)].map((_, idx) => {
+                        const angle = (idx * 360) / 8;
+                        const rad = angle * (Math.PI / 180);
+                        const dist = anim.isTargetLarge ? 120 : 70;
+                        return (
+                            <div
+                                key={idx}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%', left: '50%',
+                                    width: '8px', height: '8px',
+                                    backgroundColor: '#ffffff',
+                                    border: '2px solid #ffd700',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 12px #ffd700',
+                                    transform: 'translate(-50%, -50%)',
+                                    animation: 'dominateParticleFly 1.8s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                                    animationDelay: '0.2s',
+                                    '--target-x': `${Math.cos(rad) * dist}px`,
+                                    '--target-y': `${Math.sin(rad) * dist}px`,
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+            );
+        }
+
+
+        if (anim.type === 'madness_projectile' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const colors = ['#b060ff', '#ff00c8', '#00e6ff'];
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '28px', height: '28px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4800,
+                    '--proj-dx': `${dx}px`,
+                    '--proj-dy': `${dy}px`,
+                    animation: `madnessProjFly ${anim.duration || 650}ms cubic-bezier(0.4, 0, 0.6, 1) forwards`,
+                }}>
+                    {/* Psychic orb core */}
+                    <div style={{
+                        position: 'absolute', inset: '20%',
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, #ffffff 0%, #b060ff 50%, #ff00c8 100%)',
+                        boxShadow: '0 0 15px #b060ff, 0 0 30px #ff00c8',
+                    }} />
+                    {/* Outer spinning ring */}
+                    <div style={{
+                        position: 'absolute', inset: '5%',
+                        borderRadius: '50%',
+                        border: '2px solid #00e6ff',
+                        boxShadow: '0 0 8px #00e6ff',
+                        animation: 'geomSpinClockwise 0.4s linear infinite',
+                    }} />
+                    {/* Trail sparks */}
+                    {colors.map((c, ci) => (
+                        <div key={ci} style={{
+                            position: 'absolute',
+                            top: '50%', left: '50%',
+                            width: '5px', height: '5px',
+                            borderRadius: '50%',
+                            backgroundColor: c,
+                            boxShadow: `0 0 6px ${c}`,
+                            transform: `translate(-50%, -50%) translateX(${-8 - ci * 6}px)`,
+                            opacity: 0.7 - ci * 0.15,
+                        }} />
+                    ))}
+                </div>
+            );
+        }
+
+        if (anim.type === 'madness_cast_overlay' && anim.tgtPx) {
+            const size = TILE_SIZE * 2.8;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4700,
+                }}>
+                    {/* Outer vortex ring: purple */}
+                    <div style={{
+                        position: 'absolute', inset: '-5%',
+                        border: '3px solid #b060ff',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 30px rgba(176, 96, 255, 0.9), inset 0 0 25px rgba(176, 96, 255, 0.6)',
+                        animation: 'madnessCastRingIn 1.6s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+                    {/* Inner counter-ring: magenta dashed */}
+                    <div style={{
+                        position: 'absolute', inset: '12%',
+                        border: '2px dashed #ff00c8',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 20px rgba(255, 0, 200, 0.7)',
+                        animation: 'madnessCastRingInner 1.4s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+                    {/* Innermost ring: teal dotted */}
+                    <div style={{
+                        position: 'absolute', inset: '28%',
+                        border: '2px dotted #00e6ff',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 12px rgba(0, 230, 255, 0.6)',
+                        animation: 'madnessCastRingIn 1.2s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                    }} />
+                    {/* Chaotic flash burst */}
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.9) 0%, rgba(176,96,255,0.6) 40%, rgba(255,0,200,0.3) 70%, transparent 100%)',
+                        animation: 'madnessCastFlash 1.6s cubic-bezier(0.1, 0.8, 0.2, 1) forwards',
+                    }} />
+                    {/* Floating psyche-fracture runes in the vortex */}
+                    {['?', '!', '※', '?', '!'].map((ch, ci) => {
+                        const angle = (ci / 5) * 360 - 90;
+                        const rad = angle * (Math.PI / 180);
+                        const r = 38;
+                        return (
+                            <span key={ci} style={{
+                                position: 'absolute',
+                                left: `${50 + r * Math.cos(rad)}%`,
+                                top: `${50 + r * Math.sin(rad)}%`,
+                                transform: 'translate(-50%, -50%)',
+                                fontSize: '18px', fontWeight: 'bold',
+                                color: ['#b060ff', '#ff00c8', '#00e6ff', '#b060ff', '#ff00c8'][ci],
+                                textShadow: `0 0 10px ${['#b060ff', '#ff00c8', '#00e6ff', '#b060ff', '#ff00c8'][ci]}`,
+                                animation: 'madnessCastRingIn 1.6s cubic-bezier(0.25, 1, 0.5, 1) forwards',
+                                animationDelay: `${ci * 0.1}s`,
+                                userSelect: 'none',
+                            }}>{ch}</span>
+                        );
+                    })}
+                    {/* Exploding tri-color particles */}
+                    {[...Array(12)].map((_, idx) => {
+                        const angle = (idx * 360) / 12;
+                        const rad = angle * (Math.PI / 180);
+                        const dist = 90;
+                        const colorSet = ['#b060ff', '#ff00c8', '#00e6ff'];
+                        const c = colorSet[idx % 3];
+                        return (
+                            <div key={idx} style={{
+                                position: 'absolute',
+                                top: '50%', left: '50%',
+                                width: '7px', height: '7px',
+                                backgroundColor: '#ffffff',
+                                border: `2px solid ${c}`,
+                                borderRadius: '50%',
+                                boxShadow: `0 0 10px ${c}`,
+                                transform: 'translate(-50%, -50%)',
+                                animation: 'madnessCastParticleFly 1.4s cubic-bezier(0.1, 0.8, 0.2, 1) forwards',
+                                animationDelay: '0.15s',
+                                '--target-x': `${Math.cos(rad) * dist}px`,
+                                '--target-y': `${Math.sin(rad) * dist}px`,
+                            }} />
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (anim.type === 'madness_success_overlay' && anim.tgtPx) {
+            const imgUrl = images.hashmallim_madness?.default || images.hashmallim_madness;
+            const size = anim.isTargetLarge ? TILE_SIZE * 2.8 : TILE_SIZE * 1.8;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4600,
+                }}>
+                    {/* Expanding psychic shockwave ring */}
+                    <div style={{
+                        position: 'absolute', inset: 0,
+                        borderRadius: '50%',
+                        border: '4px solid #b060ff',
+                        boxShadow: '0 0 25px rgba(176, 96, 255, 0.9)',
+                        animation: 'madnessSuccessShockwave 1.8s cubic-bezier(0.1, 0.8, 0.2, 1) forwards',
+                    }} />
+                    {/* Second shockwave: magenta, delayed */}
+                    <div style={{
+                        position: 'absolute', inset: '10%',
+                        borderRadius: '50%',
+                        border: '3px solid #ff00c8',
+                        boxShadow: '0 0 18px rgba(255, 0, 200, 0.8)',
+                        animation: 'madnessSuccessShockwave 1.6s cubic-bezier(0.1, 0.8, 0.2, 1) forwards',
+                        animationDelay: '0.18s',
+                    }} />
+                    {/* Central madness icon with bloom */}
+                    {imgUrl && (
+                        <div style={{
+                            position: 'absolute', inset: '22%',
+                            backgroundImage: `url(${imgUrl})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            animation: 'madnessSuccessIcon 1.8s cubic-bezier(0.19, 1, 0.22, 1) forwards',
+                        }} />
+                    )}
+                    {/* Mind-shatter particles (purple, magenta, teal, white) */}
+                    {[...Array(16)].map((_, idx) => {
+                        const angle = (idx * 360) / 16;
+                        const rad = angle * (Math.PI / 180);
+                        const dist = anim.isTargetLarge ? 130 : 85;
+                        const colorSet = ['#b060ff', '#ff00c8', '#00e6ff', '#ffffff'];
+                        const c = colorSet[idx % 4];
+                        return (
+                            <div key={idx} style={{
+                                position: 'absolute',
+                                top: '50%', left: '50%',
+                                width: idx % 4 === 3 ? '5px' : '7px',
+                                height: idx % 4 === 3 ? '5px' : '7px',
+                                backgroundColor: '#ffffff',
+                                border: `2px solid ${c}`,
+                                borderRadius: idx % 3 === 0 ? '2px' : '50%',
+                                boxShadow: `0 0 10px ${c}`,
+                                transform: 'translate(-50%, -50%)',
+                                animation: 'madnessSuccessParticleFly 1.7s cubic-bezier(0.1, 0.8, 0.2, 1) forwards',
+                                animationDelay: `${0.1 + idx * 0.04}s`,
+                                '--target-x': `${Math.cos(rad) * dist}px`,
+                                '--target-y': `${Math.sin(rad) * dist}px`,
+                            }} />
+                        );
+                    })}
+                    {/* Big central flash */}
+                    <div style={{
+                        position: 'absolute', inset: '-5%',
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(176,96,255,0.5) 35%, rgba(255,0,200,0.25) 65%, transparent 100%)',
+                        animation: 'madnessCastFlash 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'dominate_fail_overlay' && anim.tgtPx) {
+            const imgUrl = images.hashmallim_dominate?.default || images.hashmallim_dominate;
+            const size = anim.isTargetLarge ? TILE_SIZE * 2.5 : TILE_SIZE * 1.5;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                }}>
+                    {/* Dark Red/Purple Runic Ring spinning clockwise but with fail animation */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '-10%',
+                        border: '3px double #ff0055',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 25px rgba(255, 0, 85, 0.8), inset 0 0 20px rgba(255, 0, 85, 0.6)',
+                        animation: 'geomSpinClockwise 2s linear infinite, dominateFailRingIn 1.5s ease-in-out forwards',
+                    }}>
+                        {/* Red/Purple Runes inside the ring */}
+                        <div style={{
+                            width: '100%',
+                            height: '100%',
+                            position: 'relative',
+                            animation: 'spin-slow 20s linear infinite',
+                        }}>
+                            {['\u16A0', '\u16A8', '\u16B1', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                                const angle = (i / 8) * 360;
+                                const rad = (angle - 90) * (Math.PI / 180);
+                                return (
+                                    <span
+                                        key={i}
+                                        style={{
+                                            position: 'absolute',
+                                            left: `${50 + 40 * Math.cos(rad)}%`,
+                                            top: `${50 + 40 * Math.sin(rad)}%`,
+                                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                                            color: '#ff0055',
+                                            fontSize: anim.isTargetLarge ? '26px' : '16px',
+                                            textShadow: '0 0 8px #ff0055',
+                                        }}
+                                    >
+                                        {rune}
+                                    </span>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Concentric smaller counter-spinning dashed ring in purple */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '10%',
+                        border: '2px dashed #800080',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 15px rgba(128, 0, 128, 0.7)',
+                        animation: 'geomSpinCounter 1.5s linear infinite, dominateFailRingIn 1.3s ease-in-out forwards',
+                    }} />
+
+                    {/* Descending & Pulsing Crimson Eye/Crown icon (using hue shift to turn gold into violet/red) */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '20%',
+                        backgroundImage: `url(${imgUrl})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        filter: 'drop-shadow(0 0 15px #ff0055) sepia(1) saturate(10) hue-rotate(320deg)',
+                        animation: 'dominateFailIconDescend 1.5s ease-in-out forwards',
+                    }} />
+
+                    {/* Violet/Red flash burst overlay */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        background: 'radial-gradient(circle, #ffffff 0%, #ff0055 60%, transparent 100%)',
+                        animation: 'dominateFailFlash 1.5s ease-in-out forwards',
+                    }} />
+
+                    {/* Violet particles exploding outwards */}
+                    {[...Array(8)].map((_, idx) => {
+                        const angle = (idx * 360) / 8;
+                        const rad = angle * (Math.PI / 180);
+                        const dist = anim.isTargetLarge ? 100 : 60;
+                        return (
+                            <div
+                                key={idx}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%', left: '50%',
+                                    width: '6px', height: '6px',
+                                    backgroundColor: '#ffffff',
+                                    border: '2px solid #ff0055',
+                                    borderRadius: '50%',
+                                    boxShadow: '0 0 8px #ff0055',
+                                    transform: 'translate(-50%, -50%)',
+                                    animation: 'dominateParticleFly 1.5s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                                    animationDelay: '0.1s',
+                                    '--target-x': `${Math.cos(rad) * dist}px`,
+                                    '--target-y': `${Math.sin(rad) * dist}px`,
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (anim.type === 'overload_success_overlay' && anim.tgtPx) {
+            const imgUrl = images.hashmallim_overload?.default || images.hashmallim_overload;
+            const size = anim.isTargetLarge ? TILE_SIZE * 3 : TILE_SIZE * 2;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                }}>
+                    {/* Techno ring 1: Spinning cyan cyber-circle */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '5%',
+                        border: '2px solid #00f0ff',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 20px rgba(0, 240, 255, 0.8), inset 0 0 15px rgba(0, 240, 255, 0.5)',
+                        animation: 'geomSpinClockwise 1s linear infinite, overloadRingIn 0.5s ease-out forwards',
+                    }} />
+
+                    {/* Techno ring 2: Counter-spinning red dashed cyber-circle */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '15%',
+                        border: '2px dashed #ff3300',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 15px rgba(255, 51, 0, 0.7)',
+                        animation: 'geomSpinCounter 1.5s linear infinite, overloadRingIn 0.7s ease-out forwards',
+                    }} />
+
+                    {/* Shockwave expanding out */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        borderRadius: '50%',
+                        border: '3px solid #ffffff',
+                        boxShadow: '0 0 30px #00f0ff',
+                        animation: 'overloadShockwave 1.2s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                    }} />
+
+                    {/* Central Overload Icon (Warning sign / Energy core) */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '25%',
+                        backgroundImage: `url(${imgUrl})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        animation: 'overloadIconPulse 1.8s ease-in-out forwards',
+                    }} />
+
+                    {/* Rapid lightning bolts/lines crackling */}
+                    {[...Array(6)].map((_, idx) => {
+                        const rot = idx * 60;
+                        const delay = idx * 0.1;
+                        return (
+                            <div
+                                key={idx}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%', left: '50%',
+                                    width: '4px', height: '40%',
+                                    background: 'linear-gradient(to bottom, #ffffff, #00f0ff, transparent)',
+                                    transform: `translate(-50%, -50%) rotate(${rot}deg) translateY(-30%)`,
+                                    boxShadow: '0 0 8px #00f0ff',
+                                    animation: 'overloadBolt 0.4s ease-out infinite alternate',
+                                    animationDelay: `${delay}s`,
+                                    '--rot': `${rot}deg`
+                                }}
+                            />
+                        );
+                    })}
+
+                    {/* Exploding high-energy particles (cyan & red) */}
+                    {[...Array(12)].map((_, idx) => {
+                        const angle = (idx * 360) / 12;
+                        const rad = angle * (Math.PI / 180);
+                        const dist = anim.isTargetLarge ? 140 : 90;
+                        const isCyan = idx % 2 === 0;
+                        return (
+                            <div
+                                key={idx}
+                                style={{
+                                    position: 'absolute',
+                                    top: '50%', left: '50%',
+                                    width: isCyan ? '8px' : '6px',
+                                    height: isCyan ? '8px' : '6px',
+                                    backgroundColor: '#ffffff',
+                                    border: `2px solid ${isCyan ? '#00f0ff' : '#ff3300'}`,
+                                    borderRadius: '50%',
+                                    boxShadow: `0 0 10px ${isCyan ? '#00f0ff' : '#ff3300'}`,
+                                    transform: 'translate(-50%, -50%)',
+                                    animation: 'overloadParticleFly 1.6s cubic-bezier(0.1, 0.8, 0.3, 1) forwards',
+                                    animationDelay: '0.1s',
+                                    '--target-x': `${Math.cos(rad) * dist}px`,
+                                    '--target-y': `${Math.sin(rad) * dist}px`,
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+            );
+        }
+
+        if (anim.type === 'overload_fail_overlay' && anim.tgtPx) {
+            const imgUrl = images.hashmallim_overload?.default || images.hashmallim_overload;
+            const size = anim.isTargetLarge ? TILE_SIZE * 2.5 : TILE_SIZE * 1.5;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: `${size}px`,
+                    height: `${size}px`,
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                }}>
+                    {/* Unstable flickering cyber-ring */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '10%',
+                        border: '2px dotted #0088ff',
+                        borderRadius: '50%',
+                        boxShadow: '0 0 10px rgba(0, 136, 255, 0.4)',
+                        animation: 'geomSpinClockwise 3s linear infinite, overloadFailRing 1s ease-out forwards',
+                    }} />
+
+                    {/* Dimmed Overload Icon with split/crack blur */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: '25%',
+                        backgroundImage: `url(${imgUrl})`,
+                        backgroundSize: 'contain',
+                        backgroundRepeat: 'no-repeat',
+                        backgroundPosition: 'center',
+                        filter: 'grayscale(0.8) contrast(0.5) blur(1px)',
+                        opacity: 0.7,
+                        animation: 'overloadFailIcon 1s cubic-bezier(0.25, 0.1, 0.25, 1) forwards',
+                    }} />
+
+                    {/* Warning text "✕ MISSED" floating up */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '-20px',
+                        left: '50%',
+                        transform: 'translateX(-50%)',
+                        color: '#ff3355',
+                        fontFamily: "'Outfit', 'Inter', sans-serif",
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        letterSpacing: '1px',
+                        textShadow: '0 0 6px rgba(255, 51, 85, 0.8)',
+                        animation: 'overloadFailText 1s ease-out forwards',
+                    }}>
+                        ✕ MISSED
+                    </div>
+
+                    {/* Fizzling smoke particles drifting upwards */}
+                    {[...Array(5)].map((_, idx) => {
+                        const delay = idx * 0.12;
+                        const xOffset = (idx - 2) * 12;
+                        return (
+                            <div
+                                key={idx}
+                                style={{
+                                    position: 'absolute',
+                                    bottom: '50%',
+                                    left: `calc(50% + ${xOffset}px)`,
+                                    width: '12px', height: '12px',
+                                    backgroundColor: '#556677',
+                                    borderRadius: '50%',
+                                    filter: 'blur(2px)',
+                                    opacity: 0.6,
+                                    animation: 'overloadSmoke 0.9s ease-out forwards',
+                                    animationDelay: `${delay}s`,
+                                }}
+                            />
+                        );
+                    })}
+                </div>
             );
         }
 
@@ -3389,6 +4160,54 @@ export default function CombatGrid(props) {
                             style={{ filter: 'drop-shadow(0 0 4px #00bfff)' }}
                         />
                     </svg>
+                </div>
+            );
+        }
+
+        if (anim.type === 'overload_projectile' && anim.srcPx && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '40px',
+                    height: '40px',
+                    pointerEvents: 'none',
+                    zIndex: 4000,
+                    animation: 'fireballTravel 0.7s linear forwards',
+                    '--fb-dx': `${anim.tgtPx.x - anim.srcPx.x}px`,
+                    '--fb-dy': `${anim.tgtPx.y - anim.srcPx.y}px`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                }}>
+                    {/* Intermediate wrapper that applies the vertical lob translation */}
+                    <div style={{
+                        animation: 'acidBlastLobY 0.7s ease-in-out forwards',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                    }}>
+                        {/* Glowing Orb: cyan & red high energy */}
+                        <div style={{
+                            width: '28px',
+                            height: '28px',
+                            borderRadius: '50%',
+                            background: 'radial-gradient(circle, #ffffff 10%, #00f0ff 50%, #ff3300 90%)',
+                            boxShadow: '0 0 12px #00f0ff, 0 0 24px #ff3300, inset 0 0 6px #ffffff',
+                            animation: 'geomSpinClockwise 1.5s linear infinite',
+                            position: 'relative'
+                        }}>
+                            {/* Inner core spinning counter */}
+                            <div style={{
+                                position: 'absolute',
+                                inset: '20%',
+                                borderRadius: '50%',
+                                border: '2px dashed #ffffff',
+                                animation: 'geomSpinCounter 1s linear infinite'
+                            }} />
+                        </div>
+                    </div>
                 </div>
             );
         }
@@ -5003,7 +5822,7 @@ export default function CombatGrid(props) {
                     zIndex: 4950,
                     pointerEvents: 'none',
                     animation: `riftLineSweep ${anim.duration || 500}ms ease-in forwards`,
-                    ['--rift-sweep']: `${-sweepPx}px`,
+                    '--rift-sweep': `${-sweepPx}px`,
                     overflow: 'visible',
                 }}>
                     <svg
@@ -5141,7 +5960,7 @@ export default function CombatGrid(props) {
         // Find any crew Summoner with an active rift portal
         const summoner = crew.find(f => f.type === 'summoner');
         if (!summoner) return null;
-        const liveSummoner = combatManager.getCombatant(summoner.id);
+        const liveSummoner = getLiveCombatant(summoner.id);
         if (!liveSummoner?.riftPortalActive || !liveSummoner?.riftPortalPos) return null;
         const { x, y } = liveSummoner.riftPortalPos; // {x, y} tile coords
         const portalLeft = x * TILE_SIZE + (SHOW_TILE_BORDERS ? x * 2 : 0);
@@ -5184,8 +6003,8 @@ export default function CombatGrid(props) {
         // Find in monsters
         const unit = Object.values(battleData).find(u => u && u.id === unitId);
         if (unit && unit.coordinates) {
-            const isHuge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
-            const isLarge = (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
+            const isHuge = !unit.isShrineGuardian && (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
+            const isLarge = !unit.isShrineGuardian && (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
             const width = isHuge 
                 ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
                 : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
@@ -5401,7 +6220,7 @@ export default function CombatGrid(props) {
 
             {/* ── Sphinx Trials: trial marker icons for off-board fighters ── */}
             {crew.map(f => {
-                const liveFighter = combatManager.getCombatant(f.id) || battleData[f.id];
+                const liveFighter = getLiveCombatant(f.id) || battleData[f.id];
                 if (!liveFighter || typeof liveFighter.inTrial !== 'number') return null;
                 const preCoords = liveFighter.preTrialCoordinates;
                 if (!preCoords) return null;
@@ -5478,6 +6297,31 @@ export default function CombatGrid(props) {
                                     width: `${TILE_SIZE}px`,
                                     height: `${TILE_SIZE}px`,
                                     backgroundColor: 'rgba(0, 255, 255, 0.03)',
+                                    zIndex: 30
+                                }}
+                            />
+                        );
+                    })}
+                </div>
+            )}
+
+            {/* --- Meteor Warning Shimmer Overlays --- */}
+            {combatManager && combatManager.meteorWarnings && combatManager.meteorWarnings.tiles && (
+                <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 30 }}>
+                    {combatManager.meteorWarnings.tiles.map((tile, tIdx) => {
+                        const top = tilePos(tile.y);
+                        const left = tilePos(tile.x);
+                        return (
+                            <div 
+                                key={`meteor-warning-${tIdx}`}
+                                className="meteor-warning-shimmer"
+                                style={{
+                                    position: 'absolute',
+                                    left: `${left}px`,
+                                    top: `${top}px`,
+                                    width: `${TILE_SIZE}px`,
+                                    height: `${TILE_SIZE}px`,
+                                    backgroundColor: 'rgba(255, 140, 0, 0.03)',
                                     zIndex: 30
                                 }}
                             />

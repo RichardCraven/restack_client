@@ -48,6 +48,77 @@ const SHOW_MONSTER_IDS = false;
 const DEATH_ANIMATION_DURATION = 2200;
 
 
+const AnimatedXPBar = ({ percentBefore, percentAfter, levelTransition }) => {
+    // If level transition occurs, we start at percentBefore, fill to 100, drop to 0, then go to percentAfter.
+    // To handle drop to 0 without backwards animation, we temporarily disable transition.
+    const [currentPercent, setCurrentPercent] = React.useState(percentBefore);
+    const [isLevelingUp, setIsLevelingUp] = React.useState(false);
+    const [disableTransition, setDisableTransition] = React.useState(false);
+    
+    React.useEffect(() => {
+        let t1, t2, t3, t4;
+        
+        t1 = setTimeout(() => {
+            if (levelTransition) {
+                // Animate to 100%
+                setCurrentPercent(100);
+                setIsLevelingUp(true);
+                
+                // Wait for fill to 100% to finish
+                t2 = setTimeout(() => {
+                    // Disable transition so it snaps to 0
+                    setDisableTransition(true);
+                    setCurrentPercent(0);
+                    
+                    // Wait a tiny bit for the snap to apply, then re-enable transition and go to percentAfter
+                    t3 = setTimeout(() => {
+                        setDisableTransition(false);
+                        setCurrentPercent(percentAfter);
+                        
+                        t4 = setTimeout(() => {
+                            setIsLevelingUp(false);
+                        }, 800);
+                    }, 50);
+                }, 800);
+            } else {
+                setCurrentPercent(percentAfter);
+            }
+        }, 1000); // 1 sec delay before starting animation
+        
+        return () => {
+            clearTimeout(t1);
+            clearTimeout(t2);
+            clearTimeout(t3);
+            clearTimeout(t4);
+        };
+    }, [percentBefore, percentAfter, levelTransition]);
+    
+    const transitionStyle = disableTransition ? 'none' : 'width 0.8s ease-in-out, background-color 0.3s ease';
+    
+    return (
+        <div className="crew-xp-container">
+            <div className="crew-xp-bg" style={{ position: 'relative' }}>
+                {isLevelingUp && (
+                    <div className="level-up-glow" style={{ 
+                        position: 'absolute', top: 0, left: 0, bottom: 0, right: 0, 
+                        boxShadow: '0 0 10px 2px rgba(255, 215, 0, 0.8), 0 0 20px 5px rgba(255, 215, 0, 0.4)', 
+                        borderRadius: 'inherit', zIndex: 1, opacity: 1, transition: 'opacity 0.3s ease'
+                    }} />
+                )}
+                <div 
+                    className={`crew-xp-fill ${isLevelingUp ? 'leveling-up' : ''}`} 
+                    style={{ 
+                        width: `${currentPercent}%`, 
+                        transition: transitionStyle,
+                        backgroundColor: isLevelingUp ? '#ffd700' : undefined 
+                    }} 
+                />
+            </div>
+            <span className="crew-xp-text">{Math.round(currentPercent)}% XP</span>
+        </div>
+    );
+};
+
 // const SHOW_BORDERS = true;
 class MonsterBattle extends React.Component {
     getGameSpeed = () => {
@@ -178,6 +249,8 @@ class MonsterBattle extends React.Component {
             foodGained: 0,
             stolenItems: [],
             levelTransitions: {},
+            xpPercentsBefore: {},
+            crewManagerSnapshot: null,
             showLevelUpScreen: false,
             levelUpQueue: [],
             battleResult: null,
@@ -202,6 +275,10 @@ class MonsterBattle extends React.Component {
             activeAnimations: [],
             logFilterSelectedFighter: false,
             logFontSize: 12,
+            // Board column count — starts at 8, expanded by entropic_kindred
+            numBoardColumns: NUM_COLUMNS,
+            // Animated column-flash strips for entropic_kindred board expansion
+            entropicKindredNewCols: [],
         }
         this.combatLogContainerRef = React.createRef();
         this.latestCombatLogEntryRef = React.createRef();
@@ -350,6 +427,54 @@ class MonsterBattle extends React.Component {
                 this._setTimeout(() => {
                     this.setState({ fearCastingActive: false });
                 }, 1800);
+            }
+
+            if (eventType === 'entropic_kindred') {
+                // Pause combat so units don't move during animation
+                if (this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+                    this.props.combatManager.pauseCombat(true);
+                }
+
+                const addedCols = (data && data.addedCols) ? data.addedCols : 3;
+                const newTotalCols = this.state.numBoardColumns + addedCols;
+
+
+                // Build new tile objects for the added columns so they render
+                // with proper styling (alternating colors, coordinate labels).
+                // New tiles are appended at the end; the CSS grid order by x,y
+                // means we need all x values from newTotalCols-addedCols through
+                // newTotalCols-1 across all rows (y 0..MAX_ROWS-1).
+                const extraTiles = [];
+                const existingCount = this.state.combatTiles.length;
+                for (let col = newTotalCols - addedCols; col < newTotalCols; col++) {
+                    for (let row = 0; row < MAX_ROWS; row++) {
+                        extraTiles.push({ id: existingCount + extraTiles.length, x: col, y: row });
+                    }
+                }
+                const updatedTiles = [...this.state.combatTiles, ...extraTiles];
+
+                // Build flash-column strips: one per new column, staggered
+                const newColStrips = [];
+                for (let i = 0; i < addedCols; i++) {
+                    newColStrips.push({ colIndex: newTotalCols - addedCols + i, delay: i * 120 });
+                }
+
+                // Show the expanded board immediately so tiles appear
+                this.setState({ numBoardColumns: newTotalCols, entropicKindredNewCols: newColStrips, combatTiles: updatedTiles });
+
+
+
+                // Clear the flash strips after animation completes
+                this._setTimeout(() => {
+                    this.setState({ entropicKindredNewCols: [] });
+                }, 1800);
+
+                // Unfreeze combat after the full animation sequence
+                this._setTimeout(() => {
+                    if (this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+                        this.props.combatManager.pauseCombat(false);
+                    }
+                }, 2200);
             }
         });
 
@@ -737,8 +862,6 @@ class MonsterBattle extends React.Component {
     updateBattleData = (battleData) => {
         if (!this._isMounted) return;
 
-        // Mummy diagnostics
-        const mummyBefore = Object.values(battleData || {}).find(c => c && (c.id === 'mummy' || c.type === 'mummy' || c.key === 'mummy' || String(c.id).includes('mummy')));
         const clonedBattleData = JSON.parse(JSON.stringify(battleData));
 
         // Preserve dead crew members so they are kept in state and can be rendered
@@ -784,13 +907,15 @@ class MonsterBattle extends React.Component {
             : [];
 
         const selectedFighterId = this.state.selectedFighter?.id;
+        // Deselect immediately if the fighter dies or gets dominated
         const nextSelectedFighter = selectedFighterId
-            ? clonedBattleData[selectedFighterId] || null
+            ? (clonedBattleData[selectedFighterId] && !clonedBattleData[selectedFighterId].dead && !clonedBattleData[selectedFighterId].dominated ? clonedBattleData[selectedFighterId] : null)
             : null;
 
         const selectedMonsterId = this.state.selectedMonster?.id;
+        // Deselect immediately if the monster dies
         const nextSelectedMonster = selectedMonsterId
-            ? clonedBattleData[selectedMonsterId] || null
+            ? (clonedBattleData[selectedMonsterId] && !clonedBattleData[selectedMonsterId].dead ? clonedBattleData[selectedMonsterId] : null)
             : null;
 
         this.setState({
@@ -965,10 +1090,18 @@ class MonsterBattle extends React.Component {
     confirmClicked = () => {
         const hasLevelUps = Object.keys(this.state.levelTransitions || {}).length > 0;
         if (hasLevelUps && this.state.battleResult === 'win') {
-            const queue = Object.entries(this.state.levelTransitions).map(([id, trans]) => {
-                const crewMember = (this.props.crew || []).find(c => c && String(c.id) === String(id));
-                return crewMember ? { crewMember, fromLevel: trans.from, toLevel: trans.to } : null;
-            }).filter(Boolean);
+            const queue = [];
+            (this.props.crew || []).forEach(member => {
+                if (member && Array.isArray(member.pendingLevelUpPicks) && member.pendingLevelUpPicks.length > 0) {
+                    member.pendingLevelUpPicks.forEach(lvl => {
+                        queue.push({
+                            crewMember: member,
+                            fromLevel: lvl - 1,
+                            toLevel: lvl
+                        });
+                    });
+                }
+            });
             if (queue.length > 0) {
                 this.setState({ showLevelUpScreen: true, levelUpQueue: queue });
                 return;
@@ -1027,7 +1160,8 @@ class MonsterBattle extends React.Component {
                 foodGained = 0,
                 itemsGained,
                 crewWins = outcome === 'crewWins' || outcome === true,
-                summaryMessage, battleResult, levelTransitions = {};
+                summaryMessage, battleResult, levelTransitions = {},
+                xpPercentsBefore = {};
 
             // liveCrew should be derived from the freshest snapshot
             let liveCrew = Object.values(latestBattleData).filter(e => !e.dead && !e.isMinion && !e.isMonster);
@@ -1184,7 +1318,10 @@ class MonsterBattle extends React.Component {
                 const levelsBefore = {};
                 try {
                     (this.props.crewManager.crew || []).forEach(c => {
-                        if (c && c.id) levelsBefore[c.id] = typeof c.level === 'number' ? c.level : 0;
+                        if (c && c.id) {
+                            levelsBefore[c.id] = typeof c.level === 'number' ? c.level : 0;
+                            xpPercentsBefore[c.id] = this.props.crewManager.calculateExpPercentage(c);
+                        }
                     });
                 } catch (e) { }
                 // Use latest liveCrew snapshot when awarding experience
@@ -1412,6 +1549,7 @@ class MonsterBattle extends React.Component {
                 isFinalDeath: false,
                 battleData: latestBattleData,
                 levelTransitions,
+                xpPercentsBefore,
             })
         }, 1500);
     }
@@ -2272,13 +2410,14 @@ class MonsterBattle extends React.Component {
                 <div className="combat-grid-container"
                     style={{
                         position: 'relative',
-                        width: TILE_SIZE * NUM_COLUMNS + (SHOW_TILE_BORDERS ? NUM_COLUMNS * 2 : 0) + 'px',
+                        width: TILE_SIZE * this.state.numBoardColumns + (SHOW_TILE_BORDERS ? this.state.numBoardColumns * 2 : 0) + 'px',
                         height: TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0) + 'px',
                         background: '#161618',
                         borderRadius: '16px',
                         border: '2px solid rgba(255, 255, 255, 0.08)',
                         boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-                        overflow: 'visible'
+                        overflow: 'visible',
+                        transition: 'width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)'
                     }}>
                     {this.state.showSummaryPanel && (() => {
                         const battleEntries = Object.values(this.state.battleData || {});
@@ -2419,12 +2558,11 @@ class MonsterBattle extends React.Component {
                                                                 </div>
 
                                                                 {/* XP Bar */}
-                                                                <div className="crew-xp-container">
-                                                                    <div className="crew-xp-bg">
-                                                                        <div className="crew-xp-fill" style={{ width: `${percent}%` }} />
-                                                                    </div>
-                                                                    <span className="crew-xp-text">{Math.round(percent)}% XP</span>
-                                                                </div>
+                                                                <AnimatedXPBar 
+                                                                    percentBefore={this.state.xpPercentsBefore ? (this.state.xpPercentsBefore[crewMember.id] || 0) : 0} 
+                                                                    percentAfter={percent} 
+                                                                    levelTransition={this.state.levelTransitions[crewMember.id]} 
+                                                                />
 
                                                                 {/* Stats Gains */}
                                                                 {gainsAgg && Object.keys(gainsAgg).length > 0 && (
@@ -2505,7 +2643,7 @@ class MonsterBattle extends React.Component {
                             const mx = mainMonster.coordinates.x;
                             const my = mainMonster.coordinates.y;
 
-                            const isHuge = mainMonster.type === 'dragon' || mainMonster.key === 'dragon' || mainMonster.size === 3 || mainMonster.huge === true;
+                            const isHuge = mainMonster.tier === 4 || mainMonster.type === 'dragon' || mainMonster.key === 'dragon' || mainMonster.huge === true || mainMonster.size === 3;
 
                             let bubbleCenterX = 0;
                             let bubbleCenterY = 0;
@@ -2703,6 +2841,27 @@ class MonsterBattle extends React.Component {
                         {this.state.boardFearActive && (
                             <div className="fear-overlay" />
                         )}
+
+                        {/* /// ENTROPIC KINDRED — column expansion flash strips */}
+                        {this.state.entropicKindredNewCols && this.state.entropicKindredNewCols.map((strip, i) => {
+                            const colPx = strip.colIndex * (TILE_SIZE + (SHOW_TILE_BORDERS ? 2 : 0));
+                            return (
+                                <div
+                                    key={`ek-col-${i}`}
+                                    className="entropic-kindred-col-flash"
+                                    style={{
+                                        position: 'absolute',
+                                        left: `${colPx}px`,
+                                        top: 0,
+                                        width: `${TILE_SIZE}px`,
+                                        height: '100%',
+                                        animationDelay: `${strip.delay}ms`,
+                                        zIndex: 80,
+                                        pointerEvents: 'none',
+                                    }}
+                                />
+                            );
+                        })}
 
                         {/* /// UNIFIED COMBAT GRID — fighters, monsters & minions share the same board */}
                         <CombatGrid

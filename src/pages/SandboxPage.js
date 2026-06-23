@@ -46,6 +46,9 @@ import {
   ghoul_portrait,
   precipice_guardian_portrait,
   blalok,
+  blalok_claw_strike,
+  blalok_bite,
+  blalok_regenerate,
   shade,
   horned_pet_portrait,
   high_priest_of_the_basilisk_portrait,
@@ -207,6 +210,7 @@ import {
   undead_grasp,
   invoke_darkness,
   sphere_of_darkness,
+  bifurcate,
 } from '../utils/images';
 import '../styles/monster-battle.scss';
 
@@ -405,7 +409,9 @@ const monstersData = [
   },
   {
     id: 'blalok', name: 'Blalok', portrait: blalok, abilities: [
-      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: blalok_claw_strike, type: 'claw_strike' },
+      { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: blalok_bite, type: 'bite' },
+      { id: 'regenerate', name: 'Regenerate', desc: 'Heals continuously for a long duration.', icon: blalok_regenerate, type: 'regenerate_type' }
     ]
   },
   {
@@ -433,6 +439,13 @@ const monstersData = [
       { id: 'magic_missile', name: 'Magic Missile', desc: 'Fire three seeking magic missiles in sequence.', icon: magic_missile_icon, type: 'magic_missile' },
       { id: 'fireball', name: 'Fireball', desc: 'Unleash a roaring fireball.', icon: fireball, type: 'fireball' },
       { id: 'ice_blast', name: 'Ice Blast', desc: 'Freeze the target in a block of absolute-zero ice.', icon: ice_blast_icon, type: 'ice_blast_proj' }
+    ]
+  },
+  {
+    id: 'beholder_minion', name: 'Beholder Minion', portrait: beholder_minion_portrait, abilities: [
+      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
+      { id: 'bifurcate', name: 'Bifurcate', desc: 'Split into two smaller copies when full energy.', icon: bifurcate, type: 'bifurcate_type' },
+      { id: 'minor_magic_missile', name: 'Minor Magic Missile', desc: 'Shoot a single magic missile.', icon: magic_missile_icon, type: 'minor_magic_missile' }
     ]
   },
   {
@@ -471,8 +484,8 @@ const fightersData = [
     name: 'Sage',
     portrait: sage,
     abilities: [
-      { id: 'heal', name: 'Heal', desc: 'Cast restorative magic on an ally.', icon: healing_hands, type: 'heal' },
-      { id: 'circle_of_protection', name: 'Circle of Protection', desc: 'Create a sanctuary shielding allies.', icon: circle_of_protection, type: 'circle_of_protection' },
+      { id: 'heal', name: 'Heal', desc: 'Restore 30 HP to an ally.', icon: healing_hands, type: 'heal' },
+      { id: 'circle_of_protection', name: 'Circle of Protection', desc: 'Create a sanctuary that increases the Defense of all allies within a 2.25-tile radius by 15 for 6 rounds.', icon: circle_of_protection, type: 'circle_of_protection' },
       { id: 'perceive', name: 'Perceive', desc: 'Affects all enemy units. Doubles the weakness of each enemy for a 2x long duration.', icon: perceive, type: 'perceive_type' },
       { id: 'direct_dispel', name: 'Direct Dispel', desc: 'Removes all debuffs from a friendly unit.', icon: direct_dispel, type: 'direct_dispel' }
     ]
@@ -4626,7 +4639,7 @@ const SandboxPage = () => {
     }
 
     // --- MAGIC MISSILE ---
-    else if (ability.type === 'magic_missile' || ability.type === 'greater_magic_missile') {
+    else if (ability.type === 'magic_missile' || ability.type === 'greater_magic_missile' || ability.type === 'minor_magic_missile') {
       setAnimating(true);
 
       const activeSphere = (selectedUnitType === 'fighter' && selectedMonsterId === 'wraith')
@@ -4709,7 +4722,8 @@ const SandboxPage = () => {
       };
 
       const isGreater = ability.type === 'greater_magic_missile';
-      const count = isGreater ? 5 : 3;
+      const isMinor = ability.type === 'minor_magic_missile';
+      const count = isGreater ? 5 : (isMinor ? 1 : 3);
       for (let i = 0; i < count; i++) {
         fireMissile(i * 150, (i - (count - 1) / 2) * 5);
       }
@@ -5884,19 +5898,19 @@ const SandboxPage = () => {
         }
         @keyframes weaponSwingArcFlipped {
           0% {
-            transform: scaleX(-1) rotate(-60deg);
+            transform: scaleY(-1) rotate(-60deg);
             opacity: 0;
           }
           10% {
-            transform: scaleX(-1) rotate(-60deg);
+            transform: scaleY(-1) rotate(-60deg);
             opacity: 1;
           }
           90% {
-            transform: scaleX(-1) rotate(60deg);
+            transform: scaleY(-1) rotate(60deg);
             opacity: 1;
           }
           100% {
-            transform: scaleX(-1) rotate(60deg);
+            transform: scaleY(-1) rotate(60deg);
             opacity: 0;
           }
         }

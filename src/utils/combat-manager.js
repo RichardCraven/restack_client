@@ -1,6 +1,7 @@
 import { FighterAI } from './fighter-ai/fighter-ai'
 import { MonsterAI } from './monster-ai/monster-ai'
 import { createFighter } from './factories'
+import * as images from './images'
 import attacksMatrix from './attacks-matrix'
 import specialsMatrix from './specials-matrix'
 import { applyAttackEffect } from './combat-effects'
@@ -739,12 +740,19 @@ export function CombatManager() {
         this.morphPortrait = cb;
     }
 
-    this.formatAttacks = (stringArray) => {
+    this.formatAttacks = (stringArray, caller) => {
         return stringArray.map(e => {
-            return clone(this.attacksMatrix[e])
+            const match = this.attacksMatrix[e];
+            if (!match) return { name: e, id: e, key: e };
+            const cloned = clone(match);
+            if (caller && (caller.type === 'blalok' || caller.key === 'blalok' || caller.image === 'blalok')) {
+                if (e === 'claw_strike') cloned.icon = images.blalok_claw_strike;
+                if (e === 'bite') cloned.icon = images.blalok_bite;
+            }
+            return cloned;
         })
     }
-    this.formatSpecials = (stringArray) => {
+    this.formatSpecials = (stringArray, caller) => {
         // Defensive formatter: accept either an array of keys (strings) or
         // an array of already-formatted special objects. Return an array of
         // special objects (cloned) and tolerate malformed inputs.
@@ -758,11 +766,19 @@ export function CombatManager() {
                     console.warn('formatSpecials: unknown special key', keyOrObj);
                     return undefined;
                 }
-                return clone(def);
+                const cloned = clone(def);
+                if (caller && (caller.type === 'blalok' || caller.key === 'blalok' || caller.image === 'blalok')) {
+                    if (keyOrObj === 'regenerate') cloned.icon = images.blalok_regenerate;
+                }
+                return cloned;
             }
             if (typeof keyOrObj === 'object') {
                 // assume already formatted; return as-is (clone to be safe)
-                return clone(keyOrObj);
+                const cloned = clone(keyOrObj);
+                if (caller && (caller.type === 'blalok' || caller.key === 'blalok' || caller.image === 'blalok')) {
+                    if (cloned.id === 'regenerate' || cloned.key === 'regenerate') cloned.icon = images.blalok_regenerate;
+                }
+                return cloned;
             }
             return undefined;
         });
@@ -787,18 +803,42 @@ export function CombatManager() {
             if (typeof s === 'string') {
                 const sNorm = s.replace(/\s+/g, '_').toLowerCase();
                 if (s.toLowerCase() === key.toLowerCase() || sNorm === normalized) {
-                    const expanded = this.formatSpecials([s]);
+                    const expanded = this.formatSpecials([s], callerOrArray);
                     if (Array.isArray(expanded) && expanded[0]) return expanded[0];
                     return { name: key };
                 }
             } else if (typeof s === 'object') {
-                if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return s;
-                if (s.key && s.key.toLowerCase() === normalized) return s;
-                if (s.id && s.id.toLowerCase() === normalized) return s;
+                if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) {
+                    const cloned = clone(s);
+                    if (callerOrArray && (callerOrArray.type === 'blalok' || callerOrArray.key === 'blalok' || callerOrArray.image === 'blalok')) {
+                        if (cloned.id === 'claw_strike' || cloned.key === 'claw_strike') cloned.icon = images.blalok_claw_strike;
+                        if (cloned.id === 'bite' || cloned.key === 'bite') cloned.icon = images.blalok_bite;
+                        if (cloned.id === 'regenerate' || cloned.key === 'regenerate') cloned.icon = images.blalok_regenerate;
+                    }
+                    return cloned;
+                }
+                if (s.key && s.key.toLowerCase() === normalized) {
+                    const cloned = clone(s);
+                    if (callerOrArray && (callerOrArray.type === 'blalok' || callerOrArray.key === 'blalok' || callerOrArray.image === 'blalok')) {
+                        if (cloned.id === 'claw_strike' || cloned.key === 'claw_strike') cloned.icon = images.blalok_claw_strike;
+                        if (cloned.id === 'bite' || cloned.key === 'bite') cloned.icon = images.blalok_bite;
+                        if (cloned.id === 'regenerate' || cloned.key === 'regenerate') cloned.icon = images.blalok_regenerate;
+                    }
+                    return cloned;
+                }
+                if (s.id && s.id.toLowerCase() === normalized) {
+                    const cloned = clone(s);
+                    if (callerOrArray && (callerOrArray.type === 'blalok' || callerOrArray.key === 'blalok' || callerOrArray.image === 'blalok')) {
+                        if (cloned.id === 'claw_strike' || cloned.key === 'claw_strike') cloned.icon = images.blalok_claw_strike;
+                        if (cloned.id === 'bite' || cloned.key === 'bite') cloned.icon = images.blalok_bite;
+                        if (cloned.id === 'regenerate' || cloned.key === 'regenerate') cloned.icon = images.blalok_regenerate;
+                    }
+                    return cloned;
+                }
             }
         }
 
-        const expanded = this.formatSpecials([normalized]);
+        const expanded = this.formatSpecials([normalized], callerOrArray);
         if (Array.isArray(expanded) && expanded[0]) return expanded[0];
         return null;
     }
@@ -920,7 +960,7 @@ export function CombatManager() {
             )
         );
 
-        if (isLarge && m.tier === 1) {
+        if (m.tier === 1 || m.tier === 2) {
             if (m.stats && typeof m.stats.hp === 'number') {
                 m.stats = { ...m.stats, hp: m.stats.hp * 2 };
             }
