@@ -125,7 +125,7 @@ class BoardsPanel extends React.Component {
                                                                                                     contains={tile.contains}
                                                                                                     image={tile.image ? tile.image : null}
                                                                                                     imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
-                                                                                                    color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                                                                                    color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                                                                                     index={tile.id}
                                                                                                     showCoordinates={false}
                                                                                                     type={tile.type}
@@ -168,7 +168,7 @@ class BoardsPanel extends React.Component {
                                                                                 tileSize={(this.props.tileSize*3)/15}
                                                                                 contains={tile.contains}
                                                                                 image={tile.image ? tile.image : null}
-                                                                                color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                                                                color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                                                                 index={tile.id}
                                                                                 showCoordinates={false}
                                                                                 type={tile.type}
@@ -210,7 +210,7 @@ class BoardsPanel extends React.Component {
                                                                 tileSize={(this.props.tileSize*3)/15}
                                                                 contains={tile.contains}
                                                                 image={tile.image ? tile.image : null}
-                                                                color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                                                color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                                                 index={tile.id}
                                                                 showCoordinates={false}
                                                                 type={tile.type}
@@ -248,7 +248,7 @@ class BoardsPanel extends React.Component {
                                                 tileSize={(this.props.tileSize*3)/15}
                                                 contains={tile.contains}
                                                 image={tile.image ? tile.image : null}
-                                                color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                                color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                                 index={tile.id}
                                                 imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
                                                 showCoordinates={false}
@@ -287,7 +287,7 @@ class BoardsPanel extends React.Component {
                                             tileSize={(this.props.tileSize*3)/15}
                                             contains={tile.contains}
                                             image={tile.image ? tile.image : null}
-                                            color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                            color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                             index={tile.id}
                                             showCoordinates={false}
                                             type={tile.type}
@@ -321,7 +321,7 @@ class BoardsPanel extends React.Component {
                                                         tileSize={(this.props.tileSize*3)/15}
                                                         contains={tile.contains}
                                                         image={tile.image ? tile.image : null}
-                                                        color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                                        color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                                         index={tile.id}
                                                         showCoordinates={false}
                                                         type={tile.type}
@@ -353,7 +353,7 @@ class BoardsPanel extends React.Component {
                                         tileSize={(this.props.tileSize*3)/15}
                                         contains={tile.contains}
                                         image={tile.image ? tile.image : null}
-                                        color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                        color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                         index={tile.id}
                                         showCoordinates={false}
                                         type={tile.type}
@@ -385,7 +385,7 @@ class BoardsPanel extends React.Component {
                                             tileSize={(this.props.tileSize*3)/15}
                                             contains={tile.contains}
                                             image={tile.image ? tile.image : null}
-                                            color={tile.color ? tile.color : 'lightgrey'} borders={tile.borders}
+                                            color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'} borders={tile.borders}
                                             index={tile.id}
                                             showCoordinates={false}
                                             type={tile.type}

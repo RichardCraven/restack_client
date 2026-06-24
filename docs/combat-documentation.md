@@ -518,105 +518,52 @@ shield_wall: {
 
 ---
 
-## 11. Speed, Dexterity, and Tempo Reference
+## 11. Speed, Dexterity, and Turn Order Reference
 
 ### Effective Stat Source
 
-- Fighters primarily use `stats.dex`
-- Monsters primarily use `stats.speed`
+- Fighters primarily use `stats.dex` (Dexterity)
+- Monsters primarily use `stats.speed` (Speed)
 - If one is missing, combat falls back to the other, then to `1`
-
-In practice, the engine uses this same fallback pattern in the major timing systems.
 
 ### What the Personal Stat Affects
 
 `dex` / `speed` directly affects:
 
-1. Tempo indicator movement speed
-2. Full turn-cycle duration
-3. `movesPerTurnCycle`
-4. `moveCooldown`
-5. General attack cooldown timing
-6. Hit avoidance via `hitCheck`
-7. Passive energy regeneration
+1. **Turn Order**: Sorted order inside `processRoundTurns()` so that higher initiative units act earlier in the round sequence.
+2. **Evasion / Dodge**: Scales physical attack miss/dodge chance in `hitCheck()` via `baseMissChance = (targetDex * 2.0) + (targetSpeed * 1.0)`.
 
-### Tempo Formula Summary
+### Dodge Chance Formula
 
 ```javascript
-incrementPerTick = effectiveStat / 25
-tempo = min(100, accumulatedCount)
+baseMissChance = (targetDex * 2.0) + (targetSpeed * 1.0)
+missChance = Math.min(baseMissChance, 45); // Capped at 45% normally
 ```
 
-Approximate real-time duration for one full tempo cycle:
-
-$$
-cycle\_time\_ms = \frac{2500 \times FIGHT\_INTERVAL}{effectiveStat}
-$$
-
-Approximate cycles at default `Slow` (`40ms`):
-
-| Effective Stat | Full Cycle Time |
-|----------------|-----------------|
-| 4              | 25.0s           |
-| 5              | 20.0s           |
-| 7              | 14.3s           |
-| 10             | 10.0s           |
-| 13             | 7.7s            |
-
-### Movement Formula Summary
-
-```javascript
-movesPerTurnCycle = effectiveStat * 2
-moveCooldown = 5000 / effectiveStat
-```
-
-Examples:
-
-| Effective Stat | Moves / Cycle | Move Cooldown |
-|----------------|---------------|---------------|
-| 4              | 8             | 1250ms        |
-| 5              | 10            | 1000ms        |
-| 10             | 20            | 500ms         |
-
-### Attack Cooldown Summary
-
-```javascript
-generalCooldown = (10 / callerSpeed) * 1000 / attackSpeedMult
-```
-
-Examples with `attackSpeedMult = 1`:
-
-| Speed | General Cooldown |
-|-------|------------------|
-| 4     | 2500ms           |
-| 5     | 2000ms           |
-| 10    | 1000ms           |
+- Each point of Dexterity grants +2% dodge/miss chance.
+- Ethereal Speed buff adds +10 to targetDex and +15 to targetSpeed, increasing dodge chance by +35% (up to a 70% cap).
 
 ---
 
 ## 12. Armor & Defense Reference
 
-### Fighter Armor (Equipped Items)
+### Armor Reduction Formula
 
-Armor items have an `.armor` integer value. All equipped items (`equippedSlot` set, `type === 'armor'`) are summed. Example reduction percentages at `damageCheck` thresholds:
+```javascript
+totalArmor = equippedArmor + (stats.def * 4 * copMultiplier)
+reduction = Math.min(totalArmor / 2.5, 75); // Capped at 75% reduction
+```
 
-| Total Armor | Raw Reduction Factor | Effective Reduction (cap 75%) |
-|-------------|---------------------|-------------------------------|
-| 10          | 7%                  | 7%                            |
-| 30          | 21%                 | 21%                           |
-| 60          | 42%                 | 42%                           |
-| 100         | 70%                 | 70%                           |
-| 110+        | >75% → capped       | 75%                           |
+- **equippedArmor**: Sum of all equipped armor item values.
+- **naturalArmor**: `stats.def * 4` (scaled by Circle of Protection if active).
+- Both fighters and monsters benefit from natural defense (`stats.def`) and equipped armor.
 
-### Monster Natural Armor
-
-Monsters do not equip armor items. Their natural defense uses `stats.def`:
-- Natural armor = `stats.def × 4`
-- Example: a monster with `def: 3` contributes 12 natural armor points
-
-### `def` Stat for Fighters
-
-Fighter `def` stat currently contributes nothing to `damageCheck` (only `equipped` armor items count). It is preserved for future use.
+| Total Armor | Reduction Percentage |
+|-------------|----------------------|
+| 10          | 4%                   |
+| 50          | 20%                  |
+| 100         | 40%                  |
+| 187.5+      | 75% (capped)         |
 
 ---
 

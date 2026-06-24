@@ -248,4 +248,48 @@ describe('BoardManager fog/respawn harness', () => {
     // Directly adjacent visible tiles are never partially obscured.
     expect(bm.tiles[northIndex].partialObscured).not.toBe(true);
   });
+
+  test('vendor tiles revealed when adjacent to player default to neutral dark-stone color (#6b6057) instead of white', () => {
+    const bm = new BoardManager();
+    bm.updateDungeon = jest.fn();
+    bm.refreshTiles = jest.fn();
+
+    const board = makeEmptyBoard(701);
+    
+    // Set up a 2x2 vendor footprint
+    // 30 (Row 2, Col 0), 31 (Row 2, Col 1), 45 (Row 3, Col 0), 46 (Row 3, Col 1)
+    const vendorGroupId = 'vendor_test_30';
+    const footprintIndices = [30, 31, 45, 46];
+    const vendorCells = ['anchor', 'top_right', 'bottom_left', 'bottom_right'];
+    
+    footprintIndices.forEach((idx, i) => {
+      board.tiles[idx].contains = {
+        type: 'vendor',
+        subtype: 'magic_shop',
+        vendorGroupId,
+        vendorAnchorId: 30,
+        vendorCell: vendorCells[i]
+      };
+      board.tiles[idx].color = null;
+    });
+
+    // Place player at Row 4, Col 0 (index 60), which is adjacent to bottom-left vendor tile (index 45)
+    const playerIndex = 60;
+    board.tiles[playerIndex].contains = { type: 'passage', subtype: null };
+
+    const level = { id: 7, front: { miniboards: [board] }, back: { miniboards: [] }, name: 'L7' };
+    bm.dungeon = { levels: [level] };
+    bm.currentLevel = level;
+    bm.currentBoard = board;
+    bm.currentOrientation = 'F';
+
+    bm.playerTile = { location: bm.getCoordinatesFromIndex(playerIndex), boardIndex: 0 };
+    bm.initializeTilesFromMap(0, bm.getIndexFromCoordinates(bm.playerTile.location));
+
+    // Verify all four vendor tiles get the dark stone color fallback #6b6057, and none of them is white
+    expect(bm.tiles[45].color).toBe('#6b6057');
+    expect(bm.tiles[30].color).toBe('#6b6057');
+    expect(bm.tiles[46].color).toBe('#6b6057');
+    expect(bm.tiles[31].color).toBe('#6b6057');
+  });
 });

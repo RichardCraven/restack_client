@@ -185,6 +185,10 @@ class MapMakerPage extends React.Component {
       planeNameInput : React.createRef(),
       boardNameInput : React.createRef(),
       showClearUniqueDungeonInstancesModal: false,
+      contextMenu: { visible: false, x: 0, y: 0, tileId: null },
+      zoomLevelId: null,
+      zoomMiniboardIndex: null,
+      zoomOrientation: null,
       clearUniqueDungeonInstances: [],
       clearUniqueDungeonInstancesLoading: false,
 
@@ -285,12 +289,6 @@ class MapMakerPage extends React.Component {
     for(let i = 0; i < 9; i++){
       arr.push([])
     }
-    this.loadAllBoards();
-    this.loadAllPlanes();
-    this.loadAllDungeons();
-    // const meta = getMeta()
-    // console.log('meta:', meta);  
-    
     this.setState((state, props) => {
       return {
         tileSize,
@@ -299,11 +297,32 @@ class MapMakerPage extends React.Component {
         // miniboards: arr
       }
     })
+    Promise.all([
+      this.loadAllBoards(),
+      this.loadAllPlanes(),
+      this.loadAllDungeons()
+    ]).then(() => {
+      this.restoreEditorSelection();
+    }).catch(err => {
+      console.error("Error loading editor selection:", err);
+    });
     this.nameFilterClicked();
     // Mapmaker-local keyboard shortcuts
     this._mapmakerKeyHandler = (e) => {
       const targetTag = (e.target && e.target.tagName ? e.target.tagName : '').toLowerCase();
       const isEditable = targetTag === 'input' || targetTag === 'textarea' || targetTag === 'select' || (e.target && e.target.isContentEditable);
+
+      if ((e.key === 's' || e.key === 'S') && (e.ctrlKey || e.metaKey)) {
+        e.preventDefault();
+        if (this.state.selectedView === 'board') {
+          this.writeBoard();
+        } else if (this.state.selectedView === 'plane') {
+          this.writePlane();
+        } else if (this.state.selectedView === 'dungeon') {
+          this.saveDungeonLevel();
+        }
+        return;
+      }
 
       if (e.key === ' ' && e.shiftKey) {
         this.setState(prev => ({ devConsoleOpen: !prev.devConsoleOpen }), () => {
@@ -667,12 +686,21 @@ class MapMakerPage extends React.Component {
     return [anchorTileId, anchorTileId + 1, anchorTileId + 15, anchorTileId + 16];
   }
 
+  getContainsType = (contains) => {
+    if (!contains) return null;
+    if (typeof contains === 'object') return contains.type || null;
+    if (typeof contains === 'string') return contains;
+    return null;
+  }
+
   canPlaceVendorFootprint = (tiles, anchorTileId) => {
     const footprint = this.getVendorFootprintTileIds(anchorTileId);
     if (!footprint) return false;
     return footprint.every((tileId) => {
       const tile = tiles[tileId];
-      return tile && tile.contains && tile.contains.type === 'empty_space';
+      if (!tile) return false;
+      const type = this.getContainsType(tile.contains);
+      return !type || type === 'empty_space' || type === 'obscured_space' || type === 'passage' || type === 'vendor';
     });
   }
 
@@ -681,7 +709,35 @@ class MapMakerPage extends React.Component {
     if (!footprint) return tiles;
     const vendorGroupId = `vendor_${vendorKey}_${anchorTileId}`;
     const vendorCells = ['anchor', 'top_right', 'bottom_left', 'bottom_right'];
+    
+    // Copy the original borders for all 4 tiles in the footprint to preserve the outer boundaries
+    const originalBorders = footprint.map(tileId => tiles[tileId]?.borders ? { ...tiles[tileId].borders } : null);
+
     footprint.forEach((tileId, idx) => {
+      const orig = originalBorders[idx];
+      let newBorders = null;
+
+      if (orig) {
+        newBorders = {};
+        if (idx === 0) { // anchor (top left)
+          if (orig.top) newBorders.top = orig.top;
+          if (orig.left) newBorders.left = orig.left;
+        } else if (idx === 1) { // top_right
+          if (orig.top) newBorders.top = orig.top;
+          if (orig.right) newBorders.right = orig.right;
+        } else if (idx === 2) { // bottom_left
+          if (orig.bottom) newBorders.bottom = orig.bottom;
+          if (orig.left) newBorders.left = orig.left;
+        } else if (idx === 3) { // bottom_right
+          if (orig.bottom) newBorders.bottom = orig.bottom;
+          if (orig.right) newBorders.right = orig.right;
+        }
+        // If there are no outer borders preserved, set to null
+        if (Object.keys(newBorders).length === 0) {
+          newBorders = null;
+        }
+      }
+
       tiles[tileId].contains = {
         type: 'vendor',
         subtype: vendorKey,
@@ -691,7 +747,7 @@ class MapMakerPage extends React.Component {
       };
       tiles[tileId].image = vendorKey;
       tiles[tileId].color = null;
-      tiles[tileId].borders = null;
+      tiles[tileId].borders = newBorders;
     });
     return tiles;
   }
@@ -793,7 +849,7 @@ class MapMakerPage extends React.Component {
         let isAdjacent = false;
         if (prevTileIdx !== null && prevTileIdx !== tile.id) {
             let prevTile = arr[prevTileIdx];
-            if (prevTile && prevTile.contains && prevTile.contains.type === 'passage') {
+            if (prevTile && this.getContainsType(prevTile.contains) === 'passage') {
                 if (tile.id === prevTileIdx - 15) { connectedBot = true; isAdjacent = true; } // moved up
                 if (tile.id === prevTileIdx + 15) { connectedTop = true; isAdjacent = true; } // moved down
                 if (tile.id === prevTileIdx - 1) { connectedRight = true; isAdjacent = true; } // moved left
@@ -809,7 +865,7 @@ class MapMakerPage extends React.Component {
             }
         }
         let newBorders = { top: '2px solid black', bottom: '2px solid black', left: '2px solid black', right: '2px solid black' };
-        if (arr[tile.id].contains && arr[tile.id].contains.type === 'passage') {
+        if (this.getContainsType(arr[tile.id].contains) === 'passage') {
             newBorders = arr[tile.id].borders ? {...arr[tile.id].borders} : newBorders;
         }
         if (connectedBot) newBorders.bottom = '2px solid transparent';
@@ -914,7 +970,7 @@ class MapMakerPage extends React.Component {
         if (wallId !== null) {
           const tiles = this.state.tiles;
           const wallTile = tiles[wallId];
-          const wallContainsType = wallTile && wallTile.contains && wallTile.contains.type;
+          const wallContainsType = wallTile ? this.getContainsType(wallTile.contains) : null;
           if (wallContainsType === 'void' || wallContainsType === null || wallContainsType === undefined) {
             this.showInscriptionWallPicker(wallId);
           }
@@ -1319,7 +1375,8 @@ class MapMakerPage extends React.Component {
         pinnedOption: tile
       })
     } else if(tile.type === 'board-tile'){
-      if (tile.contains && (tile.contains.type === 'dungeon_portal' || tile.contains.type === 'dungeon portal')) {
+      const containsType = this.getContainsType(tile.contains);
+      if (containsType === 'dungeon_portal' || containsType === 'dungeon portal') {
         const pinnedOption = this.state.pinnedOption;
         const pinnedPaletteTile = pinnedOption && this.props.mapMaker.paletteTiles[pinnedOption.id];
         if (pinnedPaletteTile && pinnedPaletteTile.optionType === 'delete') {
@@ -1508,7 +1565,7 @@ class MapMakerPage extends React.Component {
       console.log('this.props.mapMaker.paletteTiles', this.props.mapMaker.paletteTiles);
       if(pinned && pinned.optionType === 'passage'){
         let arr = [...this.state.tiles];
-        if (arr[tile.id].contains && arr[tile.id].contains.type === 'passage') {
+        if (this.getContainsType(arr[tile.id].contains) === 'passage') {
           this.setState({
             hoveredTileIdx: tile.id
           });
@@ -1560,7 +1617,8 @@ class MapMakerPage extends React.Component {
       } else if(pinned && pinned.optionType === 'voidfill'){
         let arr = [...this.state.tiles];
         arr.forEach(e=>{
-          if (!e.contains || (e.contains && e.contains.type === 'empty_space')) {
+          const containsType = this.getContainsType(e.contains);
+          if (!containsType || containsType === 'empty_space') {
             e.image = null;
             e.color = 'black'
             e.contains = { type: 'void', subtype: null }
@@ -1995,18 +2053,152 @@ updateDungeonWithPlane = (plane) => {
   zoomIntoBoard = (levelId, miniboardIndex, frontOrBack) => {
     console.log('zoom into ', levelId, miniboardIndex, frontOrBack);
     const level = this.state.loadedDungeon.levels.find(e=>e.id === levelId)
-    const miniboard = frontOrBack === 'front' ? level.front.miniboards[miniboardIndex] : level.back.miniboards[miniboardIndex]
-    console.log('level:', level, 'miniboard:', miniboard);
+    const plane = frontOrBack === 'front' ? level?.front : level?.back;
+    const miniboard = plane?.miniboards[miniboardIndex]
+    console.log('level:', level, 'plane:', plane, 'miniboard:', miniboard);
     if(level && miniboard){
+      this.setState({
+        zoomLevelId: levelId,
+        zoomMiniboardIndex: miniboardIndex,
+        zoomOrientation: frontOrBack
+      });
+      if (plane) {
+        this.loadPlane(plane);
+      }
       this.loadBoard(miniboard, true)
-      // console.log('setting videw state');
-      // this.setViewState('board')
-      // // this.set
-      // this.setState({
-      //   loadedBoard: miniboard,
-      //   tiles: miniboard.tiles
-      // })
     }
+  }
+
+  handleContextMenu = (e, tileId) => {
+    e.preventDefault();
+    this.setState({
+      contextMenu: {
+        visible: true,
+        x: e.clientX,
+        y: e.clientY,
+        tileId: tileId
+      }
+    });
+  }
+
+  resolveDungeonContext = (boardId) => {
+    const dungeon = this.state.loadedDungeon;
+    if (dungeon && dungeon.levels && boardId) {
+      for (const level of dungeon.levels) {
+        for (const orient of ['front', 'back']) {
+          const plane = level[orient];
+          if (plane && Array.isArray(plane.miniboards)) {
+            const mbIndex = plane.miniboards.findIndex(mb => mb && mb.id === boardId);
+            if (mbIndex !== -1) {
+              return {
+                levelId: level.id,
+                orientation: orient,
+                boardIndex: mbIndex
+              };
+            }
+          }
+        }
+      }
+    }
+
+    // Fallback to zoom state
+    const levelId = this.state.zoomLevelId;
+    const orientation = this.state.zoomOrientation;
+    const boardIndex = this.state.zoomMiniboardIndex;
+    if (levelId !== null && levelId !== undefined && orientation && boardIndex !== null && boardIndex !== undefined) {
+      return { levelId, orientation, boardIndex };
+    }
+
+    return null;
+  }
+
+  handleGetCoordinates = () => {
+    const tileId = this.state.contextMenu?.tileId;
+    if (tileId === null || tileId === undefined) return;
+
+    const x = tileId % 15;
+    const y = Math.floor(tileId / 15);
+    const boardId = this.state.loadedBoard?.id;
+    const context = this.resolveDungeonContext(boardId);
+
+    if (!context) {
+      this.toast('Cannot get dungeon coordinates - please open the board from within a dungeon first.');
+      this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } });
+      return;
+    }
+
+    const coordStr = `level:${context.levelId},orientation:${context.orientation},board:${context.boardIndex},x:${x},y:${y}`;
+    navigator.clipboard.writeText(coordStr)
+      .then(() => {
+        this.toast(`Copied to clipboard: ${coordStr}`);
+      })
+      .catch((err) => {
+        console.error('Clipboard write failed:', err);
+        this.toast(`Coordinates: ${coordStr}`);
+      });
+
+    console.log(`[Dungeon Coordinates] ${coordStr}`);
+    this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } });
+  }
+
+  handleStoreCoordinates = () => {
+    const tileId = this.state.contextMenu?.tileId;
+    if (tileId === null || tileId === undefined) return;
+
+    const x = tileId % 15;
+    const y = Math.floor(tileId / 15);
+    const boardId = this.state.loadedBoard?.id;
+    const context = this.resolveDungeonContext(boardId);
+
+    if (!context) {
+      this.toast('Cannot store dungeon coordinates - please open the board from within a dungeon first.');
+      this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } });
+      return;
+    }
+
+    const dungeonName = this.state.loadedDungeon?.name || 'Unnamed Dungeon';
+    const dungeonId = this.state.loadedDungeon?.id || 'unknown';
+    const label = `${dungeonName} - Level ${context.levelId} (${context.orientation}) - Board ${context.boardIndex} @ (${x}, ${y})`;
+    
+    const coordObj = {
+      id: `${dungeonId}_L${context.levelId}_${context.orientation}_B${context.boardIndex}_X${x}_Y${y}_${Date.now()}`,
+      dungeonId,
+      dungeonName,
+      levelId: context.levelId,
+      orientation: context.orientation,
+      boardIndex: context.boardIndex,
+      x,
+      y,
+      label
+    };
+
+    const meta = getMeta() || {};
+    meta.storedCoordinates = meta.storedCoordinates || [];
+    
+    const duplicateIdx = meta.storedCoordinates.findIndex(c => 
+      c.dungeonId === dungeonId &&
+      c.levelId === context.levelId &&
+      c.orientation === context.orientation &&
+      c.boardIndex === context.boardIndex &&
+      c.x === x &&
+      c.y === y
+    );
+
+    if (duplicateIdx !== -1) {
+      meta.storedCoordinates[duplicateIdx] = coordObj;
+    } else {
+      meta.storedCoordinates.push(coordObj);
+    }
+
+    storeMeta(meta);
+
+    const userId = sessionStorage.getItem('userId');
+    if (userId) {
+      updateUserRequest(userId, meta).catch(() => {});
+    }
+
+    this.toast(`Stored coordinates under storedCoordinates`);
+    this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } });
   }
   // zoomInToBoard = (board) => {
   //   console.log('LOADING BOARD!')
@@ -2399,6 +2591,7 @@ updateDungeonWithPlane = (plane) => {
             }
             if (handoff.boardId) {
               handoffBoardId = handoff.boardId;
+              this._handoffActive = true;
               setTimeout(() => {
                 const boardRef = this.findBoardRefInFolders(handoff.boardId);
                 if (boardRef) {
@@ -2412,15 +2605,6 @@ updateDungeonWithPlane = (plane) => {
           }
         } catch(_) {}
 
-        const persistedLoadedBoardId = meta?.preferences?.editor?.loadedBoardId;
-        if (persistedLoadedBoardId && !handoffBoardId) {
-          const persistedBoardRef = this.findBoardRefInFolders(persistedLoadedBoardId);
-          if (persistedBoardRef) {
-            this.loadBoard(persistedBoardRef);
-          } else {
-            setEditorPreference('loadedBoardId', null);
-          }
-        }
         resolve();
       })
     })
@@ -2940,6 +3124,11 @@ updateDungeonWithPlane = (plane) => {
       // miniboards: plane.miniboards,
       planeHasUnsavedChanges: false,
     })
+    setEditorPreference('loadedPlaneId', plane.id || null);
+    const userId = sessionStorage.getItem('userId');
+    const meta = getMeta();
+    if(userId) updateUserRequest(userId, meta);
+    storeMeta(meta);
   }
   loadDungeon = async (id) => {
     console.log('load dungein: ', id);
@@ -2995,28 +3184,12 @@ updateDungeonWithPlane = (plane) => {
     //   this.writePlane()
     // })
 
-    const meta = getMeta()
-    this.setState({
+    return new Promise((resolve) => {
+      this.setState({
         dungeons,
         loadingData: false
-    })
-    if(meta?.preferences?.editor?.loadedDungeon){
-      let dungeon = meta.preferences.editor.loadedDungeon;
-      const loadedDungeon = dungeons.find(d=>d.id === dungeon.id);
-      this.setLoadedDungeonDropdownValue(dungeon.name)
-      
-      // If overlay was previously on, compute overlayData for the loaded dungeon
-      let overlayData = null;
-      if(this.state.dungeonOverlayOn && loadedDungeon){
-        overlayData = this.props.mapMaker.markPassages(loadedDungeon);
-      }
-      
-      this.setState({
-        loadedDungeon: loadedDungeon,
-        overlayData,
-        selectedThingTitle: this.state.selectedView === 'dungeon' && loadedDungeon ? `Dungeon: ${loadedDungeon.name}` : this.state.selectedThingTitle
-      })
-    }
+      }, resolve);
+    });
   }
   setLoadedDungeonDropdownValue = (name) => {
     let b = this.state.dungeonSelectVal;
@@ -3120,13 +3293,108 @@ updateDungeonWithPlane = (plane) => {
         })
       })
     })
-    this.setState(() => {
-      return {
-        planes,
-        planesFolders,
-        planesFoldersExpanded
-      }
+    return new Promise((resolve) => {
+      this.setState(() => {
+        return {
+          planes,
+          planesFolders,
+          planesFoldersExpanded
+        }
+      }, resolve)
     })
+  }
+  restoreEditorSelection = () => {
+    if (this._handoffActive) {
+      return;
+    }
+    const meta = getMeta();
+    const selectedView = meta?.preferences?.editor?.selectedView || 'plane';
+    const loadedDungeonPref = meta?.preferences?.editor?.loadedDungeon;
+    const loadedPlaneId = meta?.preferences?.editor?.loadedPlaneId;
+    const loadedBoardId = meta?.preferences?.editor?.loadedBoardId;
+
+    if (loadedDungeonPref && loadedDungeonPref.id) {
+      const dungeon = this.state.dungeons.find(d => d.id === loadedDungeonPref.id);
+      if (dungeon) {
+        // Compute overlayData if overlay is on
+        let overlayData = null;
+        if (this.state.dungeonOverlayOn) {
+          overlayData = this.props.mapMaker.markPassages(dungeon);
+        }
+
+        this.setState({
+          loadedDungeon: dungeon,
+          overlayData,
+          selectedThingTitle: selectedView === 'dungeon' ? `Dungeon: ${dungeon.name}` : this.state.selectedThingTitle
+        });
+        this.setLoadedDungeonDropdownValue(dungeon.name);
+
+        // Check if the loadedBoardId is part of this dungeon
+        if (loadedBoardId) {
+          const context = this.resolveDungeonContext(loadedBoardId);
+          if (context) {
+            this.setState({
+              zoomLevelId: context.levelId,
+              zoomMiniboardIndex: context.miniboardIndex,
+              zoomOrientation: context.orientation,
+              loadedPlane: context.plane,
+              loadedBoard: context.miniboard,
+              tiles: context.miniboard.tiles,
+              selectedThingTitle: selectedView === 'board' ? `Board: ${context.miniboard.name}` : (selectedView === 'plane' ? `Plane: ${context.plane.name}` : `Dungeon: ${dungeon.name}`)
+            });
+            // Update preferences
+            setEditorPreference('loadedPlaneId', context.plane.id || null);
+            setEditorPreference('loadedBoardId', context.miniboard.id || null);
+            return;
+          }
+        }
+
+        // If not a dungeon board, check if loadedPlaneId is part of this dungeon
+        if (loadedPlaneId) {
+          let foundPlane = null;
+          let foundLevelId = null;
+          let foundOrient = null;
+          for (const level of dungeon.levels) {
+            if (level.front && level.front.id === loadedPlaneId) {
+              foundPlane = level.front;
+              foundLevelId = level.id;
+              foundOrient = 'front';
+              break;
+            }
+            if (level.back && level.back.id === loadedPlaneId) {
+              foundPlane = level.back;
+              foundLevelId = level.id;
+              foundOrient = 'back';
+              break;
+            }
+          }
+          if (foundPlane) {
+            this.setState({
+              loadedPlane: foundPlane,
+              zoomLevelId: foundLevelId,
+              zoomOrientation: foundOrient,
+              selectedThingTitle: selectedView === 'plane' ? `Plane: ${foundPlane.name}` : this.state.selectedThingTitle
+            });
+            return;
+          }
+        }
+      }
+    }
+
+    // Restore standalone selections if not restored within dungeon context
+    if (loadedPlaneId) {
+      const plane = this.state.planes.find(p => p.id === loadedPlaneId);
+      if (plane) {
+        this.loadPlane(plane);
+      }
+    }
+
+    if (loadedBoardId) {
+      const board = this.findBoardRefInFolders(loadedBoardId);
+      if (board) {
+        this.loadBoard(board);
+      }
+    }
   }
   addNewPlane = async () => {
     let d = new Date()
@@ -3151,8 +3419,8 @@ updateDungeonWithPlane = (plane) => {
         this.setState({
           loadedPlane: null,
           planeHasUnsavedChanges: false
-        });
-        this.toast('Unsaved Plane Discarded');
+        })
+        setEditorPreference('loadedPlaneId', null);
         return;
       }
       await deletePlaneRequest(deletedPlaneId);
@@ -3160,6 +3428,7 @@ updateDungeonWithPlane = (plane) => {
       this.clearLoadedPlane();
       await this.loadAllPlanes(); 
       await this.loadAllDungeons();
+      setEditorPreference('loadedPlaneId', null);
       if(updatedDungeonCount > 0){
         this.toast(`Plane Deleted (${updatedDungeonCount} dungeon${updatedDungeonCount === 1 ? '' : 's'} updated)`)
       } else {
@@ -3647,6 +3916,8 @@ updateDungeonWithPlane = (plane) => {
         loadedDungeon: null,
         selectedThingTitle: this.state.selectedView === 'dungeon' ? '' : this.state.selectedThingTitle
       })
+      setEditorPreference('loadedPlaneId', null);
+      setEditorPreference('loadedBoardId', null);
     }
     
     setEditorPreference('loadedDungeon', dungeon || null);
@@ -3692,6 +3963,76 @@ updateDungeonWithPlane = (plane) => {
             </div>
           </div>
         </div>}
+
+        {this.state.contextMenu && this.state.contextMenu.visible && (
+          <div
+            className="context-menu-backdrop"
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, background: 'transparent' }}
+            onClick={() => this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } })}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              this.setState({ contextMenu: { ...this.state.contextMenu, visible: false } });
+            }}
+          >
+            <div
+              className="custom-context-menu"
+              style={{
+                position: 'absolute',
+                top: this.state.contextMenu.y,
+                left: this.state.contextMenu.x,
+                backgroundColor: '#1c1c1e',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                borderRadius: '8px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                padding: '6px 0',
+                zIndex: 10000,
+                minWidth: '150px',
+                display: 'flex',
+                flexDirection: 'column',
+                backdropFilter: 'blur(10px)'
+              }}
+            >
+              <button
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#ffffff',
+                  padding: '10px 16px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  transition: 'background-color 0.2s',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                onClick={this.handleGetCoordinates}
+              >
+                Get Coordinates
+              </button>
+              <button
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#ffffff',
+                  padding: '10px 16px',
+                  textAlign: 'left',
+                  cursor: 'pointer',
+                  fontSize: '13px',
+                  transition: 'background-color 0.2s',
+                  outline: 'none',
+                  fontFamily: 'inherit'
+                }}
+                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.1)'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                onClick={this.handleStoreCoordinates}
+              >
+                Store Coordinates
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Inscription Wall-Picker — compass overlay on the clicked tile */}
         {this.state.inscriptionWallPicker && (() => {
@@ -3821,7 +4162,10 @@ updateDungeonWithPlane = (plane) => {
                   allPortals = this.props.mapMaker.getAllPortalsInDungeon(this.state.loadedDungeon);
                 } else {
                   allPortals = this.state.tiles
-                    .filter(t => t.contains && (t.contains.type === 'dungeon_portal' || t.contains.type === 'dungeon portal'))
+                    .filter(t => {
+                      const containsType = this.getContainsType(t.contains);
+                      return containsType === 'dungeon_portal' || containsType === 'dungeon portal';
+                    })
                     .map(t => ({
                       tileId: t.id,
                       coordinates: t.coordinates,
@@ -4131,6 +4475,7 @@ updateDungeonWithPlane = (plane) => {
               monsterManager={this.props.monsterManager}
               gates={GATES}
               keys={KEYS}
+              handleContextMenu={this.handleContextMenu}
             ></BoardView>}
 
             {this.state.selectedView === 'board' && <BoardsPalette

@@ -224,6 +224,34 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
         if (onForceUpdate) onForceUpdate();
     };
 
+    const hasItem = (key) => {
+        return inventoryManager.inventory.some(item =>
+            item &&
+            item.equippedBy == null &&
+            (item._im_key === key ||
+                (item.name || '').replaceAll(' ', '_').toLowerCase() === key.toLowerCase() ||
+                (item.name || '').toLowerCase() === key.toLowerCase())
+        );
+    };
+
+    const handleCraftBanner = (recipeKey, ing1, ing2) => {
+        if (!hasItem(ing1) || !hasItem(ing2)) {
+            setFeedbackMsg('Missing required crystals!');
+            setFeedbackColor('#ff4d4d');
+            return;
+        }
+        inventoryManager.removeItemByKey(ing1);
+        inventoryManager.removeItemByKey(ing2);
+        const item = inventoryManager.allItems[recipeKey];
+        if (item) {
+            inventoryManager.addItem({ ...item });
+        }
+        setFeedbackMsg(`Successfully crafted ${item?.name || 'banner'}!`);
+        setFeedbackColor('#2ecc71');
+        if (saveUserData) saveUserData().catch(() => {});
+        if (onForceUpdate) onForceUpdate();
+    };
+
     const handleTradeIngredient = (action, type, goldAmount) => {
         if (action === 'buy') {
             if (inventoryManager.gold < goldAmount) {
@@ -579,6 +607,65 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                                         </button>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <div className="vendor-panel">
+                            <h3 className="panel-title">Crafting</h3>
+                            <div className="item-list scroll-container">
+                                {[
+                                    {
+                                        key: 'moxadite_banner',
+                                        name: 'Moxadite Banner',
+                                        desc: 'Moxite + Labradite',
+                                        tooltip: 'plant a banner beacon into the earth and travel to it at will',
+                                        ing1: 'moxite',
+                                        ing2: 'labradite',
+                                        icon: 'moxadite_banner'
+                                    },
+                                    {
+                                        key: 'benthachite_banner',
+                                        name: 'Benthachite Banner',
+                                        desc: 'Benthite + Malachite',
+                                        tooltip: 'plant a banner beacon into the earth and travel to it at will',
+                                        ing1: 'benthite',
+                                        ing2: 'malachite',
+                                        icon: 'benthachite_banner'
+                                    },
+                                    {
+                                        key: 'pyremnite_banner',
+                                        name: 'Pyremnite Banner',
+                                        desc: 'Pyrite + Memnite',
+                                        tooltip: 'plant a banner beacon into the earth and travel to it at will',
+                                        ing1: 'pyrite',
+                                        ing2: 'memnite',
+                                        icon: 'pyremnite_banner'
+                                    }
+                                ].map((recipe, idx) => {
+                                    const hasIngredients = hasItem(recipe.ing1) && hasItem(recipe.ing2);
+                                    return (
+                                        <div key={idx} className="item-card">
+                                            <div title={recipe.tooltip} style={{ cursor: 'help' }}>
+                                                {renderItemIcon(recipe.icon)}
+                                            </div>
+                                            <div className="item-details">
+                                                <div className="item-name">{recipe.name}</div>
+                                                <div className="item-description">{recipe.desc}</div>
+                                            </div>
+                                            <button 
+                                                className={`buy-btn brew-btn ${!hasIngredients ? 'disabled' : ''}`} 
+                                                onClick={() => hasIngredients && handleCraftBanner(recipe.key, recipe.ing1, recipe.ing2)}
+                                                disabled={!hasIngredients}
+                                                style={{ opacity: hasIngredients ? 1 : 0.5 }}
+                                            >
+                                                <span>Craft</span>
+                                                <span className="price-tag" style={{ fontSize: '10px' }}>
+                                                    {recipe.ing1} + {recipe.ing2}
+                                                </span>
+                                            </button>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
                     </div>
@@ -1723,6 +1810,7 @@ class DungeonPage extends React.Component {
             , devConsoleOpen: false
             , devConsoleInput: ''
             , devConsoleOutput: []
+            , showTeleportPopup: false
             , activeChestLoot: []
             , chestLootVisible: false
             , chestLootFadeOut: false
@@ -2955,6 +3043,114 @@ class DungeonPage extends React.Component {
         }
     }
 
+    parseCoordinates = (str) => {
+        const levelMatch = str.match(/level[:=]\s*(-?\d+)/i);
+        const orientMatch = str.match(/orient(?:ation)?[:=]\s*(\w+)/i);
+        const boardMatch = str.match(/board[:=]\s*(\d+)/i);
+        const xMatch = str.match(/x[:=]\s*(\d+)/i);
+        const yMatch = str.match(/y[:=]\s*(\d+)/i);
+
+        if (levelMatch && orientMatch && boardMatch && xMatch && yMatch) {
+            return {
+                levelId: parseInt(levelMatch[1]),
+                orientation: orientMatch[1].toLowerCase(),
+                boardIndex: parseInt(boardMatch[1]),
+                x: parseInt(xMatch[1]),
+                y: parseInt(yMatch[1])
+            };
+        }
+
+        const parts = str.split(',').map(p => p.trim());
+        if (parts.length >= 5) {
+            const lvl = parseInt(parts[0]);
+            const orient = parts[1].toLowerCase();
+            const brd = parseInt(parts[2]);
+            const px = parseInt(parts[3]);
+            const py = parseInt(parts[4]);
+            if (!isNaN(lvl) && (orient === 'front' || orient === 'back' || orient === 'f' || orient === 'b') && !isNaN(brd) && !isNaN(px) && !isNaN(py)) {
+                return {
+                    levelId: lvl,
+                    orientation: orient,
+                    boardIndex: brd,
+                    x: px,
+                    y: py
+                };
+            }
+        }
+        return null;
+    }
+
+    teleportCrew = (coords) => {
+        const bm = this.props.boardManager;
+        if (!bm) return;
+
+        const targetLevelId = Number(coords.levelId);
+        const targetMiniboardIndex = Number(coords.boardIndex);
+        const mappedOrientation = (coords.orientation === 'front' || coords.orientation === 'F' || coords.orientation === 'f') ? 'F' : 'B';
+        const targetCoordinates = [coords.x, coords.y];
+
+        if (bm.dungeon && Array.isArray(bm.dungeon.levels)) {
+            const incomingLevel = bm.dungeon.levels.find(l => Number(l.id) === targetLevelId);
+            if (incomingLevel) {
+                bm.currentLevel = incomingLevel;
+            }
+        }
+
+        bm.currentOrientation = mappedOrientation;
+        bm.tiles = [];
+        const targetIdx = bm.getIndexFromCoordinates([targetCoordinates[1], targetCoordinates[0]]);
+        
+        try {
+            bm.initializeTilesFromMap(targetMiniboardIndex, targetIdx);
+        } catch (err) {
+            console.error("initializeTilesFromMap failed during teleport:", err);
+        }
+
+        const levelTracker = [...this.state.levelTracker];
+        levelTracker.forEach(e => { if (e) e.active = false; });
+        const lvl = levelTracker.find(e => e && Number(e.id) === targetLevelId);
+        if (lvl) lvl.active = true;
+
+        const meta = getMeta() || {};
+        if (meta.location) {
+            meta.location.levelId = targetLevelId;
+            meta.location.orientation = mappedOrientation;
+            meta.location.boardIndex = targetMiniboardIndex;
+            meta.location.tileIndex = targetIdx;
+        }
+        storeMeta(meta);
+
+        const minimap = [...this.state.minimap];
+        minimap.forEach(e => { if (e) e.active = false; });
+        if (minimap[targetMiniboardIndex]) {
+            minimap[targetMiniboardIndex].active = true;
+        }
+
+        let indicatorsGroup = meta.minimapIndicators.find(e => Number(e.level) === targetLevelId && e.orientation === mappedOrientation);
+        if (!indicatorsGroup) {
+            let newIndicators = [];
+            for (let i = 0; i < 9; i++) {
+                newIndicators.push({ enemies: [], gates: [], merchant: [], stairs: [], misc: [], custom: [] });
+            }
+            indicatorsGroup = { level: targetLevelId, orientation: mappedOrientation, indicators: newIndicators };
+            meta.minimapIndicators.push(indicatorsGroup);
+            storeMeta(meta);
+        }
+
+        this.setState({
+            levelTracker,
+            minimap,
+            minimapZoomedTile: null,
+            minimapIndicators: indicatorsGroup.indicators,
+            tiles: [...bm.tiles],
+            overlayTiles: bm.overlayTiles
+        }, () => {
+            this.updateFloatingPlayerPosition(bm.playerTile.location);
+            this.recordBreadcrumb();
+            this.refreshTiles(targetLevelId);
+        });
+    }
+
     executePortalTeleport = (tile) => {
         const portal = tile.contains;
         if (!portal || !portal.targetCoordinates) {
@@ -3351,6 +3547,38 @@ class DungeonPage extends React.Component {
             const monsterCommandMatch = monsterCommands.find(c => cmd.startsWith(c));
             const itemCommandMatch = itemCommands.find(c => cmd.startsWith(c));
 
+            if (cmd.startsWith('tele ') || cmd.startsWith('teleport ')) {
+                const coordStr = raw.substring(cmd.startsWith('teleport ') ? 9 : 5).trim();
+                const parsed = this.parseCoordinates(coordStr);
+                if (parsed) {
+                    this.teleportCrew(parsed);
+                    this.setState(prev => ({
+                        devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Teleported to Level ${parsed.levelId}, Orientation ${parsed.orientation}, Board ${parsed.boardIndex} @ (${parsed.x}, ${parsed.y})`],
+                        devConsoleInput: '',
+                        devConsoleOpen: false,
+                        keysLocked: false
+                    }));
+                } else {
+                    this.setState(prev => ({
+                        devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: Invalid coordinates format. Expected: level:X,orientation:Y,board:Z,x:A,y:B`],
+                        devConsoleInput: ''
+                    }));
+                }
+                e.preventDefault();
+                return;
+            }
+
+            if (cmd === 'tele...' || cmd === 'teleport...' || cmd === 'tele' || cmd === 'teleport') {
+                this.setState({
+                    showTeleportPopup: true,
+                    devConsoleOpen: false,
+                    devConsoleInput: '',
+                    keysLocked: true
+                });
+                e.preventDefault();
+                return;
+            }
+
             if (cmd === 'lvl up' || cmd === 'lvlup' || cmd === 'level up' || cmd === 'levelup') {
                 try {
                     const selectedId = this.state.selectedCrewMember?.id;
@@ -3527,6 +3755,8 @@ class DungeonPage extends React.Component {
                         'launch cardgame — start a card duel battle',
                         'reagents — add 1 of each reagent type to inventory',
                         'lvl up / level up — level up the currently selected crew member',
+                        'tele <coordinates> — teleport to coordinates (copied from mapmaker)',
+                        'tele / teleport / tele... / teleport... — open stored coordinates teleport modal',
                         'list / help'
                     ];
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, ...commands], devConsoleInput: '' }));
@@ -8347,6 +8577,77 @@ class DungeonPage extends React.Component {
                     onForceUpdate={() => this.forceUpdate()}
                 />
             </CModal>
+            {/* Teleport popup */}
+            <CModal 
+                className="teleport-modal" 
+                alignment="center" 
+                visible={this.state.showTeleportPopup} 
+                onClose={() => this.setState({ showTeleportPopup: false, keysLocked: false })}
+                backdrop={true}
+            >
+                <CModalHeader closeButton={false}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+                        <CModalTitle>🌀 Teleportation Beacons</CModalTitle>
+                        <button 
+                            aria-label="Close teleport beacons"
+                            className="camp-close" 
+                            style={{ background: 'none', border: 'none', color: '#fff', fontSize: '20px', cursor: 'pointer' }} 
+                            onClick={() => this.setState({ showTeleportPopup: false, keysLocked: false })}
+                        >
+                            ✕
+                        </button>
+                    </div>
+                </CModalHeader>
+                <CModalBody style={{ backgroundColor: '#141517', color: '#ffffff', padding: '20px' }}>
+                    {(() => {
+                        const meta = getMeta() || {};
+                        const coords = meta.storedCoordinates || [];
+                        if (coords.length === 0) {
+                            return <div style={{ textAlign: 'center', opacity: 0.6, padding: '20px', fontSize: '14px' }}>No teleport coordinates stored. Right-click a tile in Mapmaker Board View to store coordinates first.</div>;
+                        }
+                        return (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '400px', overflowY: 'auto' }}>
+                                {coords.map((c, idx) => (
+                                    <div 
+                                        key={c.id || idx}
+                                        style={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            padding: '12px 16px',
+                                            backgroundColor: '#1c1d21',
+                                            border: '1px solid rgba(255, 255, 255, 0.08)',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s ease'
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#25272d';
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#1c1d21';
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.08)';
+                                        }}
+                                        onClick={() => {
+                                            this.setState({ showTeleportPopup: false, keysLocked: false });
+                                            this.teleportCrew(c);
+                                        }}
+                                    >
+                                        <div style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}>
+                                            <span style={{ fontWeight: '600', fontSize: '14px', color: '#ffffff' }}>{c.dungeonName || 'Dungeon'}</span>
+                                            <span style={{ fontSize: '12px', color: '#a0a0a0', marginTop: '4px' }}>
+                                                Level {c.levelId} ({c.orientation}) • Board {c.boardIndex} • Tile ({c.x}, {c.y})
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '18px', color: '#34d399' }}>➔</span>
+                                    </div>
+                                ))}
+                            </div>
+                        );
+                    })()}
+                </CModalBody>
+            </CModal>
             {/* Quests popup */}
             <CModal className={`quests-modal${this.state.showCampPopup ? ' quests-above-camp' : ''}`} alignment="center" visible={this.state.showQuestsPopup} onClose={this.handleCloseQuestsPopup} backdrop={true} style={this.state.showCampPopup ? {zIndex: 1100} : undefined}>
                 <CModalHeader closeButton={false}>
@@ -10451,7 +10752,7 @@ class DungeonPage extends React.Component {
                             contains={tile.contains}
                             boardTiles={this.state.tiles}
                             terrain={tile.terrain}
-                            color={tile.color ? tile.color : 'lightgrey'}
+                            color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'}
                             borders={tile.borders}
                             partialObscured={!!tile.partialObscured}
                             coordinates={tile.coordinates}
@@ -10462,7 +10763,7 @@ class DungeonPage extends React.Component {
                             passThrough={!this.state.minimapPlaceMapMarkerStarted}
                             handleClick={(e)=>this.handleOverlayClick}
                             // For overlay tiles we want the background color to reflect overlay state (e.g. edge indicator)
-                            backgroundColor={tile.color ? tile.color : (this.state.overlayHoveredTileId === i && this.state.minimapPlaceMapMarkerStarted ? 'rgba(100, 100, 38, 0.272)' : 'transparent')}
+                            backgroundColor={tile.color && tile.color !== 'null' ? tile.color : (this.state.overlayHoveredTileId === i && this.state.minimapPlaceMapMarkerStarted ? 'rgba(100, 100, 38, 0.272)' : 'transparent')}
                             >
                             </Tile>
                         })}
@@ -10482,7 +10783,7 @@ class DungeonPage extends React.Component {
                             contains={tile.contains}
                             boardTiles={this.state.tiles}
                             terrain={tile.terrain}
-                            color={tile.color ? tile.color : 'lightgrey'}
+                            color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'}
                             borders={tile.borders}
                             inscriptions={tile.inscriptions}
                             partialObscured={!!tile.partialObscured}

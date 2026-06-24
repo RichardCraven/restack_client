@@ -109,13 +109,14 @@ class BoardView extends React.Component {
                                 boardTiles={this.props.tiles}
                                 image={tile.image ? tile.image : null}
                                 imageOverride={tile.image && tile.image.includes('/') ? tile.image : null}
-                                color={tile.color ? tile.color : 'lightgrey'}
+                                color={tile.color && tile.color !== 'null' && tile.color !== 'undefined' ? tile.color : '#6b6057'}
                                 borders={tile.borders}
                                 coordinates={tile.coordinates}
                                 showCoordinates={this.props.showCoordinates}
                                 editMode={true}
                                 handleHover={this.props.handleHover}
                                 handleClick={this.props.handleClick}
+                                handleContextMenu={this.props.handleContextMenu}
                                 delayedHoverLabel={this.getTileHoverLabel(tile)}
                                 type={tile.type}
                                 hovered={

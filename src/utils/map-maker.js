@@ -56,11 +56,6 @@ export function MapMaker(props){
     ];
 
     this.jewelOptions = [
-        { key: 'green_opal', name: 'Green opal', image: 'green_opal' },
-        { key: 'blue_opal', name: 'Blue opal', image: 'blue_opal' },
-        { key: 'red_opal', name: 'Red opal', image: 'red_opal' },
-        { key: 'amber_opal', name: 'Amber opal', image: 'amber_opal' },
-
         { key: 'amber', name: 'Amber', image: 'amber' },
         { key: 'sapphire', name: 'Sapphire', image: 'sapphire' },
         { key: 'ruby', name: 'Ruby', image: 'ruby' },
@@ -68,22 +63,26 @@ export function MapMaker(props){
         { key: 'sapphire_shards', name: 'Sapphire shards', image: 'sapphire_shards' },
         { key: 'ruby_shards', name: 'Ruby shards', image: 'ruby_shards' },
 
-        { key: 'blue_crystal', name: 'Blue crystal', image: 'blue_crystal' },
-        { key: 'purple_crystal', name: 'Purple crystal', image: 'purple_crystal' },
-        { key: 'pink_crystal', name: 'Pink crystal', image: 'pink_crystal' },
-        { key: 'green_crystal', name: 'Green crystal', image: 'green_crystal' },
-        { key: 'ruddy_crystal', name: 'Ruddy crystal', image: 'ruddy_crystal' },
-        { key: 'saphite_crystal', name: 'Saphite crystal', image: 'saphite_crystal' },
-        { key: 'magentite_crystal', name: 'Magentite crystal', image: 'magentite_crystal' },
-        { key: 'moxite_crystal', name: 'Moxite crystal', image: 'moxite_crystal' },
-        { key: 'abyssal_crystal', name: 'Abyssal crystal', image: 'abyssal_crystal' },
+        { key: 'polished_amber', name: 'Polished amber', image: 'polished_amber' },
+        { key: 'polished_sapphire', name: 'Polished sapphire', image: 'polished_sapphire' },
+        { key: 'polished_ruby', name: 'Polished ruby', image: 'polished_ruby' },
 
+        { key: 'moxite', name: 'Moxite', image: 'moxite' },
         { key: 'pyrite', name: 'Pyrite', image: 'pyrite' },
         { key: 'benthite', name: 'Benthite', image: 'benthite' },
         { key: 'labradite', name: 'Labradite', image: 'labradite' },
         { key: 'memnite', name: 'Memnite', image: 'memnite' },
         { key: 'malachite', name: 'Malachite', image: 'malachite' },
         { key: 'onyx', name: 'Onyx', image: 'onyx' },
+
+        { key: 'moxite_cluster', name: 'Moxite cluster', image: 'moxite_cluster' },
+        { key: 'pyrite_cluster', name: 'Pyrite cluster', image: 'pyrite_cluster' },
+        { key: 'benthite_cluster', name: 'Benthite cluster', image: 'benthite_cluster' },
+        { key: 'memnite_cluster', name: 'Memnite cluster', image: 'memnite_cluster' },
+        { key: 'labradite_cluster', name: 'Labradite cluster', image: 'labradite_cluster' },
+        { key: 'malachite_cluster', name: 'Malachite cluster', image: 'malachite_cluster' },
+        { key: 'onyx_cluster', name: 'Onyx cluster', image: 'onyx_cluster' },
+        { key: 'abyssal_crystal', name: 'Abyssal crystal', image: 'abyssal_crystal' },
     ];
 
     this.runeOptions = [

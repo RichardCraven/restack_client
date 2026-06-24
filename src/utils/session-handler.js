@@ -117,7 +117,13 @@ function setEditorPreference(key, val){
     if(!meta || typeof meta !== 'object') meta = {};
     if(!meta.preferences || typeof meta.preferences !== 'object') meta.preferences = {};
     if(!meta.preferences.editor || typeof meta.preferences.editor !== 'object') meta.preferences.editor = {};
-    meta.preferences.editor[key] = val;
+    
+    let valueToStore = val;
+    if (key === 'loadedDungeon' && val && typeof val === 'object') {
+        valueToStore = { id: val.id || val._id || null, name: val.name || null };
+    }
+    
+    meta.preferences.editor[key] = valueToStore;
     storeMeta(meta)
 }
 

@@ -202,7 +202,10 @@ export function InventoryManager() {
     ]
     this.misc_names = [
         'crown',
-        'lantern'
+        'lantern',
+        'moxadite_banner',
+        'benthachite_banner',
+        'pyremnite_banner'
     ]
     this.jewels_names = [
         'ruby',
@@ -211,12 +214,17 @@ export function InventoryManager() {
         'ruby_shards',
         'sapphire_shards',
         'amber_shards',
+        'polished_ruby',
+        'polished_sapphire',
+        'polished_amber',
+        'moxite',
         'pyrite',
         'benthite',
         'memnite',
         'labradite',
         'malachite',
         'onyx',
+        'moxite_cluster',
         'pyrite_cluster',
         'benthite_cluster',
         'memnite_cluster',
@@ -2207,6 +2215,30 @@ export function InventoryManager() {
             tier: 1,
             shard: true
         },
+        polished_ruby: {
+            icon: 'polished_ruby',
+            type: 'jewel',
+            name: 'polished ruby',
+            tier: 2,
+            shard: false,
+            slottedIn: null
+        },
+        polished_sapphire: {
+            icon: 'polished_sapphire',
+            type: 'jewel',
+            name: 'polished sapphire',
+            tier: 2,
+            shard: false,
+            slottedIn: null
+        },
+        polished_amber: {
+            icon: 'polished_amber',
+            type: 'jewel',
+            name: 'polished amber',
+            tier: 2,
+            shard: false,
+            slottedIn: null
+        },
         pyrite: {
             icon: 'pyrite',
             type: 'jewel',
@@ -2261,6 +2293,15 @@ export function InventoryManager() {
             cluster: false,
             slottedIn: null
         },
+        moxite: {
+            icon: 'moxite',
+            type: 'jewel',
+            name: 'moxite',
+            tier: 2,
+            shard: false,
+            cluster: false,
+            slottedIn: null
+        },
         pyrite_cluster: {
             icon: 'pyrite_cluster',
             type: 'jewel',
@@ -2300,6 +2341,13 @@ export function InventoryManager() {
             icon: 'onyx_cluster',
             type: 'jewel',
             name: 'onyx cluster',
+            tier: 2,
+            cluster: true
+        },
+        moxite_cluster: {
+            icon: 'moxite_cluster',
+            type: 'jewel',
+            name: 'moxite cluster',
             tier: 2,
             cluster: true
         },
@@ -2594,6 +2642,27 @@ export function InventoryManager() {
             type: 'special',
             name: 'curse doll',
             equippedBy: null,
+        },
+        moxadite_banner: {
+            icon: 'moxadite_banner',
+            type: 'misc',
+            name: 'moxadite banner',
+            equippedBy: null,
+            description: 'Plant a banner beacon into the earth and travel to it at will.'
+        },
+        benthachite_banner: {
+            icon: 'benthachite_banner',
+            type: 'misc',
+            name: 'benthachite banner',
+            equippedBy: null,
+            description: 'Plant a banner beacon into the earth and travel to it at will.'
+        },
+        pyremnite_banner: {
+            icon: 'pyremnite_banner',
+            type: 'misc',
+            name: 'pyremnite banner',
+            equippedBy: null,
+            description: 'Plant a banner beacon into the earth and travel to it at will.'
         },
 
         // crystals

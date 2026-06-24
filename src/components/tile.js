@@ -3,6 +3,7 @@ import * as images from '../utils/images'
 
 
 function Tile(props) {
+    const color = (props.color === 'null' || props.color === 'undefined') ? null : props.color;
     const hoverLabelTimerRef = React.useRef(null);
     const [showDelayedHoverLabel, setShowDelayedHoverLabel] = React.useState(false);
 
@@ -130,7 +131,7 @@ function Tile(props) {
         return `url("${encodeURI(normalizedUrl)}")`;
     };
 
-    const isBoardGridTile = props.type === 'board-tile' && !vctBorder && !isVendorCell;
+    const isBoardGridTile = props.type === 'board-tile' && !vctBorder;
     const getContainsType = (contains) => {
         if (!contains) return null;
         if (typeof contains === 'object') return contains.type || null;
@@ -148,7 +149,7 @@ function Tile(props) {
     const boardTiles = Array.isArray(props.boardTiles) ? props.boardTiles : null;
     const currentTile = (tileIndex !== null && boardTiles && boardTiles[tileIndex]) ? boardTiles[tileIndex] : null;
     const currentContains = currentTile ? currentTile.contains : props.contains;
-    const currentTileColor = (currentTile && typeof currentTile.color !== 'undefined') ? currentTile.color : props.color;
+    const currentTileColor = (currentTile && typeof currentTile.color !== 'undefined' && currentTile.color !== 'null') ? currentTile.color : color;
     const getNeighborTile = (delta) => {
         if (tileIndex === null || !boardTiles) return null;
         if (tileRow === null || tileCol === null) return null;
@@ -191,8 +192,6 @@ function Tile(props) {
     const leftNeighbor = getNeighborTile(-1);
     const rightNeighbor = getNeighborTile(1);
     const bottomNeighbor = getNeighborTile(15);
-    const rightNeighborIsVendor = !!(rightNeighbor && getContainsType(rightNeighbor.contains) === 'vendor');
-    const bottomNeighborIsVendor = !!(bottomNeighbor && getContainsType(bottomNeighbor.contains) === 'vendor');
     const edgeLines = isBoardGridTile ? {
         top: edgeColorForBoundary(
             props.borders && props.borders.top,
@@ -207,15 +206,13 @@ function Tile(props) {
             leftNeighbor ? leftNeighbor.color : null
         ),
         // Right/bottom are normally owned by the neighbor's left/top edge.
-        // Vendor cells intentionally skip grid-edge rendering, so render a fallback
-        // right/bottom edge when the neighbor is a vendor tile.
-        right: (isLastCol || rightNeighborIsVendor) ? edgeColorForBoundary(
+        right: isLastCol ? edgeColorForBoundary(
             props.borders && props.borders.right,
             rightNeighbor && rightNeighbor.borders ? rightNeighbor.borders.left : null,
             rightNeighbor ? rightNeighbor.contains : null,
             rightNeighbor ? rightNeighbor.color : null
         ) : null,
-        bottom: (isLastRow || bottomNeighborIsVendor) ? edgeColorForBoundary(
+        bottom: isLastRow ? edgeColorForBoundary(
             props.borders && props.borders.bottom,
             bottomNeighbor && bottomNeighbor.borders ? bottomNeighbor.borders.top : null,
             bottomNeighbor ? bottomNeighbor.contains : null,
@@ -241,7 +238,7 @@ function Tile(props) {
                 '#8080807a' : 
                 ( props.type === 'overlay-tile' ? 
                     'transparent': 
-                    (props.type === 'inventory-tile' ? (props.isActiveInventory ? 'lightgreen' : 'transparent') : props.color)),
+                    (props.type === 'inventory-tile' ? (props.isActiveInventory ? 'lightgreen' : 'transparent') : color)),
             fontSize: '0.7em',
             position: 'relative',
             overflow: 'hidden',
@@ -286,6 +283,12 @@ function Tile(props) {
                     return null
                 }
             }}
+            onContextMenu={(e) => {
+                if (props.handleContextMenu) {
+                    e.preventDefault();
+                    props.handleContextMenu(e, props.id);
+                }
+            }}
             onDragStart={(e) => e.preventDefault()}
             className={`tile ${props.className || ''} ${props.type || ''}`.trim()}
         >
@@ -307,11 +310,11 @@ function Tile(props) {
              const pct = Math.max(0, Math.min(1, maxHpVal <= 0 ? 0 : hpVal / maxHpVal));
              const heightPct = Math.round(pct * 100);
              const barWidthPct = (typeof props.hpBarWidth === 'number') ? props.hpBarWidth : 10;
-                         return <div className="hp-fill" style={{position: 'absolute', left: 0, bottom: 0, width: `${barWidthPct}%`, height: `${heightPct}%`, backgroundColor: props.color || '#888', opacity: 0.95, zIndex: 2, transition: 'height 250ms linear', boxShadow: 'inset 2px 0 6px rgba(0,0,0,0.25)'}}></div>
+                         return <div className="hp-fill" style={{position: 'absolute', left: 0, bottom: 0, width: `${barWidthPct}%`, height: `${heightPct}%`, backgroundColor: color || '#888', opacity: 0.95, zIndex: 2, transition: 'height 250ms linear', boxShadow: 'inset 2px 0 6px rgba(0,0,0,0.25)'}}></div>
          })()}
 
                      {/* Terrain background: chosen per-tile (terrain_1..terrain_16) and rendered beneath portrait/items */}
-                     { props.terrain && props.color !== 'black' && (() => {
+                     { props.terrain && color !== 'black' && (() => {
                          let terrainUrl = (props.terrain && props.terrain.includes('/')) ? props.terrain : (images[props.terrain] || null);
                          return <div className="terrain-bg" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: terrainUrl ? toCssUrl(terrainUrl) : 'none', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center', zIndex: 0, opacity: 0.5}} />
                      })()}
@@ -330,7 +333,7 @@ function Tile(props) {
            )}
 
            {/* Obscured space texture overlay */}
-           { props.color !== 'black' && ((props.contains && props.contains.type === 'obscured_space') || props.optionType === 'obscured space') && (
+           { color !== 'black' && ((props.contains && props.contains.type === 'obscured_space') || props.optionType === 'obscured space') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     backgroundImage: 'repeating-linear-gradient(45deg, #777 0, #777 2px, transparent 2px, transparent 8px)',
@@ -342,7 +345,7 @@ function Tile(props) {
 
 
            {/* Inscription marker: 3 diagonal lines drawn on wall tiles */}
-           { props.color !== 'black' && ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (
+           { color !== 'black' && ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
@@ -358,7 +361,7 @@ function Tile(props) {
            )}
 
            {/* Shrine marker */}
-           { props.color !== 'black' && (props.contains && props.contains.type === 'shrine') && (
+           { color !== 'black' && (props.contains && props.contains.type === 'shrine') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
@@ -382,7 +385,7 @@ function Tile(props) {
            )}
 
            {/* Lore Tablet marker */}
-           { props.color !== 'black' && (props.contains && props.contains.type === 'lore_tablet') && (
+           { color !== 'black' && (props.contains && props.contains.type === 'lore_tablet') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
@@ -406,7 +409,7 @@ function Tile(props) {
            )}
 
            {/* Inscription edge markers — golden bars on inscribed walls */}
-           { props.color !== 'black' && props.inscriptions && (
+           { color !== 'black' && props.inscriptions && (
                <>
                    { props.inscriptions.top && (
                        <div style={{position:'absolute', top:0, left:'10%', right:'10%', height:'4px',
@@ -431,7 +434,7 @@ function Tile(props) {
                </>
            )}
 
-           {props.partialObscured && props.color !== 'black' && (
+           {props.partialObscured && color !== 'black' && (
                 <div style={{
                     position: 'absolute',
                     top: 0,

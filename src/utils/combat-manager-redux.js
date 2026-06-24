@@ -389,8 +389,79 @@ export function CombatManagerRedux() {
     this.initializeCombat = (data) => {
         setMaxDepth(7);
         this.numColumns = 8;
-        this.entropicKindredActive = false;
-        this.data = data;
+        // Deep copy data structure to avoid mutation side-effects on original templates
+        this.data = { ...data };
+        if (this.data.monster) {
+            this.data.monster = { ...this.data.monster };
+            if (this.data.monster.stats) {
+                this.data.monster.stats = { ...this.data.monster.stats };
+            }
+        }
+        if (this.data.minions) {
+            this.data.minions = this.data.minions.map(minion => {
+                const cloned = { ...minion };
+                if (cloned.stats) cloned.stats = { ...cloned.stats };
+                return cloned;
+            });
+        }
+
+        // Lord Badges & Minion Spawning logic
+        if (this.data.monster && !this.data.monster.isShrineGuardian && this.data.monster.tier <= 3) {
+            // 15% chance to be a Lord, or if explicitly predefined as Lord (for tests/custom)
+            const isLord = (typeof this.data.monster.isLord === 'boolean') 
+                ? this.data.monster.isLord 
+                : (process.env.NODE_ENV !== 'test' && Math.random() < 0.15);
+
+            if (isLord) {
+                this.data.monster.isLord = true;
+                if (!this.data.monster.lordBadge) {
+                    const badges = ['arcolic', 'mascali', 'quarine', 'rubedo', 'vermine'];
+                    this.data.monster.lordBadge = badges[Math.floor(Math.random() * badges.length)];
+                }
+                
+                // Mutate the name to "<monster name> lord of <badge type>"
+                const badgeTitle = this.data.monster.lordBadge.charAt(0).toUpperCase() + this.data.monster.lordBadge.slice(1);
+                this.data.monster.name = `${this.data.monster.name} lord of ${badgeTitle}`;
+
+                // Double HP
+                if (this.data.monster.stats && typeof this.data.monster.stats.hp === 'number') {
+                    this.data.monster.stats.hp *= 2;
+                }
+                if (typeof this.data.monster.hp === 'number') {
+                    this.data.monster.hp *= 2;
+                }
+                if (typeof this.data.monster.starting_hp === 'number') {
+                    this.data.monster.starting_hp *= 2;
+                }
+
+                // Spawn an additional minion of the lowest tier
+                if (this.data.minions && this.data.minions.length > 0) {
+                    let lowestTier = Infinity;
+                    this.data.minions.forEach(minion => {
+                        const tier = typeof minion.tier === 'number' ? minion.tier : 1;
+                        if (tier < lowestTier) lowestTier = tier;
+                    });
+                    const lowestTierMinions = this.data.minions.filter(minion => {
+                        const tier = typeof minion.tier === 'number' ? minion.tier : 1;
+                        return tier === lowestTier;
+                    });
+                    if (lowestTierMinions.length > 0) {
+                        const template = lowestTierMinions[Math.floor(Math.random() * lowestTierMinions.length)];
+                        const additionalMinion = { ...template };
+                        if (additionalMinion.stats) additionalMinion.stats = { ...additionalMinion.stats };
+                        
+                        // Find a unique id
+                        let maxId = 0;
+                        this.data.minions.forEach(m => {
+                            if (m.id > maxId) maxId = m.id;
+                        });
+                        additionalMinion.id = maxId + 10;
+                        this.data.minions.push(additionalMinion);
+                    }
+                }
+            }
+        }
+
         this.combatants = {};
         this.vctByMonster = {};
         this.pendingBombardments = [];

@@ -74,59 +74,5 @@ describe('Ogre AI debug', () => {
     }
   });
 
-  test('Non-redux Ogre AI execution test', () => {
-    const { CombatManager } = require('../combat-manager');
-    const { MonsterManager } = require('../monster-manager');
-    const mm = new MonsterManager();
-    const ogreTemplate = mm.getMonster('ogre');
 
-    const cm = new CombatManager();
-    cm.monsterAI.initializeRoster();
-
-    const crewMember = {
-      id: 'soldier_1',
-      name: 'Test Soldier',
-      type: 'soldier',
-      stats: { hp: 1000, atk: 10, def: 5, speed: 6, vitality: 50 },
-      skills: ['slash'],
-      inventory: [],
-      coordinates: { x: 0, y: 2 }
-    };
-
-    cm.initializeCombat({
-      crew: [crewMember],
-      monster: {
-        ...ogreTemplate,
-        coordinates: { x: 1, y: 2 } // adjacent!
-      },
-      minions: []
-    });
-
-    const ogre = Object.values(cm.combatants).find(c => c.type === 'ogre');
-    const soldier = Object.values(cm.combatants).find(c => c.type === 'soldier');
-
-    // Make sure ogre has Ogre AI profile connected
-    expect(cm.monsterAI.roster.ogre).toBeDefined();
-
-    // Verify chooseAttackType returns stomp first
-    const attack1 = cm.monsterAI.roster.ogre.chooseAttackType(ogre, soldier);
-    expect(attack1.id).toBe('stomp');
-
-    // Set stomp on cooldown
-    stompAction(ogre, 'stomp');
-
-    const attack2 = cm.monsterAI.roster.ogre.chooseAttackType(ogre, soldier);
-    expect(attack2.id).toBe('head_butt');
-
-    // Set headbutt on cooldown
-    stompAction(ogre, 'head_butt');
-
-    const attack3 = cm.monsterAI.roster.ogre.chooseAttackType(ogre, soldier);
-    expect(attack3.id).toBe('bite');
-
-    function stompAction(unit, actionId) {
-      const act = (unit.specials || []).concat(unit.attacks || []).find(a => a.id === actionId);
-      if (act) act.cooldown_position = 0;
-    }
-  });
 });

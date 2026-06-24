@@ -430,6 +430,14 @@ import eclipse from '../assets/icons/misc/eclipse.png'
 import magic_moon_1 from '../assets/icons/misc/magic_moon_1.png'
 import food from '../assets/icons/misc/food.png'
 
+// Lord Badges
+import arcolic_badge from '../assets/icons/misc/arcolic badge.png'
+import mascali_badge from '../assets/icons/misc/mascali badge.png'
+import quarine_badge from '../assets/icons/misc/quarine badge.png'
+import rubedo_badge from '../assets/icons/misc/rubedo badge.png'
+import vermine_badge from '../assets/icons/misc/vermine badge.png'
+
+
 // loot
 // import quest_57_ore from '../assets/icons/misc/loot/Quest_57_ore.png'
 // import quest_58_ore from '../assets/icons/misc/loot/Quest_58_ore.png'
@@ -441,18 +449,8 @@ import banner from '../assets/icons/misc/loot/banner.png'
 // import res_78 from '../assets/icons/misc/loot/Res_78.png'
 
 
-import green_opal from '../assets/icons/misc/loot/green opal.png'
-import blue_opal from '../assets/icons/misc/loot/blue_opal.png'
-import red_opal from '../assets/icons/misc/loot/red_opal.png'
-import amber_opal from '../assets/icons/misc/loot/amber_opal.png'
-import blue_crystal from '../assets/icons/misc/loot/blue_crystal.png'
-import purple_crystal from '../assets/icons/misc/loot/purple_crystal.png'
-import pink_crystal from '../assets/icons/misc/loot/pink_crystal.png'
-import green_crystal from '../assets/icons/misc/loot/green_crystal.png'
-import ruddy_crystal from '../assets/icons/misc/loot/ruddy_crystal.png'
-import saphite_crystal from '../assets/icons/misc/loot/saphite_crystal.png'
-import magentite_crystal from '../assets/icons/misc/loot/magentite_crystal.png'
-import moxite_crystal from '../assets/icons/misc/loot/moxite_crystal.png'
+import moxite from '../assets/icons/misc/loot/moxite.png'
+import moxite_cluster from '../assets/icons/misc/loot/moxite cluster.png'
 import amber from '../assets/icons/misc/loot/amber.png'
 import sapphire from '../assets/icons/misc/loot/sapphire.png'
 import ruby from '../assets/icons/misc/loot/ruby.png'
@@ -461,6 +459,11 @@ import ruby from '../assets/icons/misc/loot/ruby.png'
 import amber_shards from '../assets/icons/misc/loot/amber shards.png'
 import sapphire_shards from '../assets/icons/misc/loot/sapphire shards.png'
 import ruby_shards from '../assets/icons/misc/loot/ruby shards.png'
+
+
+import polished_amber from '../assets/icons/misc/loot/polished amber.png'
+import polished_sapphire from '../assets/icons/misc/loot/polished sapphire.png'
+import polished_ruby from '../assets/icons/misc/loot/polished ruby.png'
 
 
 import labradite from '../assets/icons/misc/loot/labradite.png'
@@ -483,6 +486,10 @@ import yazatas_focus from '../assets/icons/misc/loot/yazatas focus.png'
 import mishnes_focus from '../assets/icons/misc/loot/mishnes focus.png'
 import masekets_focus from '../assets/icons/misc/loot/masekets focus.png'
 import abyssal_crystal from '../assets/icons/misc/loot/abyssal focus.png'
+
+import moxadite_banner from '../assets/icons/misc/moxadite banner.png'
+import benthachite_banner from '../assets/icons/misc/benthachite banner.png'
+import pyremnite_banner from '../assets/icons/misc/pyremnite banner.png'
 
 
 // runes
@@ -1515,24 +1522,23 @@ export {
     // res_76_crystal_red,
     // res_77,
     // res_78,
-    green_opal,
-    blue_opal,
-    red_opal,
-    amber_opal,
-    blue_crystal,
-    purple_crystal,
-    pink_crystal,
-    green_crystal,
-    ruddy_crystal,
-    saphite_crystal,
-    magentite_crystal,
-    moxite_crystal,
+    moxite,
+    moxite_cluster,
     amber,
     sapphire,
     ruby,
     amber_shards,
     sapphire_shards,
     ruby_shards,
+    polished_amber,
+    polished_sapphire,
+    polished_ruby,
+    pyrite,
+    benthite,
+    memnite,
+    labradite,
+    malachite,
+    onyx,
     pyrite_cluster,
     benthite_cluster,
     memnite_cluster,
@@ -1543,12 +1549,9 @@ export {
     yazatas_focus,
     mishnes_focus,
     masekets_focus,
-    pyrite,
-    benthite,
-    labradite,
-    memnite,
-    malachite,
-    onyx,
+    moxadite_banner,
+    benthachite_banner,
+    pyremnite_banner,
     volcanic_rune,
     stone_rune,
     pewter_rune,
@@ -2033,4 +2036,11 @@ export {
     // unlock spell & indicator
     unlock,
     master_key,
+
+    // Lord Badges
+    arcolic_badge,
+    mascali_badge,
+    quarine_badge,
+    rubedo_badge,
+    vermine_badge,
 };

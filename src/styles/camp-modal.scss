@@ -1557,9 +1557,16 @@
 
 // ── Merchant & Alchemist Modals ──────────────────────────────────────────
 
-.merchant-modal, .alchemist-modal {
+.merchant-modal {
   .modal-dialog {
     max-width: 920px;
+    width: calc(100% - 32px);
+  }
+}
+
+.alchemist-modal {
+  .modal-dialog {
+    max-width: 1250px;
     width: calc(100% - 32px);
   }
 
@@ -1606,6 +1613,16 @@
     gap: 20px;
 
     @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+.alchemist-screen {
+  .vendor-split-container {
+    grid-template-columns: 1fr 1fr 1fr;
+
+    @media (max-width: 1024px) {
       grid-template-columns: 1fr;
     }
   }

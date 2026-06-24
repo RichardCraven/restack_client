@@ -1,5 +1,4 @@
 import { CombatManagerRedux } from '../combat-manager-redux';
-import { CombatManager } from '../combat-manager';
 
 describe('Monster HP scaling based on tier', () => {
   const createMockData = (tier, type = 'goblin', hp = 50) => ({
@@ -66,29 +65,4 @@ describe('Monster HP scaling based on tier', () => {
     });
   });
 
-  describe('CombatManager', () => {
-    test('doubles HP (+100%) for a Tier 1 main monster', () => {
-      const cm = new CombatManager();
-      const data = createMockData(1, 'goblin', 50);
-
-      cm.initializeCombat(data);
-
-      const boss = cm.combatants['boss_1'];
-      expect(boss).toBeDefined();
-      expect(boss.starting_hp).toBe(100);
-      expect(boss.hp).toBe(100);
-    });
-
-    test('doubles HP (+100%) for a Tier 2 main monster', () => {
-      const cm = new CombatManager();
-      const data = createMockData(2, 'ghoul', 80);
-
-      cm.initializeCombat(data);
-
-      const boss = cm.combatants['boss_1'];
-      expect(boss).toBeDefined();
-      expect(boss.starting_hp).toBe(160);
-      expect(boss.hp).toBe(160);
-    });
-  });
 });

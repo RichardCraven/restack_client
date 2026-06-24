@@ -59,8 +59,8 @@ const STAT_DESCRIPTIONS = {
         glyph: '◈',
         points: [
             { label: 'Primary Class Stat', text: 'Main stat for Monk, Ranger, and Engineer. Secondary for Wizard and Sage.' },
-            { label: 'Action Speed', text: 'Directly increases turn-queue Speed, allowing more frequent actions.' },
-            { label: 'Defense Stat', text: 'Primary Defense scaling for Monk and Wizard. Secondary for Soldier and Engineer.' },
+            { label: 'Action Speed', text: 'Determines turn order in combat, allowing characters to act sooner in the round sequence.' },
+            { label: 'Evasion & Dodge', text: 'Grants +2% physical dodge/miss chance per point of Dexterity (normally capped at 45%).' },
             { label: 'Finesse Attacks', text: 'Scales physical projectile attacks like arrows and throwing daggers.' }
         ]
     },
@@ -70,7 +70,7 @@ const STAT_DESCRIPTIONS = {
         glyph: '⛉',
         points: [
             { label: 'Primary Class Stat', text: 'Main stat for Sage. Secondary for Soldier, Barbarian, and Ranger.' },
-            { label: 'Maximum HP & Energy', text: 'Directly increases max Hitpoints and skill Energy.' },
+            { label: 'Maximum HP', text: 'Directly increases max Hitpoints.' },
             { label: 'Vitality / Endurance', text: 'Increases Vitality (max combat rounds before exhaustion).' },
             { label: 'Ailment Resistance', text: 'Grants % chance to resist Poison, Stun, and Sleep.' }
         ]

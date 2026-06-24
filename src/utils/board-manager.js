@@ -703,7 +703,7 @@ export function BoardManager(){
         return pool.length ? this.pickRandom(pool) : this.pickRandom(fallbackRuneShards);
     }
     this.getRandomTierTwoJewelKey = () => {
-        const fallbackTierTwoJewels = ['pyrite', 'benthite', 'memnite', 'labradite', 'malachite', 'onyx'];
+        const fallbackTierTwoJewels = ['pyrite', 'benthite', 'memnite', 'moxite', 'labradite', 'malachite', 'onyx'];
         const inventory = this.getCurrentInventory ? this.getCurrentInventory() : null;
         const itemRegistry = inventory && !Array.isArray(inventory) && inventory.allItems ? inventory.allItems : null;
         if (!itemRegistry) return this.pickRandom(fallbackTierTwoJewels);
@@ -1830,7 +1830,7 @@ export function BoardManager(){
         // neutral stone fallback if none is stored.
         try {
             const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color;
-            const isValidFloorColor = (c) => c && c !== 'black' && c !== 'white';
+            const isValidFloorColor = (c) => c && c !== 'black' && c !== 'white' && c !== 'null';
             tile.color = isValidFloorColor(boardColor) ? boardColor : '#6b6057';
         } catch (e) {
             tile.color = '#6b6057';
@@ -2460,8 +2460,8 @@ export function BoardManager(){
                 if ((inScoutedArea || (manhattan <= 2 && visibleTileIds.has(e.id))) && (!isVoid || hasInscriptions)) {
                     const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
                     const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].borders);
-                    const runtimeColor = (e.color && e.color !== 'black') ? e.color : null;
-                    const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
+                    const runtimeColor = (e.color && e.color !== 'black' && e.color !== 'null') ? e.color : null;
+                    const boardColor = (persistedColor && persistedColor !== 'black' && persistedColor !== 'null') ? persistedColor : (runtimeColor || null);
                     // Use persisted/runtime board color when available.  Fall back to a
                     // neutral dark-stone tone rather than 'white' — white tiles were a
                     // jarring visual glitch when server data had no explicit color saved.
@@ -2507,9 +2507,9 @@ export function BoardManager(){
                     groupTiles.forEach((tile) => {
                         const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color);
                         const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].borders);
-                        const runtimeColor = (tile.color && tile.color !== 'black') ? tile.color : null;
-                        const boardColor = (persistedColor && persistedColor !== 'black') ? persistedColor : (runtimeColor || null);
-                        tile.color = boardColor || 'white';
+                        const runtimeColor = (tile.color && tile.color !== 'black' && tile.color !== 'null') ? tile.color : null;
+                        const boardColor = (persistedColor && persistedColor !== 'black' && persistedColor !== 'null') ? persistedColor : (runtimeColor || null);
+                        tile.color = boardColor || '#6b6057';
                         tile.image = this.getImageForContains(tile.contains, tile);
                         tile.borders = this.normalizeFogBorders(persistedBorders);
                         tile.partialObscured = false;

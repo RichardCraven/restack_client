@@ -81,6 +81,7 @@ class ShrineScreen extends React.Component {
             // ── Progress (concentration rounds)
             currentRound: 1,
             totalRounds: TOTAL_ROUNDS,
+            roundTimeRemainingRatio: 1,
 
             // ── Log messages
             log: [],
@@ -183,6 +184,7 @@ class ShrineScreen extends React.Component {
             this.setState({
                 battleData: cloned,
                 currentRound: this.combatManager.round,
+                roundTimeRemainingRatio: this.combatManager.roundTimeRemainingRatio !== undefined ? this.combatManager.roundTimeRemainingRatio : 1,
                 log: combatLog
             }, () => {
                 this._checkCommunionOutcome();
@@ -484,7 +486,7 @@ class ShrineScreen extends React.Component {
 
     render() {
         const { shrineData } = this.props;
-        const { phase, stoneTileMap, currentRound, totalRounds, log, outcome, showSkillSelect } = this.state;
+        const { phase, stoneTileMap, currentRound, totalRounds, roundTimeRemainingRatio, log, outcome, showSkillSelect } = this.state;
 
         const shrineClass = shrineData && shrineData.shrineClass;
         const classLabel = shrineClass ? capitalize(shrineClass) : 'Unknown';
@@ -638,14 +640,21 @@ class ShrineScreen extends React.Component {
                                     CONCENTRATING
                                 </div>
                                 <div style={{ background: 'rgba(0,0,0,0.7)', borderRadius: '3px', height: '8px', border: '1px solid rgba(201,162,39,0.4)', overflow: 'hidden' }}>
-                                    <div style={{
-                                        height: '100%',
-                                        width: `${Math.min(100, (currentRound / totalRounds) * 100)}%`,
-                                        background: 'linear-gradient(90deg, #7b5ea7, #c9a227)',
-                                        borderRadius: '3px',
-                                        transition: 'width 0.8s ease',
-                                        boxShadow: '0 0 6px rgba(201,162,39,0.6)',
-                                    }} />
+                                    {(() => {
+                                        const elapsedInRound = 1 - (roundTimeRemainingRatio !== undefined ? roundTimeRemainingRatio : 1);
+                                        const completedRounds = (currentRound - 1) + elapsedInRound;
+                                        const smoothProgressPct = Math.min(100, Math.max(0, (completedRounds / totalRounds) * 100));
+                                        return (
+                                            <div style={{
+                                                height: '100%',
+                                                width: `${smoothProgressPct}%`,
+                                                background: 'linear-gradient(90deg, #7b5ea7, #c9a227)',
+                                                borderRadius: '3px',
+                                                transition: 'width 0.1s linear',
+                                                boxShadow: '0 0 6px rgba(201,162,39,0.6)',
+                                            }} />
+                                        );
+                                    })()}
                                 </div>
                             </div>
                         );
@@ -871,8 +880,11 @@ class ShrineScreen extends React.Component {
     _renderShrineTile() {
         const left = SHRINE_COL * (TILE_SIZE + 2);
         const top = SHRINE_ROW * (TILE_SIZE + 2);
-        const { phase, currentRound, totalRounds, cinematicActive } = this.state;
+        const { phase, currentRound, totalRounds, roundTimeRemainingRatio, cinematicActive } = this.state;
         const isConcentrating = (phase === 'communion' && !cinematicActive) || (phase === 'done' && this.state.outcome === 'success');
+        const elapsedInRound = 1 - (roundTimeRemainingRatio !== undefined ? roundTimeRemainingRatio : 1);
+        const completedRounds = (currentRound - 1) + elapsedInRound;
+        const smoothProgressPct = Math.min(100, Math.max(0, (completedRounds / totalRounds) * 100));
         return (
             <div key="shrine-tile" style={{
                 position: 'absolute',
@@ -902,11 +914,11 @@ class ShrineScreen extends React.Component {
                     }}>
                         <div style={{
                             height: '100%',
-                            width: `${Math.min(100, (currentRound / totalRounds) * 100)}%`,
+                            width: `${smoothProgressPct}%`,
                             background: 'linear-gradient(90deg, #c9a227, #fff8dc)',
                             borderRadius: '2px',
                             boxShadow: '0 0 4px rgba(201,162,39,0.8)',
-                            transition: 'width 0.8s ease',
+                            transition: 'width 0.1s linear',
                         }} />
                     </div>
                 )}
