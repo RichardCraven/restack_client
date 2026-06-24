@@ -430,11 +430,6 @@ class MonsterBattle extends React.Component {
             }
 
             if (eventType === 'entropic_kindred') {
-                // Pause combat so units don't move during animation
-                if (this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
-                    this.props.combatManager.pauseCombat(true);
-                }
-
                 const addedCols = (data && data.addedCols) ? data.addedCols : 3;
                 const newTotalCols = this.state.numBoardColumns + addedCols;
 
@@ -468,13 +463,6 @@ class MonsterBattle extends React.Component {
                 this._setTimeout(() => {
                     this.setState({ entropicKindredNewCols: [] });
                 }, 1800);
-
-                // Unfreeze combat after the full animation sequence
-                this._setTimeout(() => {
-                    if (this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
-                        this.props.combatManager.pauseCombat(false);
-                    }
-                }, 2200);
             }
         });
 

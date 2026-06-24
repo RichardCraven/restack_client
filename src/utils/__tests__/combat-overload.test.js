@@ -6,6 +6,7 @@ describe('CombatManagerRedux overload ability logic', () => {
   let target;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     cm = new CombatManagerRedux();
     cm.updateData = jest.fn();
     cm.animManagerRedux = {
@@ -46,6 +47,10 @@ describe('CombatManagerRedux overload ability logic', () => {
     cm.combatants = { [caster.id]: caster, [target.id]: target };
   });
 
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   const overloadAbility = {
     id: 'overload',
     name: 'Overload',
@@ -58,6 +63,7 @@ describe('CombatManagerRedux overload ability logic', () => {
     cm.hitCheck = () => true;
 
     cm.useAbility(caster, overloadAbility, target);
+    jest.runAllTimers();
 
     expect(target.hp).toBe(100);
     expect(target.endurance).toBe(50);
@@ -78,6 +84,7 @@ describe('CombatManagerRedux overload ability logic', () => {
     target.endurance = 40;
 
     cm.useAbility(caster, overloadAbility, target);
+    jest.runAllTimers();
 
     // staminaUsed = 10. Bypasses defense, so finalDmg = 10.
     // Since staminaPct (0.8) > 0.5, deals 5 HP damage and 5 stamina damage.
@@ -94,6 +101,7 @@ describe('CombatManagerRedux overload ability logic', () => {
     target.endurance = 20;
 
     cm.useAbility(caster, overloadAbility, target);
+    jest.runAllTimers();
 
     // staminaUsed = 30. Bypasses defense, so finalDmg = 30.
     // Since staminaPct <= 0.5, deals full 30 damage to HP.
@@ -107,6 +115,7 @@ describe('CombatManagerRedux overload ability logic', () => {
     cm.hitCheck = () => false;
 
     cm.useAbility(caster, overloadAbility, target);
+    jest.runAllTimers();
 
     expect(target.hp).toBe(100);
     expect(cm.animManagerRedux.triggerAbility).toHaveBeenCalledWith(

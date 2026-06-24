@@ -726,6 +726,10 @@
 .lus-tooltip-trigger {
     position: relative;
     cursor: help;
+    
+    &:hover {
+        z-index: 10;
+    }
 }
 
 .lus-stat-tooltip {

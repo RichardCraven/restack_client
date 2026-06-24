@@ -150,6 +150,26 @@ describe('Hashmallim custom spell logic, animation parameter passing, and meteor
     expect(target.dominated).toBeUndefined();
   });
 
+  test('Hashmallim should target and attack the dominated player unit if it is the only remaining PC unit', () => {
+    hashmallim.attacks = ['gore'];
+    target.dominated = true;
+    target._dominatedOriginalIsMonster = false;
+    target._dominatedOriginalIsMinion = false;
+    target.isMonster = true;
+    target.isMinion = false;
+
+    const bestTarget = cm.acquireTarget(hashmallim);
+    expect(bestTarget).toBe(target);
+
+    cm.useAbility = jest.fn();
+    cm.executeUnitAI(hashmallim);
+
+    expect(cm.useAbility).toHaveBeenCalled();
+    const lastCall = cm.useAbility.mock.calls[cm.useAbility.mock.calls.length - 1];
+    expect(lastCall[2]).toBe(target);
+  });
+
+
   test('Dominated debuff tick should extend by 1 round on check failure and re-acquire target/update facing on break-free', () => {
     // 1. Set target as Dominated
     target.dominated = true;

@@ -567,6 +567,7 @@ export function CombatManagerRedux() {
         this.data.monster.isMonster = true;
         const monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
+        monster.isShrineGuardian = this.data.monster.isShrineGuardian;
         monster.tier = this.data.monster.tier;
         monster.maxEndurance = this.data.monster.stats.vitality || Math.round(20 + (this.data.monster.stats.def || 5) * 2);
         monster.endurance = monster.maxEndurance;
@@ -679,14 +680,14 @@ export function CombatManagerRedux() {
                 e.isMonster = true; // Starting boss minions are hostile monsters
 
                 // Determine minion size
-                const isMinionHuge = (
+                const isMinionHuge = !e.isShrineGuardian && (
                     (typeof e.huge === 'boolean' && e.huge === true)
                     || (e.type === 'dragon')
                     || (e.tier === 4)
                     || (typeof e.size === 'number' && e.size === 3)
                     || (typeof e.scale === 'number' && e.scale === 3)
                 );
-                const isMinionLarge = (
+                const isMinionLarge = !e.isShrineGuardian && (
                     !isMinionHuge && (
                         (typeof e.large === 'boolean' && e.large === true)
                         || (e.type && LARGE_COMBAT_KEYS.includes(e.type) && (e.isMinion !== true || e.tier === 3 || e.tier === 4))
@@ -732,6 +733,7 @@ export function CombatManagerRedux() {
                 const minion = createFighter(e, callbacks, this.FIGHT_INTERVAL);
                 minion.isMinion = true;
                 minion.isMonster = true; // Starting boss minions are hostile monsters
+                minion.isShrineGuardian = e.isShrineGuardian;
                 minion.tier = e.tier || 1;
                 minion.maxEndurance = e.stats.vitality || Math.round(20 + (e.stats.def || 5) * 2);
                 minion.endurance = minion.maxEndurance;
@@ -1341,9 +1343,22 @@ export function CombatManagerRedux() {
         // Healers are high-value targets for enemies
         const HEALER_TYPES = new Set(['sage', 'summoner', 'wizard']);
 
+        const checkHashmallimDominatedTarget = (targetUnit) => {
+            if (caller && (caller.type === 'hashmallim' || caller.image === 'hashmallim')) {
+                const alivePCUnits = Object.values(this.combatants).filter(p => 
+                    p && !p.dead && !p.isVCT && typeof p.inTrial !== 'number' && (p._dominatedOriginalIsMonster === false || !p.isMonster)
+                );
+                if (alivePCUnits.length === 1 && alivePCUnits[0].id === targetUnit.id && (targetUnit.dominated || targetUnit.permanentlyDominated)) {
+                    return true;
+                }
+            }
+            return false;
+        };
+
         let candidateTargets = Object.values(this.combatants).filter(c => {
             if (!c || c.dead || c.isVCT || typeof c.inTrial === 'number') return false;
             if (excludeTargetIds && excludeTargetIds.includes(c.id)) return false;
+            if (checkHashmallimDominatedTarget(c)) return true;
             const callerIsEnemy = !!caller.isMonster;
             const cIsEnemy = !!c.isMonster;
             return callerIsEnemy !== cIsEnemy;
@@ -1353,6 +1368,7 @@ export function CombatManagerRedux() {
         if (candidateTargets.length === 0 && excludeTargetIds && excludeTargetIds.length > 0) {
             candidateTargets = Object.values(this.combatants).filter(c => {
                 if (!c || c.dead || c.isVCT || typeof c.inTrial === 'number') return false;
+                if (checkHashmallimDominatedTarget(c)) return true;
                 const callerIsEnemy = !!caller.isMonster;
                 const cIsEnemy = !!c.isMonster;
                 return callerIsEnemy !== cIsEnemy;
@@ -1378,6 +1394,7 @@ export function CombatManagerRedux() {
             if (preferWeakest) score += (1 - hpPct) * 10; // prefer wounded targets
             if (!callerIsEnemy && HEALER_TYPES.has(c.type)) score += 5;
             if (!callerIsEnemy && c.isBones) score += 18; // aggressive but not full tunnel-vision
+            if (callerIsEnemy && c.isConcentrating) score += 50; // prioritize concentrating unit
 
             if (score > bestScore) {
                 bestScore = score;
@@ -6422,8 +6439,8 @@ export function CombatManagerRedux() {
                     coordinates: { ...tile },
                     hp: 30,
                     starting_hp: 30,
-                    stats: { str: 3, dex: 5, atk: unit.stats ? Math.floor((unit.stats.atk || 10) * 0.40) : 8, def: 2, speed: 10, willpower: 1, int: 2, fort: 2 },
-                    attacks: [],
+                    stats: { str: 3, dex: 5, atk: 7, def: 2, speed: 10, willpower: 1, int: 2, fort: 2 },
+                    attacks: ['bite'],
                     specials: [],
                     portrait: images['hagigah_summon_skulls'],
                     cooldowns: {},
@@ -6564,25 +6581,26 @@ export function CombatManagerRedux() {
             const ADDED_COLS = 3;
             const INSERT_AT  = 4; // new columns appear at x=4,5,6; existing x>=4 shift right
 
-            // Shift all monster/minion combatants and their VCTs right by ADDED_COLS
+            // Shift ALL combatants (crew, monsters, minions) right by ADDED_COLS
+            // if they are at or past the insertion point. Without this, crew
+            // members stay at their old x while monsters shift, causing
+            // attacks to target stale positions.
             Object.values(this.combatants).forEach(c => {
                 if (!c || c.dead) return;
-                if (c.isMonster || c.isMinion) {
-                    if (c.coordinates && c.coordinates.x >= INSERT_AT) {
-                        c.coordinates.x += ADDED_COLS;
-                    }
-                    // Update occupiedCoords for large/huge units
-                    if (Array.isArray(c.occupiedCoords)) {
-                        c.occupiedCoords = c.occupiedCoords.map(coord =>
-                            coord.x >= INSERT_AT ? { ...coord, x: coord.x + ADDED_COLS } : coord
-                        );
-                    }
-                    // Update VCT coordinates if present
-                    if (c.vctCoords) {
-                        c.vctCoords = c.vctCoords.map(coord =>
-                            coord.x >= INSERT_AT ? { ...coord, x: coord.x + ADDED_COLS } : coord
-                        );
-                    }
+                if (c.coordinates && c.coordinates.x >= INSERT_AT) {
+                    c.coordinates.x += ADDED_COLS;
+                }
+                // Update occupiedCoords for large/huge units
+                if (Array.isArray(c.occupiedCoords)) {
+                    c.occupiedCoords = c.occupiedCoords.map(coord =>
+                        coord.x >= INSERT_AT ? { ...coord, x: coord.x + ADDED_COLS } : coord
+                    );
+                }
+                // Update VCT coordinates if present
+                if (c.vctCoords) {
+                    c.vctCoords = c.vctCoords.map(coord =>
+                        coord.x >= INSERT_AT ? { ...coord, x: coord.x + ADDED_COLS } : coord
+                    );
                 }
             });
 
@@ -6612,86 +6630,88 @@ export function CombatManagerRedux() {
         // ── OVERLOAD ────────────────────────────────────────────────────────────
         if (abilityId === 'overload') {
             const hit = this.hitCheck(unit, target);
-            if (hit) {
-                const maxStamina = target.maxEndurance || 50;
-                const currStamina = target.endurance !== undefined ? target.endurance : 50;
-                const staminaUsed = Math.max(0, maxStamina - currStamina);
-                
-                const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
-                let finalDmg = Math.round(staminaUsed * dmgMult);
 
-                // If target is above 50% stamina, split damage between HP and stamina, otherwise deal full damage to HP
-                const staminaPct = maxStamina > 0 ? currStamina / maxStamina : 1;
-                
-                if (staminaPct > 0.50) {
-                    const hpDmg = Math.round(finalDmg * 0.5);
-                    const staminaDmg = Math.round(finalDmg * 0.5);
+            // Snapshot name strings now — unit/target refs stay live, names stay accurate
+            const unitLogName = this.getCombatantLogName(unit);
+            const targetLogName = this.getCombatantLogName(target);
 
-                    target.hp = Math.max(0, target.hp - hpDmg);
-                    target.endurance = Math.max(0, (target.endurance || 0) - staminaDmg);
-                    
-                    target.damageIndicators = target.damageIndicators || [];
-                    target.damageIndicators.push({
-                        id: Date.now() + Math.random() + 80,
-                        value: `-${hpDmg}`,
-                        source: 'Overload',
-                        type: 'damage'
-                    });
-                    if (staminaDmg > 0) {
-                        target.damageIndicators.push({
-                            id: Date.now() + Math.random() + 90,
-                            value: `-${staminaDmg} Stamina`,
-                            source: 'Overload',
-                            type: 'debuff'
-                        });
-                    }
-
-                    if (target.endurance <= 0 && !target.exhausted) {
-                        this.applyEnduranceCost(target, 0, 'Overload');
-                    }
-
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)} unleashes Overload on ${this.getCombatantLogName(target)}: deals ${hpDmg} HP and ${staminaDmg} Stamina damage (defense bypassed, split due to >50% stamina).`);
-                } else {
-                    target.hp = Math.max(0, target.hp - finalDmg);
-                    target.damageIndicators = target.damageIndicators || [];
-                    target.damageIndicators.push({
-                        id: Date.now() + Math.random() + 80,
-                        value: `-${finalDmg}`,
-                        source: 'Overload',
-                        type: 'damage'
-                    });
-
-                    this.appendCombatLog(`${this.getCombatantLogName(unit)} unleashes Overload on ${this.getCombatantLogName(target)}: deals ${finalDmg} HP damage (defense bypassed, full damage due to <=50% stamina).`);
-                }
-
-                if (target.hp <= 0) {
-                    this.targetKilled(target);
-                }
-
-                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
-                    this.animManagerRedux.triggerAbility(
-                        unit.coordinates,
-                        target.coordinates,
-                        'overload_success',
-                        target.isLarge,
-                        (Array.isArray(target.occupiedCoords) ? target.occupiedCoords : [target.coordinates]),
-                        unit.id
-                    );
-                }
-            } else {
-                this.appendCombatLog(`${this.getCombatantLogName(unit)} attempted to Overload ${this.getCombatantLogName(target)} but missed!`);
-                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
-                    this.animManagerRedux.triggerAbility(
-                        unit.coordinates,
-                        target.coordinates,
-                        'overload_fail',
-                        target.isLarge,
-                        (Array.isArray(target.occupiedCoords) ? target.occupiedCoords : [target.coordinates]),
-                        unit.id
-                    );
-                }
+            // ── Fire projectile animation immediately ───────────────────────────
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(
+                    unit.coordinates,
+                    target.coordinates,
+                    hit ? 'overload_success' : 'overload_fail',
+                    target.isLarge,
+                    (Array.isArray(target.occupiedCoords) ? target.occupiedCoords : [target.coordinates]),
+                    unit.id
+                );
             }
-            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+
+            // ── Delay damage/log until projectile arrives (700 ms travel time) ─
+            const OVERLOAD_TRAVEL_MS = 700;
+            setTimeout(() => {
+                if (hit) {
+                    const maxStamina = target.maxEndurance || 50;
+                    const currStamina = target.endurance !== undefined ? target.endurance : 50;
+                    const staminaUsed = Math.max(0, maxStamina - currStamina);
+
+                    const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
+                    let finalDmg = Math.round(staminaUsed * dmgMult);
+
+                    // If target is above 50% stamina, split damage between HP and stamina, otherwise deal full damage to HP
+                    const staminaPct = maxStamina > 0 ? currStamina / maxStamina : 1;
+
+                    if (staminaPct > 0.50) {
+                        const hpDmg = Math.round(finalDmg * 0.5);
+                        const staminaDmg = Math.round(finalDmg * 0.5);
+
+                        target.hp = Math.max(0, target.hp - hpDmg);
+                        target.endurance = Math.max(0, (target.endurance || 0) - staminaDmg);
+
+                        target.damageIndicators = target.damageIndicators || [];
+                        target.damageIndicators.push({
+                            id: Date.now() + Math.random() + 80,
+                            value: `-${hpDmg}`,
+                            source: 'Overload',
+                            type: 'damage'
+                        });
+                        if (staminaDmg > 0) {
+                            target.damageIndicators.push({
+                                id: Date.now() + Math.random() + 90,
+                                value: `-${staminaDmg} Stamina`,
+                                source: 'Overload',
+                                type: 'debuff'
+                            });
+                        }
+
+                        if (target.endurance <= 0 && !target.exhausted) {
+                            this.applyEnduranceCost(target, 0, 'Overload');
+                        }
+
+                        this.appendCombatLog(`${unitLogName} unleashes Overload on ${targetLogName}: deals ${hpDmg} HP and ${staminaDmg} Stamina damage (defense bypassed, split due to >50% stamina).`);
+                    } else {
+                        target.hp = Math.max(0, target.hp - finalDmg);
+                        target.damageIndicators = target.damageIndicators || [];
+                        target.damageIndicators.push({
+                            id: Date.now() + Math.random() + 80,
+                            value: `-${finalDmg}`,
+                            source: 'Overload',
+                            type: 'damage'
+                        });
+
+                        this.appendCombatLog(`${unitLogName} unleashes Overload on ${targetLogName}: deals ${finalDmg} HP damage (defense bypassed, full damage due to <=50% stamina).`);
+                    }
+
+                    if (target.hp <= 0) {
+                        this.targetKilled(target);
+                    }
+                } else {
+                    this.appendCombatLog(`${unitLogName} attempted to Overload ${targetLogName} but missed!`);
+                }
+
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            }, OVERLOAD_TRAVEL_MS);
+
             return;
         }
 
@@ -7943,6 +7963,7 @@ export function CombatManagerRedux() {
         const hitCount = (abilityId === 'execute') ? 3 : (isMagicMissile ? (abilityId === 'greater_magic_missile' ? 5 : (abilityId === 'minor_magic_missile' ? 1 : 3)) : 1);
         let hitsSucceeded = 0;
         let anyHitConnected = false;
+        const mmResults = isMagicMissile ? [] : null;
 
         const performHit = (h) => {
             if (target.hp <= 0 || target.dead) return;
@@ -8024,9 +8045,17 @@ export function CombatManagerRedux() {
                             source: ability.name,
                             type: 'damage'
                         });
-                        this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+                        if (isMagicMissile && mmResults) {
+                            mmResults.push(finalDmg);
+                        } else {
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)} uses ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)} for ${finalDmg} damage${target.weaknessRevealed ? ' (weakness exposed!)' : ''}.`);
+                        }
                     } else {
-                        this.appendCombatLog(`${this.getCombatantLogName(unit)} casts ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
+                        if (isMagicMissile && mmResults) {
+                            mmResults.push(0);
+                        } else {
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)} casts ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
+                        }
                     }
 
                     hitsSucceeded++;
@@ -8202,6 +8231,8 @@ export function CombatManagerRedux() {
             } else {
                 if (abilityId === 'betrayal') {
                     this.appendCombatLog(`${this.getCombatantLogName(target)} resisted Betrayal by ${this.getCombatantLogName(unit)}.`);
+                } else if (isMagicMissile && mmResults) {
+                    mmResults.push('miss');
                 } else {
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} missed ${this.getCombatActionName(ability)} on ${this.getCombatantLogName(target)}.`);
                 }
@@ -8576,6 +8607,21 @@ export function CombatManagerRedux() {
             for (let i = 0; i < count; i++) {
                 setTimeout(() => performHit(i), 400 + i * 200);
             }
+            setTimeout(() => {
+                if (mmResults && mmResults.length > 0) {
+                    const casterName = this.getCombatantLogName(unit);
+                    const targetName = this.getCombatantLogName(target);
+                    const abilityName = this.getCombatActionName(ability);
+                    const parts = mmResults.map(r => r === 'miss' ? 'miss' : r === 0 ? 'blocked' : `${r}`);
+                    const hitDamages = mmResults.filter(r => typeof r === 'number' && r > 0);
+                    const weaknessNote = target.weaknessRevealed ? ' (weakness exposed!)' : '';
+                    if (hitDamages.length === 0) {
+                        this.appendCombatLog(`${casterName} fires ${abilityName} at ${targetName} — all missiles missed!`);
+                    } else {
+                        this.appendCombatLog(`${casterName} fires ${abilityName} at ${targetName}: ${parts.join(', ')} damage.${weaknessNote}`);
+                    }
+                }
+            }, 400 + count * 200 + 50);
         } else {
             for (let h = 0; h < hitCount; h++) {
                 performHit(h);

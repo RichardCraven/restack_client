@@ -69,6 +69,7 @@ class ShrineScreen extends React.Component {
         this.state = {
             // ── Phase: 'enter' | 'communion' | 'done'
             phase: 'enter',
+            cinematicActive: true,
 
             // ── Stone floor
             stoneTileMap,
@@ -107,14 +108,14 @@ class ShrineScreen extends React.Component {
 
     componentDidMount() {
         this._isMounted = true;
-        // Short enter delay, then initialize and start real combat
+        // Start the communion phase immediately so the grid and crew render, and we start the cinematic sequence.
         this._enterTimeout = setTimeout(() => {
             if (this._isMounted) {
                 this.setState({ phase: 'communion' }, () => {
                     this._initializeCombatEngine();
                 });
             }
-        }, 1800);
+        }, 100);
     }
 
     componentWillUnmount() {
@@ -131,6 +132,7 @@ class ShrineScreen extends React.Component {
 
         // 1. Instantiate CombatManagerRedux
         this.combatManager = new CombatManagerRedux();
+        this.combatManager.beginGreeting = () => {}; // Override standard greeting sequence
         this.combatManager.initialize();
 
         if (overlayManager) {
@@ -270,9 +272,9 @@ class ShrineScreen extends React.Component {
             : null;
 
         if (shrineUnit) {
-            shrineUnit.coordinates = { x: 4, y: 1 };
+            shrineUnit.coordinates = { x: 4, y: 5 }; // Start at the bottom row, middle column
             shrineUnit.depth = 4;
-            shrineUnit.position = 1;
+            shrineUnit.position = 5;
             shrineUnit.skipAI = true;
             shrineUnit.isConcentrating = true;
             this.combatManager._setCombatantOccupiedCoords(shrineUnit, this.combatManager.combatants);
@@ -305,13 +307,81 @@ class ShrineScreen extends React.Component {
             c.coordinates = { x: startX, y: startY };
             c.depth = startX;
             c.position = startY;
+            c.opacity = 0; // Hide initially
+            c.opacityTransition = 'opacity 1.5s ease-in-out'; // Transition duration for fade-in
             this.combatManager._setCombatantOccupiedCoords(c, this.combatManager.combatants);
         });
 
         // Force a state sync to initialize the grid rendering
         this.setState({
             battleData: JSON.parse(JSON.stringify(this.combatManager.combatants))
+        }, () => {
+            this._runCinematicSequence();
         });
+    }
+
+    _runCinematicSequence = async () => {
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+        
+        // 1. Slight delay before the cinematic events play out
+        await delay(1500);
+
+        // Find the shrine unit
+        const combatantsList = Object.values(this.combatManager.combatants);
+        const shrineUnit = this.shrineUnitId ? this.combatManager.combatants[this.shrineUnitId] : null;
+
+        if (shrineUnit && this._isMounted) {
+            // Walk up towards the shrine one tile at a time: from y=5 to y=1
+            for (let y = 4; y >= 1; y--) {
+                if (!this._isMounted) return;
+                shrineUnit.coordinates.y = y;
+                shrineUnit.position = y;
+                this.combatManager._setCombatantOccupiedCoords(shrineUnit, this.combatManager.combatants);
+                
+                this.setState({
+                    battleData: JSON.parse(JSON.stringify(this.combatManager.combatants))
+                });
+                
+                await delay(800); // 800ms per tile step
+            }
+        }
+
+        if (!this._isMounted) return;
+
+        // 2. Monsters appear (fade in transition)
+        const guardians = combatantsList.filter(c => c.isMonster);
+        guardians.forEach(g => {
+            g.opacity = 1;
+        });
+
+        this.setState({
+            battleData: JSON.parse(JSON.stringify(this.combatManager.combatants))
+        });
+
+        // Wait for the fade-in transition (1.5 seconds)
+        await delay(1500);
+
+        if (!this._isMounted) return;
+
+        // 3. Render the charging progress bar and end cinematic events
+        this.setState({
+            cinematicActive: false,
+            battleData: JSON.parse(JSON.stringify(this.combatManager.combatants))
+        });
+
+        // Turn on combat AI and start the combat ticks
+        if (this.combatManager) {
+            if (typeof this.combatManager.greetingComplete === 'function') {
+                this.combatManager.greetingComplete();
+            }
+            this.combatManager.appendCombatLog('Combat started. Round 1 begins.');
+            this.combatManager.startRoundTimer();
+            this.combatManager.processRoundTurns();
+            
+            this.setState({
+                battleData: JSON.parse(JSON.stringify(this.combatManager.combatants))
+            });
+        }
     }
 
     _checkCommunionOutcome() {
@@ -551,7 +621,7 @@ class ShrineScreen extends React.Component {
                     )}
 
                     {/* Concentration progress bar */}
-                    {phase === 'communion' && this.shrineUnitId && this.state.battleData[this.shrineUnitId] && !this.state.battleData[this.shrineUnitId].dead && (() => {
+                    {phase === 'communion' && !this.state.cinematicActive && this.shrineUnitId && this.state.battleData[this.shrineUnitId] && !this.state.battleData[this.shrineUnitId].dead && (() => {
                         const sUnit = this.state.battleData[this.shrineUnitId];
                         const left = sUnit.coordinates.x * (TILE_SIZE + 2) - 10;
                         const top = sUnit.coordinates.y * (TILE_SIZE + 2) - 20;
@@ -801,8 +871,8 @@ class ShrineScreen extends React.Component {
     _renderShrineTile() {
         const left = SHRINE_COL * (TILE_SIZE + 2);
         const top = SHRINE_ROW * (TILE_SIZE + 2);
-        const { phase, currentRound, totalRounds } = this.state;
-        const isConcentrating = phase === 'communion' || (phase === 'done' && this.state.outcome === 'success');
+        const { phase, currentRound, totalRounds, cinematicActive } = this.state;
+        const isConcentrating = (phase === 'communion' && !cinematicActive) || (phase === 'done' && this.state.outcome === 'success');
         return (
             <div key="shrine-tile" style={{
                 position: 'absolute',

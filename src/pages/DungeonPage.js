@@ -3487,12 +3487,28 @@ class DungeonPage extends React.Component {
                     e.preventDefault();
                     return;
                 }
+                if (cmd === 'resolve') {
+                    try {
+                        const meta = getMeta() || {};
+                        meta.resolve = 100;
+                        storeMeta(meta);
+                        try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch(e){}
+                        try { this.forceUpdate(); } catch(e){}
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Resolve set to 100'], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
                 // list available commands
                 if (cmd === 'list' || cmd === 'help') {
                     const commands = [
                         'monster-spawn / monsterspawn / mspawn',
                         'item-spawn / itemspawn / ispawn',
                         'shrine respawn / shrinerespawn',
+                        'resolve — set the crew\'s resolve to 100',
                         'fullhealth / full-health / revive',
                         'food — fill food count to 55',
                         'key — add 1 master key to inventory',

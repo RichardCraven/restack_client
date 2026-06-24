@@ -117,6 +117,7 @@ export function MonsterManager() {
             skills: ['void_lance', 'major_magic_missile', 'obliterate', 'invisibility'],
             passives: ['flying'],
             weaknesses: ['arcane', 'holy'],
+            minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 35 },
@@ -150,6 +151,7 @@ export function MonsterManager() {
             skills: ['claw_strike', 'bifurcate', 'minor_magic_missile'],
             passives: ['flying'],
             weaknesses: ['arcane', 'holy'],
+            minions: ['beholder_minion', 'beholder_minion'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 35 },
@@ -180,6 +182,7 @@ export function MonsterManager() {
             deathCries: ['*whines and collapses*'],
             skills: ['rake', 'bite', 'head_butt'],
             weaknesses: ['holy'],
+            minions: ['skeleton', 'skeleton'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 35 },
@@ -206,6 +209,7 @@ export function MonsterManager() {
             },
             level: 6,
             portrait: images['ghoul_portrait'],
+            minions: ['beholder_minion', 'beholder_minion'],
             greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
         },
         blalok: {
@@ -227,6 +231,7 @@ export function MonsterManager() {
                 fort: 4
             },
             level: 6,
+            minions: ['blalok', 'blalok'],
             portrait: images['blalok'],
             greetings: [], deathCries: [], skills: ['claw_strike', 'bite', 'regenerate', 'sacrificial_mending'], weaknesses: [], drops: []
         },
@@ -254,6 +259,7 @@ export function MonsterManager() {
             deathCries: ['*shrieks and fades*'],
             skills: ['undead_grasp', 'despair', 'induce_fear'],
             weaknesses: ['fire', 'holy'],
+            minions: ['shade'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 35 },
@@ -283,6 +289,7 @@ export function MonsterManager() {
             deathCries: ['*gurgle*'],
             skills: ['claw_strike', 'bite', 'regenerate', 'gore'],
             weaknesses: ['fire'],
+            minions: ['goblin', 'goblin'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 35 },
@@ -296,7 +303,7 @@ export function MonsterManager() {
             image_names: ['mummy'],
             monster_names: ['Kufu', 'Razeset'],
             stats: {
-                hp: 250,
+                hp: 210,
                 atk: 10,
                 def: 13,
                 speed: 4, // slow ancient undead — easy to hit but very tanky
@@ -310,9 +317,9 @@ export function MonsterManager() {
             portrait: images['mummy_portrait'],
             greetings: ['time is unravelling'],
             deathCries: ['at last'],
-            skills: ['claw_strike', 'induce_fear', 'energy_drain'],
+            skills: ['claw_strike', 'induce_fear', 'energy_drain', 'undead_grasp'],
             weaknesses: ['arcane', 'fire', 'electricity'],
-            minions: ['skeleton', 'skeleton'],
+            minions: ['skeleton', 'shade'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 50 },
@@ -342,6 +349,7 @@ export function MonsterManager() {
             deathCries: ['The whispers... end...'],
             skills: ['magic_missile', 'fireball', 'ice_blast'],
             weaknesses: ['holy', 'physical'],
+            minions: ['blalok', 'blalok'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 35 },
@@ -372,11 +380,11 @@ export function MonsterManager() {
             deathCries: ['*screams*'],
             skills: ['undead_grasp', 'nether_bolt', 'invoke_darkness', 'shadow_armor'],
             weaknesses: ['holy', 'psionic'],
+            minions: ['shade', 'shade'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_ITEM, percentChance: 50 },
-            ],
-            minions: ['shade', 'skeleton'],
+            ]
         },
         ogre: {
             type: 'ogre',
@@ -402,11 +410,11 @@ export function MonsterManager() {
             deathCries: ['*gurgle*'],
             skills: ['claw_strike', 'bite', 'stomp', 'head_butt'],
             weaknesses: ['fire', 'psionic'],
+            minions: ['blalok', 'blalok', 'goblin', 'goblin'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 45 },
             ],
-            minions: ['goblin', 'goblin', 'goblin'],
         },
         // ── Level 9 ──────────────────────────────────────────────────────
         gorgon: {
@@ -433,6 +441,7 @@ export function MonsterManager() {
             deathCries: ['Arrrghhh!'],
             skills: ['snake_strike', 'bite', 'petrify'],
             weaknesses: ['ice', 'psionic'],
+            minions: ['basilisk_cultists', 'blalok', 'blalok'],
             drops: [
                 { item: TIER1_POTION, percentChance: 35 },
                 { itemPool: TIER1_WEAPONS, percentChance: 45 },
@@ -463,7 +472,7 @@ export function MonsterManager() {
             deathCries: ['Peace at last...'],
             skills: ['vampiric_bite', 'claw_strike', 'bat_fly', 'crimson_sight', 'soul_suck'],
             weaknesses: ['arcane', 'holy'],
-            minions: ['goblin', 'goblin'],
+            minions: ['ghoul', 'skeleton', 'skeleton'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
                 { itemPool: TIER2_WEAPONS, percentChance: 45 },
@@ -493,6 +502,7 @@ export function MonsterManager() {
             deathCries: ['*cosmic screams*'],
             skills: ['claw_strike', 'bite'],
             weaknesses: ['holy', 'fire'],
+            minions: ['basilisk_cultists', 'blalok', 'blalok'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
                 { itemPool: TIER2_WEAPONS, percentChance: 35 },
@@ -556,6 +566,7 @@ export function MonsterManager() {
             deathCries: ['Mercy'],
             skills: ['greater_magic_missile', 'hex', 'shadow_curse', 'spiderweb', 'summon_spiders', 'dispell', 'demonic_whispers', 'transform'],
             weaknesses: ['arcane', 'holy'],
+            minions: ['beholder_minion', 'horned_pet', 'beholder_minion'],
             drops: [
                 { item: TIER3_POTION, percentChance: 35 },
                 { itemPool: TIER3_ITEM, percentChance: 35 },
@@ -610,7 +621,7 @@ export function MonsterManager() {
             deathCries: ['Urdu meklak milnaurku...'],
             skills: ['void_lance', 'obliterate', 'energy_burn', 'petrify', 'invisibility', 'major_magic_missile'],
             weaknesses: ['arcane', 'holy'],
-            minions: ['beholder_minion', 'beholder_minion'],
+            minions: ['beholder_minion', 'beholder_minion', 'beholder_minion'],
             drops: [
                 { item: TIER2_POTION, percentChance: 60 },
                 { itemPool: TIER2_MAGICAL, percentChance: 35 },
@@ -698,7 +709,7 @@ export function MonsterManager() {
             portrait: images['djinn_portrait'],
             greetings: ['your fate leads you here, now it will all end'],
             deathCries: ['it seems your fate has other plans'],
-            skills: ['void_lance', 'betrayal', 'arcane_barrier', 'bind', 'death_missile', 'rift'],
+            skills: ['betrayal', 'arcane_barrier', 'bind', 'death_missile', 'rift', 'rake'],
             weaknesses: ['arcane'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },

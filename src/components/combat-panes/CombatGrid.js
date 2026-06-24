@@ -1888,7 +1888,7 @@ export default function CombatGrid(props) {
                         : riftPushbackAnim
                             ? `transform ${riftPushbackAnim.duration}ms ease-out`
                             : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
-                    opacity: isBatFlying ? 0 : 1,
+                    opacity: typeof unit.opacity === 'number' ? unit.opacity : (isBatFlying ? 0 : 1),
                     ...computeHitVars(unit, getHitAnimation),
                 }}
             >
@@ -1900,12 +1900,12 @@ export default function CombatGrid(props) {
                     onClick={() => monsterCombatPortraitClicked(unit.id)}
                     style={{
                         position: 'relative',
-                        pointerEvents: 'auto',
+                        pointerEvents: (unit.opacity === 0) ? 'none' : 'auto',
                         width: '100%',
                         height: '100%',
                         borderRadius: '8px',
                         overflow: 'visible',
-                        opacity: isBatFlying ? 0 : 1,
+                        opacity: typeof unit.opacity === 'number' ? unit.opacity : (isBatFlying ? 0 : 1),
                         animation: activeShieldSlamAnim 
                             ? `${activeShieldSlamAnim.type === 'head_butt_lunge' ? 'headbuttLunge' : 'shieldSlamLunge'} ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
                             : (activeStompCast
@@ -1915,7 +1915,7 @@ export default function CombatGrid(props) {
                         '--slam-dy': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.y - activeShieldSlamAnim.srcPx.y}px` : '0px',
                         willChange: (activeShieldSlamAnim || activeStompCast) ? 'transform' : 'auto',
                         zIndex: (activeShieldSlamAnim || activeStompCast) ? 4500 : undefined,
-                        transition: 'opacity 0.25s ease-in-out'
+                        transition: typeof unit.opacityTransition === 'string' ? unit.opacityTransition : 'opacity 0.25s ease-in-out'
                     }}
                 >
                     <div
@@ -2586,7 +2586,6 @@ export default function CombatGrid(props) {
         if (anim.type === 'madness_projectile' && anim.srcPx && anim.tgtPx) {
             const dx = anim.tgtPx.x - anim.srcPx.x;
             const dy = anim.tgtPx.y - anim.srcPx.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
             const colors = ['#b060ff', '#ff00c8', '#00e6ff'];
             return (
                 <div key={key} style={{
