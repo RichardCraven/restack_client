@@ -42,7 +42,9 @@ class CardDuel extends React.Component {
     constructor(props) {
         super(props);
 
-        const crew = props.crew || [];
+        const rawCrew = props.crew || [];
+        const isCombatLoss = !!props.isCombatLoss;
+        const crew = isCombatLoss ? rawCrew.map(c => ({ ...c, dead: false })) : rawCrew;
         const meta = props.meta || {};
         const depth = props.dungeonDepth || 1;
         const activeEchoIds = (meta.echoCards || []).slice(0, 4);

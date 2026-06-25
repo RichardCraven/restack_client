@@ -422,6 +422,7 @@ import treasure from '../assets/icons/staples/treasure.png'
 
 // misc
 import trash from '../assets/icons/misc/trash.png'
+import trap from '../assets/icons/trap.png';
 import spawn_point from '../assets/icons/spawn.png'
 import eye from '../assets/icons/misc/eye.png'
 import eye_inverted from '../assets/icons/misc/eye_inverted.png'
@@ -1061,6 +1062,7 @@ import spectral_dust from '../assets/icons/loot/spectral_dust.png';
 import monadic_dust from '../assets/icons/loot/monadic_dust.png';
 import monadic_nugget from '../assets/icons/loot/monadic_nugget.png';
 
+const tattoo_placeholder = trap; // placeholder until real tattoo art is added
 const _terrainBase = [terrain_1, terrain_2, terrain_3, terrain_4, terrain_5, terrain_6, terrain_7, terrain_8, terrain_9, terrain_10, terrain_11, terrain_12, terrain_13, terrain_14, terrain_15, terrain_16];
 const _terrainLight = [terrain_1_light, terrain_2_light, terrain_3_light, terrain_4_light, terrain_5_light, terrain_6_light, terrain_7_light, terrain_8_light, terrain_9_light, terrain_10_light, terrain_11_light, terrain_12_light, terrain_13_light, terrain_14_light, terrain_15_light, terrain_16_light];
 const _terrainDark = [terrain_1_dark, terrain_2_dark, terrain_3_dark, terrain_4_dark, terrain_5_dark, terrain_6_dark, terrain_7_dark, terrain_8_dark, terrain_9_dark, terrain_10_dark, terrain_11_dark, terrain_12_dark, terrain_13_dark, terrain_14_dark, terrain_15_dark, terrain_16_dark];
@@ -1506,6 +1508,8 @@ export {
     oracle,
 
     trash,
+    trap,
+    tattoo_placeholder,
     spawn_point,
     wide_skull,
     eye,

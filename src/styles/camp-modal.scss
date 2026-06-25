@@ -1557,16 +1557,10 @@
 
 // ── Merchant & Alchemist Modals ──────────────────────────────────────────
 
-.merchant-modal {
-  .modal-dialog {
-    max-width: 920px;
-    width: calc(100% - 32px);
-  }
-}
+.merchant-modal, .alchemist-modal, .prep-complete-modal, .ritual-complete-modal, .ritual-encounter-modal, .food-complete-modal {
+  z-index: 3000 !important;
 
-.alchemist-modal {
   .modal-dialog {
-    max-width: 1250px;
     width: calc(100% - 32px);
   }
 
@@ -1600,6 +1594,18 @@
   }
 }
 
+.merchant-modal {
+  .modal-dialog {
+    max-width: 920px;
+  }
+}
+
+.alchemist-modal {
+  .modal-dialog {
+    max-width: 1250px;
+  }
+}
+
 .merchant-screen, .alchemist-screen {
   display: flex;
   flex-direction: column;
@@ -1626,7 +1632,9 @@
       grid-template-columns: 1fr;
     }
   }
+}
 
+.merchant-screen, .alchemist-screen {
   .vendor-panel {
     background: rgba(20, 21, 23, 0.72);
     border: 1px solid rgba(255, 255, 255, 0.07);

@@ -399,7 +399,7 @@ class CrewManagerPage extends React.Component {
         const useMinionKeys = minionKeys || this.state.selectedMinionKeys || [];
         let monster = this.props.monsterManager.getMonster(useMonsterKey);
         if (!monster) monster = this.props.monsterManager.getRandomMonster();
-        let monsterName = this.pickRandom(monster.monster_names)
+        let monsterName = this.pickRandom(monster.monster_names) || (monster.type ? monster.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
         monster.name = monsterName
         monster.inventory = [];
 
@@ -409,7 +409,7 @@ class CrewManagerPage extends React.Component {
             const minion = this.props.monsterManager.getMonster(key);
             if (!minion) return;
             minion.id = minion.id + (i * 10) + 700;
-            minion.name = this.pickRandom(minion.monster_names);
+            minion.name = this.pickRandom(minion.monster_names) || (minion.type ? minion.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
             minion.inventory = [];
             minions.push(minion);
         });
@@ -697,7 +697,7 @@ class CrewManagerPage extends React.Component {
         const useMinionKeys = this.state.selectedMinionKeys || [];
         let monster = this.props.monsterManager.getMonster(useMonsterKey);
         if (!monster) monster = this.props.monsterManager.getRandomMonster();
-        let monsterName = this.pickRandom(monster.monster_names)
+        let monsterName = this.pickRandom(monster.monster_names) || (monster.type ? monster.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
         monster.name = monsterName
         monster.inventory = [];
 
@@ -707,7 +707,7 @@ class CrewManagerPage extends React.Component {
             const minion = this.props.monsterManager.getMonster(key);
             if (!minion) return;
             minion.id = minion.id + (i * 10) + 700;
-            minion.name = this.pickRandom(minion.monster_names);
+            minion.name = this.pickRandom(minion.monster_names) || (minion.type ? minion.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
             minion.inventory = [];
             minions.push(minion);
         });
@@ -1049,10 +1049,15 @@ class CrewManagerPage extends React.Component {
                                             })()}
                                             {!this.state.selectedMonsterKey && <span className="enemy-slot-placeholder">＋</span>}
                                         </div>
-                                        {this.state.selectedMonsterKey && (() => {
-                                            const m = this.props.monsterManager.getMonster(this.state.selectedMonsterKey);
-                                            return m ? <div className="enemy-slot-name">{formatMonsterType(m.type)}</div> : null;
-                                        })()}
+                                        <div className="enemy-slot-name">
+                                            {(() => {
+                                                if (this.state.selectedMonsterKey) {
+                                                    const m = this.props.monsterManager.getMonster(this.state.selectedMonsterKey);
+                                                    if (m) return formatMonsterType(m.type);
+                                                }
+                                                return '\u00a0';
+                                            })()}
+                                        </div>
                                     </div>
 
                                     {/* 4 minion slots */}
@@ -1071,7 +1076,9 @@ class CrewManagerPage extends React.Component {
                                                     {m && <div className="enemy-slot-portrait" style={{ backgroundImage: `url(${m.portrait})` }}></div>}
                                                     {!key && <span className="enemy-slot-placeholder">＋</span>}
                                                 </div>
-                                                {m && <div className="enemy-slot-name">{formatMonsterType(m.type)}</div>}
+                                                <div className="enemy-slot-name">
+                                                    {m ? formatMonsterType(m.type) : '\u00a0'}
+                                                </div>
                                             </div>
                                         );
                                     })}

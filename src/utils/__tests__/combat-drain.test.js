@@ -61,8 +61,16 @@ describe('CombatManagerRedux energy_drain logic', () => {
     // Force hitCheck to return true
     cm.hitCheck = () => true;
 
-    // Use ability
-    cm.useAbility(caster, energyDrainAbility, target);
+    // Mock Math.random to prevent critical strikes
+    const originalRandom = Math.random;
+    Math.random = () => 0.5;
+
+    try {
+        // Use ability
+        cm.useAbility(caster, energyDrainAbility, target);
+    } finally {
+        Math.random = originalRandom;
+    }
 
     // Caster has 20 atk, Target has 10 def.
     // Let's check damage: damageCheck(attacker, defender, rawDmg=20, isMagical=false) => 20 - def/2 = 20 - 5 = 15 final damage.

@@ -22,6 +22,18 @@ const formatCombatText = (value) => String(value || '')
     .map(part => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
 
+const isUndead = (unit) => {
+    if (!unit) return false;
+    const subtype = (unit.subtype || '').toLowerCase();
+    const type = (unit.type || '').toLowerCase();
+    const key = (unit.key || '').toLowerCase();
+    const id = (unit.id || '').toLowerCase();
+    return subtype === 'undead' ||
+           type === 'skeleton' || type === 'zombie' || type === 'wraith' || type === 'vampire' || type === 'ghoul' || type === 'mummy' ||
+           key === 'skeleton' || key === 'zombie' || key === 'wraith' || key === 'vampire' || key === 'ghoul' || key === 'mummy' ||
+           id.includes('skeleton') || id.includes('zombie') || id.includes('wraith') || id.includes('vampire') || id.includes('ghoul') || id.includes('mummy');
+};
+
 export function CombatManagerRedux() {
     this.DEATH_ANIMATION_MS = 2200;
     this.FIGHT_INTERVAL = INTERVALS[1]; // default Slow
@@ -471,6 +483,7 @@ export function CombatManagerRedux() {
         this.roundTimeRemainingRatio = 1.0;
         this.roundTimeElapsedMs = 0;
         this.combatOver = false;
+        this.combatPaused = false;
 
         const callbacks = {
             broadcastDataUpdate: (c) => {
@@ -879,7 +892,7 @@ export function CombatManagerRedux() {
                 { x: combatant.coordinates.x + 2 * hOffset, y: combatant.coordinates.y - 2 }
             ];
             extraCoords.forEach(coord => {
-                if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 6) {
+                if (coord.x >= 0 && coord.x < (this.numColumns || 8) && coord.y >= 0 && coord.y < 6) {
                     if (!combatant.occupiedCoords.some(c => c.x === coord.x && c.y === coord.y)) {
                         combatant.occupiedCoords.push(coord);
                     }
@@ -932,7 +945,7 @@ export function CombatManagerRedux() {
                 { x: combatant.coordinates.x + hOffset, y: combatant.coordinates.y - 1 }
             ];
             extraCoords.forEach(coord => {
-                if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 6) {
+                if (coord.x >= 0 && coord.x < (this.numColumns || 8) && coord.y >= 0 && coord.y < 6) {
                     if (!combatant.occupiedCoords.some(c => c.x === coord.x && c.y === coord.y)) {
                         combatant.occupiedCoords.push(coord);
                     }
@@ -1702,7 +1715,7 @@ export function CombatManagerRedux() {
     };
 
     this.triggerVisualAbility = (unitId, targetId, ability) => {
-        if (!this.animationManager) return;
+        if (!this.animationManager || typeof this.animationManager.getTileIdByCoords !== 'function') return;
         const unit = this.getCombatant(unitId);
         const target = this.getCombatant(targetId);
         if (!unit || !target) return;
@@ -2714,6 +2727,12 @@ export function CombatManagerRedux() {
             if (key === 'regenerate' && (selfHpPct >= 0.50 || unit.regenerating)) return;
             const resolved = this.resolveSpecial(unit, key);
             if (!resolved || resolved.type === 'passive' || resolved.isPassive) return;
+
+            // Ensure friendly/support skills do not target enemies
+            const isFriendlySkill = resolved.type === 'heal' || resolved.type === 'buff' || key === 'sacrificial_mending' || key === 'direct_dispel' || key === 'heal';
+            if (isFriendlySkill && resolved.range !== 'self' && target && (!!unit.isMonster !== !!target.isMonster)) {
+                return;
+            }
 
             let score = 0;
             const effects = Array.isArray(resolved.effect) ? resolved.effect : (resolved.effect ? [resolved.effect] : []);
@@ -6145,6 +6164,10 @@ export function CombatManagerRedux() {
         }
 
         if (abilityId === 'sacrificial_mending') {
+            // Guard: target must be on the same team
+            if (target && (!!unit.isMonster !== !!target.isMonster)) {
+                return;
+            }
             // Drain 20 HP from the caster (the Blalok) — cannot kill it (floor at 1)
             const drain = Math.min(20, unit.hp - 1);
             if (drain > 0) {
@@ -6173,6 +6196,10 @@ export function CombatManagerRedux() {
         }
 
         if (abilityId === 'heal') {
+            // Guard: target must be on the same team
+            if (target && (!!unit.isMonster !== !!target.isMonster)) {
+                return;
+            }
             const healAmount = 30; // base healing
             const maxHp = target.starting_hp || target.hp || 100;
             const healedHp = Math.min(healAmount, maxHp - target.hp);
@@ -6205,6 +6232,10 @@ export function CombatManagerRedux() {
         }
 
         if (abilityId === 'direct_dispel') {
+            // Guard: target must be on the same team
+            if (target && (!!unit.isMonster !== !!target.isMonster)) {
+                return;
+            }
             this.cleanseDebuffs(target);
             this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Direct Dispel on ${this.getCombatantLogName(target)}, removing all debuffs.`);
             
@@ -6652,22 +6683,13 @@ export function CombatManagerRedux() {
             const ADDED_COLS = 3;
             const INSERT_AT  = 4; // new columns appear at x=4,5,6; existing x>=4 shift right
 
-            // Shift ALL combatants (crew, monsters, minions) right by ADDED_COLS
-            // if they are at or past the insertion point. Without this, crew
-            // members stay at their old x while monsters shift, causing
-            // attacks to target stale positions.
+            // Shift coordinates of ALL combatants (crew, monsters, minions, VCTs)
             Object.values(this.combatants).forEach(c => {
                 if (!c || c.dead) return;
                 if (c.coordinates && c.coordinates.x >= INSERT_AT) {
                     c.coordinates.x += ADDED_COLS;
                 }
-                // Update occupiedCoords for large/huge units
-                if (Array.isArray(c.occupiedCoords)) {
-                    c.occupiedCoords = c.occupiedCoords.map(coord =>
-                        coord.x >= INSERT_AT ? { ...coord, x: coord.x + ADDED_COLS } : coord
-                    );
-                }
-                // Update VCT coordinates if present
+                // Update direct vctCoords array if present
                 if (c.vctCoords) {
                     c.vctCoords = c.vctCoords.map(coord =>
                         coord.x >= INSERT_AT ? { ...coord, x: coord.x + ADDED_COLS } : coord
@@ -6680,6 +6702,15 @@ export function CombatManagerRedux() {
             setMaxDepth(newMaxDepth);
             this.numColumns = 8 + ADDED_COLS;
             this.entropicKindredActive = true;
+
+            // Recalculate occupied coordinates for all active units using the updated board width
+            Object.values(this.combatants).forEach(c => {
+                if (!c || c.dead || c.isVCT) return;
+                this._setCombatantOccupiedCoords(c, this.combatants);
+            });
+
+            // Synchronize VCT coordinates to their shifted parent monsters
+            this.syncVCTs();
 
             this.appendCombatLog(`${this.getCombatantLogName(unit)} tears reality apart — the battlefield EXPANDS outward! Three new columns materialize from the void.`);
 
@@ -7244,9 +7275,10 @@ export function CombatManagerRedux() {
                 );
             }
 
-            // Find all targets in the 2x2 area
+            // Find all targets in the 2x2 area (excluding caster and allies)
             Object.values(this.combatants).forEach(c => {
                 if (!c || c.dead || c.isVCT) return;
+                if (c.id === unit.id || !!c.isMonster === !!unit.isMonster) return;
 
                 const insideArea = areaCoords.some(ac => ac.x === c.coordinates.x && ac.y === c.coordinates.y) ||
                                   (Array.isArray(c.occupiedCoords) && c.occupiedCoords.some(cc => areaCoords.some(ac => ac.x === cc.x && ac.y === cc.y)));
@@ -8064,7 +8096,7 @@ export function CombatManagerRedux() {
                 }
 
                 let finalDmg = Math.round(this.damageCheck(unit, target, currentRawDmg, isMagicalAbility) * dmgMult);
-                if (arrowType === 'celestial' && target.subtype === 'undead') {
+                if (arrowType === 'celestial' && (target.subtype === 'undead' || isUndead(target))) {
                     finalDmg = Math.round(finalDmg * 1.5);
                 }
                 const isVampire = unit.type === 'vampire' || unit.key === 'vampire' || unit.id === 'vampire';
@@ -8506,7 +8538,7 @@ export function CombatManagerRedux() {
                                 this._applyDebuff(target, { decrease_stats: { stats: [{ stat: 'atk', amount: 3 }] } }, 'poison', dur);
                                 this.appendCombatLog(`${this.getCombatantLogName(target)} is poisoned!`);
                             } else if (eff.type === 'bleed') {
-                                if (target.subtype === 'undead') {
+                                if (target.subtype === 'undead' || isUndead(target)) {
                                     this.appendCombatLog(`${this.getCombatantLogName(target)} does not bleed.`);
                                 } else {
                                     target.bleed = true;
@@ -8754,7 +8786,7 @@ export function CombatManagerRedux() {
                 const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
                 let finalDmg = Math.round(this.damageCheck(ranger, target, baseDamage) * dmgMult);
 
-                if (arrowType === 'celestial' && target.subtype === 'undead') {
+                if (arrowType === 'celestial' && (target.subtype === 'undead' || isUndead(target))) {
                     finalDmg = Math.round(finalDmg * 1.5);
                 }
 
@@ -8961,7 +8993,7 @@ export function CombatManagerRedux() {
                         { x: x + 2 * hOffset, y: y - 2 }
                     ];
                     extraCoords.forEach(coord => {
-                        if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 6) {
+                        if (coord.x >= 0 && coord.x < (this.numColumns || 8) && coord.y >= 0 && coord.y < 6) {
                             if (!unitTiles.some(c => c.x === coord.x && c.y === coord.y)) {
                                 unitTiles.push(coord);
                             }
@@ -8975,7 +9007,7 @@ export function CombatManagerRedux() {
                         { x: x + hOffset, y: y - 1 }
                     ];
                     extraCoords.forEach(coord => {
-                        if (coord.x >= 0 && coord.x < 8 && coord.y >= 0 && coord.y < 6) {
+                        if (coord.x >= 0 && coord.x < (this.numColumns || 8) && coord.y >= 0 && coord.y < 6) {
                             if (!unitTiles.some(c => c.x === coord.x && c.y === coord.y)) {
                                 unitTiles.push(coord);
                             }

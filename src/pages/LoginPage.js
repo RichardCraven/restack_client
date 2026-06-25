@@ -22,9 +22,6 @@ export default function LoginPage(props) {
   const [registrationInputPropsPass2, setRpass2] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 5, tension: 250, friction: 40 } }))
   
   const [successConfirmation, setSuccessConfirmation] = useSpring(() => ({ x: '200px', opacity: 0, config: { mass: 5, tension: 350, friction: 40 } }))
-
-  const [validUser, setValidUser] = useState({})
-
   useEffect(() => {
     const handleKey = (e) => {
       if(e.key && e.key.toLowerCase() === 'enter'){
@@ -132,8 +129,6 @@ export default function LoginPage(props) {
                 username: registerName,
                 password: registerPass1
               }
-
-              setValidUser(registerRes)
               showRegistrationConfirmation(registerRes)
 
             } else {
@@ -177,7 +172,6 @@ export default function LoginPage(props) {
     }, 90)
 
     props.refreshAllUsers()
-    let scopedValidUser = validUser
     setTimeout(()=>{
       // setSuccessConfirmation({x: '200px', opacity: 0})
 

@@ -12,8 +12,7 @@ import skillsMatrix from '../../utils/skills-matrix';
 import { Redirect } from "react-router-dom";
 import { storeMeta, getMeta, getUserId } from '../../utils/session-handler';
 import {
-    updateUserRequest,
-    deleteDungeonRequest
+    updateUserRequest
 } from '../../utils/api-handler';
 import Canvas from '../../components/Canvas/canvas'
 // import Overlay from '../../components/Overlay'
@@ -431,33 +430,58 @@ class MonsterBattle extends React.Component {
 
             if (eventType === 'entropic_kindred') {
                 const addedCols = (data && data.addedCols) ? data.addedCols : 3;
+                const insertAt = (data && typeof data.insertAt === 'number') ? data.insertAt : 4;
                 const newTotalCols = this.state.numBoardColumns + addedCols;
 
+                // 1. Shift coordinates of existing tiles that are at or past the insertion point
+                const shiftedTiles = this.state.combatTiles.map(tile => {
+                    if (tile.x >= insertAt) {
+                        return { ...tile, x: tile.x + addedCols };
+                    }
+                    return tile;
+                });
 
-                // Build new tile objects for the added columns so they render
-                // with proper styling (alternating colors, coordinate labels).
-                // New tiles are appended at the end; the CSS grid order by x,y
-                // means we need all x values from newTotalCols-addedCols through
-                // newTotalCols-1 across all rows (y 0..MAX_ROWS-1).
-                const extraTiles = [];
-                const existingCount = this.state.combatTiles.length;
-                for (let col = newTotalCols - addedCols; col < newTotalCols; col++) {
+                // 2. Generate the new empty tiles at the insertion columns (insertAt ... insertAt + addedCols - 1)
+                const newTiles = [];
+                for (let col = insertAt; col < insertAt + addedCols; col++) {
                     for (let row = 0; row < MAX_ROWS; row++) {
-                        extraTiles.push({ id: existingCount + extraTiles.length, x: col, y: row });
+                        newTiles.push({
+                            id: -1, // temporary placeholder
+                            x: col,
+                            y: row
+                        });
                     }
                 }
-                const updatedTiles = [...this.state.combatTiles, ...extraTiles];
+
+                // 3. Combine and sort all tiles row-by-row (y ascending, then x ascending)
+                const combinedTiles = [...shiftedTiles, ...newTiles];
+                combinedTiles.sort((a, b) => {
+                    if (a.y !== b.y) return a.y - b.y;
+                    return a.x - b.x;
+                });
+
+                // 4. Assign correct sequential IDs based on sorted index
+                const updatedTiles = combinedTiles.map((tile, idx) => ({
+                    ...tile,
+                    id: idx
+                }));
+
+                // Re-initialize ghostPortraitMatrix to match the new size
+                const newGhostPortraitMatrix = Array(updatedTiles.length).fill(null);
 
                 // Build flash-column strips: one per new column, staggered
                 const newColStrips = [];
                 for (let i = 0; i < addedCols; i++) {
-                    newColStrips.push({ colIndex: newTotalCols - addedCols + i, delay: i * 120 });
+                    newColStrips.push({ colIndex: insertAt + i, delay: i * 120 });
                 }
 
-                // Show the expanded board immediately so tiles appear
-                this.setState({ numBoardColumns: newTotalCols, entropicKindredNewCols: newColStrips, combatTiles: updatedTiles });
-
-
+                // Show the expanded board immediately so tiles appear in correct positions
+                this.setState({
+                    numBoardColumns: newTotalCols,
+                    entropicKindredNewCols: newColStrips,
+                    combatTiles: updatedTiles,
+                    ghostPortraitMatrix: newGhostPortraitMatrix
+                });
 
                 // Clear the flash strips after animation completes
                 this._setTimeout(() => {
@@ -495,7 +519,9 @@ class MonsterBattle extends React.Component {
             this.props.combatManager.pauseCombat(!!this.props.paused);
         }
 
-        this.props.animationManager.initialize(NUM_COLUMNS, MAX_ROWS);
+        if (this.props.animationManager && typeof this.props.animationManager.initialize === 'function') {
+            this.props.animationManager.initialize(NUM_COLUMNS, MAX_ROWS);
+        }
 
         this.setState({
             combatTiles: arr, ghostPortraitMatrix,
@@ -1362,93 +1388,18 @@ class MonsterBattle extends React.Component {
             } else {
                 battleResult = 'loss'
                 summaryMessage = 'Death has come for you and yours.'
-                // Implement group-death handling: track group deaths in meta.deathTracker.
-                // On non-final deaths: increment counter, restore crew HP to 1, respawn at dungeon spawn,
-                // and show the summary panel (do NOT navigate to the death scene).
-                // On the third full-group death: clear dungeon and crew, persist, then run the final death sequence.
-                try {
-                    const meta = getMeta();
-                    let deaths = meta.deathTracker || 0;
-                    deaths = deaths + 1;
-                    meta.deathTracker = deaths;
-                    try { storeMeta(meta); } catch (e) { }
-                    try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
-                    // Notify parent (DungeonPage) so UI elements like death-tracker can refresh
-                    try { if (this.props && typeof this.props.onDeathTrackerChanged === 'function') this.props.onDeathTrackerChanged(deaths); } catch (e) { }
-                    // deaths count incremented
-                    if (deaths >= 3) {
-                        // ── FINAL DEATH ──────────────────────────────────────────────────
-                        // Show "this is the end" summary for 3 seconds, then wipe the
-                        // player's dungeon profile and launch the death sequence.
+                this._suppressPersistFinalHP = true;
 
-                        // Wipe dungeon profile immediately so it's clean before the
-                        // narrative plays (profile reset is invisible behind the summary).
-                        try {
-                            if (meta.dungeonId) {
-                                try { deleteDungeonRequest(meta.dungeonId).catch(() => { }); } catch (e) { }
-                            }
-                        } catch (inner) { }
-                        try { this.props.boardManager.dungeon.id = null; } catch (e) { }
-                        try { this.props.inventoryManager.inventory = []; } catch (e) { }
-                        meta.dungeonId = null;
-                        meta.location = null;
-                        meta.inventory = { items: [], gold: 0, shimmering_dust: 0, totems: 0 };
-                        meta.crew = [];
-                        meta.deathTracker = 0;
-                        try { storeMeta(meta); } catch (e) { }
-                        try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
-                        try { this.props.crewManager.initializeCrew([]); } catch (e) { }
+                // Show the summary panel (with portraits)
+                try { if (this._isMounted) this.setState({ showSummaryPanel: true, suppressSummaryPortraits: false }); } catch (e) { }
 
-                        // Show the final-death summary (no OK button) then auto-launch
-                        this._suppressPersistFinalHP = true;
-                        try {
-                            if (this._isMounted) this.setState({
-                                showSummaryPanel: true,
-                                suppressSummaryPortraits: false,
-                                isFinalDeath: true,
-                                summaryMessage: 'This is the end.',
-                                battleResult: 'loss',
-                            });
-                        } catch (e) { }
+                this._setTimeout(async () => {
+                    try { if (this._isMounted) this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch (e) { }
 
-                        this._setTimeout(() => {
-                            this._suppressPersistFinalHP = false;
-                            this.launchDeathSequence();
-                        }, 3000);
+                    this.props.battleOver('loss');
 
-                    } else {
-                        // We will show the battle summary (without portraits), wait 3s, then launch
-                        // the death narrative and perform the respawn & restore so the narrative
-                        // plays before the crew are moved/cleared in the UI.
-                        try {
-                            // persist the incremented death tracker now
-                            try { storeMeta(meta); } catch (e) { }
-                            try { updateUserRequest(getUserId(), meta).catch(() => { }); } catch (e) { }
-                        } catch (inner) { }
-
-                        // Suppress the later "persist final HP" block so it does not overwrite our planned restore
-                        this._suppressPersistFinalHP = true;
-
-                        // Set a state flag so the summary-panel rendering shows portraits
-                        try { if (this._isMounted) this.setState({ suppressSummaryPortraits: false }); } catch (e) { }
-
-                        // After a short delay, close summary, restore crew and respawn (do NOT navigate to death scene for non-final deaths)
-                        this._setTimeout(async () => {
-                            try { if (this._isMounted) this.setState({ showSummaryPanel: false, suppressSummaryPortraits: false }); } catch (e) { }
-
-                            this.props.battleOver('respawn');
-
-
-                            // allow later persistence block to run normally again
-                            this._suppressPersistFinalHP = false;
-                        }, 3000);
-                        // Show the summary panel now (it will be visible until the timeout closes it)
-                        try { if (this._isMounted) this.setState({ showSummaryPanel: true }); } catch (e) { }
-                    }
-                } catch (err) {
-                    console.warn('group-death handler failed, falling back to death scene', err);
-                    this.launchDeathSequence();
-                }
+                    this._suppressPersistFinalHP = false;
+                }, 3000);
             }
 
             // Persist final HP and dead state for crew once when combat ends
@@ -1548,7 +1499,9 @@ class MonsterBattle extends React.Component {
         })
     }
     establishAnimationCallback = () => {
-        this.props.animationManager.establishAnimationCallback(this.renderAnimation)
+        if (this.props.animationManager && typeof this.props.animationManager.establishAnimationCallback === 'function') {
+            this.props.animationManager.establishAnimationCallback(this.renderAnimation)
+        }
     }
     establishUpdateActorCallback = () => {
         this.props.combatManager.establishUpdateActorCallback(this.updateCurrentActor)
@@ -1563,7 +1516,13 @@ class MonsterBattle extends React.Component {
         this.props.combatManager.establishUpdateDataCallback(this.updateBattleData)
     }
     establishUpdateAnimationDataCallback = () => {
-        this.props.animationManager.establishUpdateAnimationDataCallback(this.updateAnimationData)
+        if (this.props.animationManager) {
+            if (typeof this.props.animationManager.connect === 'function') {
+                this.props.animationManager.connect(this.updateAnimationData);
+            } else if (typeof this.props.animationManager.establishUpdateAnimationDataCallback === 'function') {
+                this.props.animationManager.establishUpdateAnimationDataCallback(this.updateAnimationData);
+            }
+        }
     }
     establishMorphPortraitCallback = () => {
         this.props.combatManager.establishMorphPortraitCallback(this.morphPortrait)

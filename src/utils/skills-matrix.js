@@ -7,7 +7,7 @@ const skillsMatrix = {
         id: 'keen_eye',
         tier: 1,
         name: 'Keen Eye',
-        desc: 'Reveals +2 fog tiles on miniboard entry.',
+        desc: 'L1: Reveals +2 fog tiles. L2: Reveals nearby traps. L3: +3 DEX to trap saves.',
         icon: images.eagle_eye,
         cooldown: 0,
         type: 'passive',

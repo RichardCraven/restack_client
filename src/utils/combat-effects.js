@@ -25,6 +25,18 @@ export function clearDrainedEffect(target) {
     target.drained_eras = 0;
 }
 
+export function isUndead(unit) {
+    if (!unit) return false;
+    const subtype = (unit.subtype || '').toLowerCase();
+    const type = (unit.type || '').toLowerCase();
+    const key = (unit.key || '').toLowerCase();
+    const id = (unit.id || '').toLowerCase();
+    return subtype === 'undead' ||
+           type === 'skeleton' || type === 'zombie' || type === 'wraith' || type === 'vampire' || type === 'ghoul' || type === 'mummy' ||
+           key === 'skeleton' || key === 'zombie' || key === 'wraith' || key === 'vampire' || key === 'ghoul' || key === 'mummy' ||
+           id.includes('skeleton') || id.includes('zombie') || id.includes('wraith') || id.includes('vampire') || id.includes('ghoul') || id.includes('mummy');
+}
+
 /**
  * Applies the "bleed" effect to a combatant.
  * - Sets bleed=true, bleed_eras=duration
@@ -34,6 +46,7 @@ export function clearDrainedEffect(target) {
  */
 export function applyBleedEffect(target, duration, broadcastDataUpdate) {
     if (!target) return false;
+    if (isUndead(target)) return false;
     target.bleed = true;
     target.bleed_eras = duration || 1;
     if (typeof broadcastDataUpdate === 'function') broadcastDataUpdate();

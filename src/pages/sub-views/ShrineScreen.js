@@ -16,6 +16,8 @@ import * as images from '../../utils/images';
 import { CombatManagerRedux } from '../../utils/combat-manager-redux';
 import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
 import CombatGrid from '../../components/combat-panes/CombatGrid';
+import '../../styles/monster-battle.scss';
+
 
 // ── Grid constants ────────────────────────────────────────────────────────────
 const COLS = 8;
@@ -98,7 +100,8 @@ class ShrineScreen extends React.Component {
 
             // ── Selection states for CombatGrid (dummy/view-only)
             selectedFighter: null,
-            selectedMonster: null
+            selectedMonster: null,
+            shrinerDying: false
         };
 
         this.combatManager = null;
@@ -208,7 +211,8 @@ class ShrineScreen extends React.Component {
                 key: 'goblin',
                 stats: { hp: 45, atk: 7, def: 4 },
                 portrait: images['goblin_portrait'],
-                monster_names: ['Wiggit']
+                monster_names: ['Wiggit'],
+                skills: ['claw_strike', 'bite']
             };
         }
         if (!mob2) {
@@ -217,37 +221,74 @@ class ShrineScreen extends React.Component {
                 key: 'skeleton',
                 stats: { hp: 40, atk: 6, def: 5 },
                 portrait: images['skeleton_portrait'],
-                monster_names: ['Bones']
+                monster_names: ['Bones'],
+                skills: ['sword_swing', 'reassembly']
             };
         }
 
-        const name1 = (mob1.monster_names && mob1.monster_names.length)
+        const name1_a = (mob1.monster_names && mob1.monster_names.length)
             ? mob1.monster_names[Math.floor(Math.random() * mob1.monster_names.length)]
             : capitalize(mob1.type);
-        const name2 = (mob2.monster_names && mob2.monster_names.length)
+        const name1_b = (mob1.monster_names && mob1.monster_names.length)
+            ? mob1.monster_names[Math.floor(Math.random() * mob1.monster_names.length)]
+            : capitalize(mob1.type);
+        const name2_a = (mob2.monster_names && mob2.monster_names.length)
+            ? mob2.monster_names[Math.floor(Math.random() * mob2.monster_names.length)]
+            : capitalize(mob2.type);
+        const name2_b = (mob2.monster_names && mob2.monster_names.length)
             ? mob2.monster_names[Math.floor(Math.random() * mob2.monster_names.length)]
             : capitalize(mob2.type);
 
         const monster = {
-            id: `shrine_guardian_1_${Date.now()}`,
+            id: `shrine_guardian_1_a_${Date.now()}`,
             type: mob1.type || mob1.key || 'monster',
-            name: name1,
+            name: name1_a,
             stats: { ...mob1.stats },
             portrait: resolvePortrait(mob1.portrait),
-            inventory: [],
+            inventory: mob1.inventory || [],
             greetings: ["Guardians of the shrine emerge from the shadows!"],
-            isShrineGuardian: true
+            isShrineGuardian: true,
+            skills: mob1.skills || [],
+            attacks: mob1.attacks || [],
+            specials: mob1.specials || []
         };
 
         const minions = [
             {
-                id: `shrine_guardian_2_${Date.now()}`,
+                id: `shrine_guardian_1_b_${Date.now()}`,
+                type: mob1.type || mob1.key || 'monster',
+                name: name1_b,
+                stats: { ...mob1.stats },
+                portrait: resolvePortrait(mob1.portrait),
+                inventory: mob1.inventory || [],
+                isShrineGuardian: true,
+                skills: mob1.skills || [],
+                attacks: mob1.attacks || [],
+                specials: mob1.specials || []
+            },
+            {
+                id: `shrine_guardian_2_a_${Date.now()}`,
                 type: mob2.type || mob2.key || 'monster',
-                name: name2,
+                name: name2_a,
                 stats: { ...mob2.stats },
                 portrait: resolvePortrait(mob2.portrait),
-                inventory: [],
-                isShrineGuardian: true
+                inventory: mob2.inventory || [],
+                isShrineGuardian: true,
+                skills: mob2.skills || [],
+                attacks: mob2.attacks || [],
+                specials: mob2.specials || []
+            },
+            {
+                id: `shrine_guardian_2_b_${Date.now()}`,
+                type: mob2.type || mob2.key || 'monster',
+                name: name2_b,
+                stats: { ...mob2.stats },
+                portrait: resolvePortrait(mob2.portrait),
+                inventory: mob2.inventory || [],
+                isShrineGuardian: true,
+                skills: mob2.skills || [],
+                attacks: mob2.attacks || [],
+                specials: mob2.specials || []
             }
         ];
 
@@ -303,9 +344,13 @@ class ShrineScreen extends React.Component {
 
         // Position the guardians on the left and right sides
         const guardians = combatantsList.filter(c => c.isMonster);
-        guardians.forEach((c, idx) => {
-            const startX = (idx % 2 === 0) ? 0 : 7;
-            const startY = 2 + (idx % 3);
+        let leftIdx = 0;
+        let rightIdx = 0;
+        guardians.forEach((c) => {
+            const isMob1 = c.id.includes('shrine_guardian_1');
+            const startX = isMob1 ? 0 : 7;
+            const yOffset = isMob1 ? leftIdx++ : rightIdx++;
+            const startY = 2 + yOffset;
             c.coordinates = { x: startX, y: startY };
             c.depth = startX;
             c.position = startY;
@@ -396,12 +441,23 @@ class ShrineScreen extends React.Component {
         if (this.shrineUnitId) {
             const shrineUnit = battleData[this.shrineUnitId];
             if (shrineUnit && (shrineUnit.dead || shrineUnit.hp <= 0)) {
-                if (this.combatManager) this.combatManager.shutdown();
-                this.setState({
-                    phase: 'done',
-                    outcome: 'failure',
-                    message: ''
-                });
+                if (!this.state.shrinerDying) {
+                    this.setState({ shrinerDying: true });
+                    if (this.combatManager) {
+                        this.combatManager.pauseCombat(true);
+                    }
+                    setTimeout(() => {
+                        if (this._isMounted) {
+                            if (this.combatManager) this.combatManager.shutdown();
+                            this.setState({
+                                phase: 'done',
+                                outcome: 'failure',
+                                message: '',
+                                shrinerDying: false
+                            });
+                        }
+                    }, 2500);
+                }
                 return;
             }
         }
@@ -457,7 +513,7 @@ class ShrineScreen extends React.Component {
 
     _getGlobalSkillsByClass() {
         return {
-            ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }, { key: 'scrounging_rat', name: 'Scrounging Rat', desc: 'Forage for food in camp: 15-30 food (3h) / 30-50 food (2h) / 50-80 food (1h).' }, { key: 'fastidious_crow', name: 'Fastidious Crow', desc: 'Scout a 10x10 board area for 24h.' }],
+            ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'L1: Reveals +2 fog tiles. L2: Reveals nearby traps. L3: +3 DEX to trap saves.' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }, { key: 'scrounging_rat', name: 'Scrounging Rat', desc: 'Forage for food in camp: 15-30 food (3h) / 30-50 food (2h) / 50-80 food (1h).' }, { key: 'fastidious_crow', name: 'Fastidious Crow', desc: 'Scout a 10x10 board area for 24h.' }],
             sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }],
             soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: "Party Resolve never drops below 20 from deaths" }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }, { key: 'strong_resolve', name: 'Strong Resolve', desc: 'Reduces Resolve penalties by 40%/75%/90%.' }],
             wizard:   [{ key: 'arcane_sense', name: 'Arcane Sense', desc: 'Identifies chest tier before opening' }, { key: 'ley_tap', name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' }, { key: 'dimensional_pocket', name: 'Dimensional Pocket', desc: '+2 shared inventory slots' }, { key: 'scry', name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' }],
@@ -547,7 +603,7 @@ class ShrineScreen extends React.Component {
                 </div>
 
                 {/* Grid */}
-                <div style={{
+                <div className="mb-board" style={{
                     position: 'relative',
                     width: `${gridW}px`,
                     height: `${gridH}px`,
@@ -880,11 +936,8 @@ class ShrineScreen extends React.Component {
     _renderShrineTile() {
         const left = SHRINE_COL * (TILE_SIZE + 2);
         const top = SHRINE_ROW * (TILE_SIZE + 2);
-        const { phase, currentRound, totalRounds, roundTimeRemainingRatio, cinematicActive } = this.state;
+        const { phase, cinematicActive } = this.state;
         const isConcentrating = (phase === 'communion' && !cinematicActive) || (phase === 'done' && this.state.outcome === 'success');
-        const elapsedInRound = 1 - (roundTimeRemainingRatio !== undefined ? roundTimeRemainingRatio : 1);
-        const completedRounds = (currentRound - 1) + elapsedInRound;
-        const smoothProgressPct = Math.min(100, Math.max(0, (completedRounds / totalRounds) * 100));
         return (
             <div key="shrine-tile" style={{
                 position: 'absolute',
@@ -905,23 +958,6 @@ class ShrineScreen extends React.Component {
                     alt="shrine"
                     style={{ width: '72px', height: '72px', objectFit: 'contain' }}
                 />
-                {isConcentrating && (
-                    <div style={{
-                        position: 'absolute', bottom: '4px',
-                        width: '80%', height: '4px',
-                        background: 'rgba(0,0,0,0.6)', borderRadius: '2px',
-                        overflow: 'hidden',
-                    }}>
-                        <div style={{
-                            height: '100%',
-                            width: `${smoothProgressPct}%`,
-                            background: 'linear-gradient(90deg, #c9a227, #fff8dc)',
-                            borderRadius: '2px',
-                            boxShadow: '0 0 4px rgba(201,162,39,0.8)',
-                            transition: 'width 0.1s linear',
-                        }} />
-                    </div>
-                )}
             </div>
         );
     }

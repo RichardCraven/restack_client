@@ -87,3 +87,7 @@ This document defines terminology and visual concepts used in the combat simulat
 ### Recovery Rate
 - **Definition**: The rate at which a combatant regenerates endurance. By default, units regain 1% of their max endurance (rounded down) every 2 rounds.
 
+### Shriner
+- **Definition**: The specific crew member attempting to concentrate/commune on the ancestral shrine to gain a global upgrade in the Shrine screen.
+- **Behavior**: This unit starts at the bottom-center of the map, walks up to the shrine during the intro cinematic, and must concentrate for 6 rounds without dying. If the Shriner takes lethal damage and dies, the combat pauses and plays the Shriner's death animation in full before ending the communion event with a failure message.
+

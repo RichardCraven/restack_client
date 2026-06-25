@@ -18,7 +18,8 @@ import {
     loadDungeonRequest,
     updateDungeonRequest,
     updateUserRequest,
-    addDungeonRequest
+    addDungeonRequest,
+    deleteDungeonRequest
   } from '../utils/api-handler';
 import {storeMeta, getMeta, getUserId, getUserName, applyResolvePenalty} from '../utils/session-handler';
 import { keyCleanup, itemCleanup, resolveItemPools, resolveMonsterPools } from '../utils/cache-cleanup';
@@ -59,6 +60,56 @@ const SLOT_INFO = {
     'ancillary-left': { name: 'Ancillary Slot (Left)', desc: 'Equip rings, amulets, relics, or accessories here.' },
     'ancillary-right': { name: 'Ancillary Slot (Right)', desc: 'Equip rings, amulets, relics, or accessories here.' },
     'pet': { name: 'Pet Slot', desc: 'Equip companion pets here to support you in battle.' }
+};
+
+// ── Imprint Tattoo constants ─────────────────────────────────────────────────
+const TATTOO_IMPRINT_DURATIONS_MS = [
+    30 * 60 * 1000,            // 1st:  30 min
+    3 * 60 * 60 * 1000,        // 2nd:  3 hours
+    2 * 24 * 60 * 60 * 1000,   // 3rd:  2 days
+    5 * 24 * 60 * 60 * 1000,   // 4th:  5 days
+    8 * 24 * 60 * 60 * 1000,   // 5th:  8 days
+    12 * 24 * 60 * 60 * 1000,  // 6th: 12 days
+    15 * 24 * 60 * 60 * 1000,  // 7th: 15 days
+    20 * 24 * 60 * 60 * 1000,  // 8th: 20 days
+];
+
+const TATTOO_SLOT_LABELS = {
+    head:       'Head',
+    torso:      'Torso',
+    left_arm:   'Left Arm',
+    right_arm:  'Right Arm',
+    left_hand:  'Left Hand',
+    right_hand: 'Right Hand',
+    left_leg:   'Left Leg',
+    right_leg:  'Right Leg',
+};
+
+const TATTOO_DESIGNS = {
+    fire_bird: {
+        name: 'Fire Bird',
+        desc: '+3 STR — A blazing phoenix rising across the skin.',
+        flavor: 'The bird reborn from ash — as you will be.',
+        effect: { str: 3 },
+        iconKey: 'tattoo_placeholder',
+        color: '#c0392b',
+    },
+    silver_serpent: {
+        name: 'Silver Serpent',
+        desc: '+2 DEX, +1 FORT — A coiling serpent of cold silver.',
+        flavor: 'The serpent waits, and strikes faster than thought.',
+        effect: { dex: 2, fort: 1 },
+        iconKey: 'tattoo_placeholder',
+        color: '#7f8c8d',
+    },
+    tribal_hand: {
+        name: 'Tribal Hand',
+        desc: '+1 STR, +5 Base HP — Ancient markings of ancestral fury.',
+        flavor: 'Ten thousand warriors lend their strength.',
+        effect: { str: 1, baseHp: 5 },
+        iconKey: 'tattoo_placeholder',
+        color: '#8B6914',
+    },
 };
 
 const NarrativeOverlay = ({ sequence, onClose }) => {
@@ -645,7 +696,14 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                                     const hasIngredients = hasItem(recipe.ing1) && hasItem(recipe.ing2);
                                     return (
                                         <div key={idx} className="item-card">
-                                            <div title={recipe.tooltip} style={{ cursor: 'help' }}>
+                                            <div 
+                                                title={recipe.tooltip} 
+                                                style={{ cursor: 'help' }}
+                                                onClick={() => {
+                                                    setFeedbackColor('#4db8ff');
+                                                    setFeedbackMsg(`${recipe.name}: ${recipe.tooltip}`);
+                                                }}
+                                            >
                                                 {renderItemIcon(recipe.icon)}
                                             </div>
                                             <div className="item-details">
@@ -901,6 +959,21 @@ class DungeonPage extends React.Component {
                 noMaxCap: true,
                 subTypes: []
             });
+            // ── Imprint Tattoo ──
+            const tattoos = character.tattoos || [];
+            const isImprinting = !!character.tattooImprinting &&
+                new Date(character.tattooImprinting.endDate) > new Date();
+            actions.push({
+                type: 'imprint_tattoo',
+                name: 'Imprint Tattoo',
+                iconUrl: images['avatar'] || '',
+                noMaxCap: true,
+                disabled: tattoos.length >= 8 || isImprinting,
+                tattooCount: tattoos.length,
+                isImprinting,
+                tattooImprintingEndDate: character.tattooImprinting?.endDate || null,
+                subTypes: []
+            });
         }
         if (character.type === 'soldier') {
             // Check if a tactic is already in-progress or active
@@ -1028,7 +1101,7 @@ class DungeonPage extends React.Component {
                 const maximumReached = getMaxReachedForAction(action);
                 // find the active special action that matches THIS action's type
                 // type:'glyph' covers new format; type:'spell' fallback covers legacy magic missile
-                const activeAction = (character.specialActions || []).find(a => {
+                let activeAction = (character.specialActions || []).find(a => {
                     if (!a || !a.startDate || !a.endDate) return false;
                     if (a.type !== action.type && !(action.type === 'glyph' && (a.type === 'spell' || a.type === 'glyph'))) return false;
                     const start = new Date(a.startDate);
@@ -1036,6 +1109,20 @@ class DungeonPage extends React.Component {
                     const now = new Date();
                     return now >= start && now < end;
                 });
+
+                // Support progress overlay for Barbarian's Tattoo Imprinting
+                if (action.type === 'imprint_tattoo' && character.tattooImprinting) {
+                    const start = new Date(character.tattooImprinting.startDate);
+                    const end = new Date(character.tattooImprinting.endDate);
+                    const now = new Date();
+                    if (now >= start && now < end) {
+                        activeAction = {
+                            type: 'imprint_tattoo',
+                            startDate: character.tattooImprinting.startDate,
+                            endDate: character.tattooImprinting.endDate
+                        };
+                    }
+                }
                 return (
                 <div className={`action-wrapper action-wrapper--${action.type}`} key={i}>
                     <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
@@ -1061,7 +1148,16 @@ class DungeonPage extends React.Component {
                             );
                         })()}
                         <div className='action-icon' style={{backgroundImage: `url(${action.iconUrl})`, filter: action.type === 'compound' ? 'invert(1)' : undefined}}></div>
-                        <div className="action-text">{action.name}</div>
+                        <div className="action-text">
+                            {action.type === 'imprint_tattoo' && action.isImprinting
+                                ? this.getTattooImprintLabel(this.state.selectedCrewMember) || action.name
+                                : action.name}
+                            {action.type === 'imprint_tattoo' && (
+                                <span style={{ fontSize: '0.7rem', color: '#7a6a5a', marginLeft: 6 }}>
+                                    {action.tattooCount}/8
+                                </span>
+                            )}
+                        </div>
                     </div>
                     {/* <div className="info-icon" style={{backgroundImage: `url(${images['info']})`}}></div> */}
                     <div className={`action-sub-menu ${(Array.isArray(this.state.actionMenuTypeExpanded) ? this.state.actionMenuTypeExpanded : []).includes(action.type) ? 'expanded' : ''}`}>
@@ -1628,6 +1724,44 @@ class DungeonPage extends React.Component {
             }
         }
 
+        // Check Tattoo Imprint completion
+        (meta.crew || []).forEach(m => {
+            if (!m || !m.tattooImprinting) return;
+            const end = new Date(m.tattooImprinting.endDate);
+            if (new Date() < end) return;
+
+            m.tattoos = m.tattoos || [];
+            m.tattoos.push({
+                design: m.tattooImprinting.design,
+                slot:   m.tattooImprinting.slot,
+                appliedAt: new Date().toISOString(),
+            });
+
+            // Apply permanent stat boosts directly to member.stats
+            const effect = TATTOO_DESIGNS[m.tattooImprinting.design]?.effect || {};
+            if (!m.stats) m.stats = {};
+            Object.entries(effect).forEach(([stat, delta]) => {
+                if (typeof m.stats[stat] === 'number') {
+                    m.stats[stat] += delta;
+                } else {
+                    m.stats[stat] = delta;
+                }
+            });
+            // Recompute derived stats (atk, def, hp, etc.)
+            try { if (this.props.crewManager && typeof this.props.crewManager.computeDerivedStats === 'function') this.props.crewManager.computeDerivedStats(m); } catch (e) {}
+
+            const designName = TATTOO_DESIGNS[m.tattooImprinting.design]?.name || m.tattooImprinting.design;
+            updates.push({
+                text: `🔥 ${m.name}'s ${designName} tattoo is complete! Stats permanently boosted.`,
+                actionType: 'tattoo_complete',
+                owner: m.name,
+            });
+
+            delete m.tattooImprinting;
+            modified = true;
+            numeralUpdate = true;
+        });
+
         // Check Fastidious Crow completion
         if (meta.scoutActive && !meta.scoutActive.scoutedArea) {
             const end = new Date(meta.scoutActive.endDate);
@@ -1830,6 +1964,12 @@ class DungeonPage extends React.Component {
             , showNarrativeOverlay: false
             , showAmbushPopup: false
             , ambushMonster: null
+            , showTrapPopup: false
+            , trapResults: null
+            , showTattooOverlay: false
+            , tattooOverlayMemberId: null
+            , tattooSelectedSlot: null
+            , tattooSelectedDesign: null
             , showShrineOverlay: false
             , shrineData: null
             , inShrineScreen: false
@@ -1989,8 +2129,8 @@ class DungeonPage extends React.Component {
             return {
                 tileSize,
                 boardSize,
-                leftPanelExpanded: meta?.leftExpanded,
-                rightPanelExpanded: meta?.rightExpanded,
+                leftPanelExpanded: (!meta || !meta.dungeonId) ? false : meta?.leftExpanded,
+                rightPanelExpanded: (!meta || !meta.dungeonId) ? false : meta?.rightExpanded,
                 // persist/rehydrate crew actions tray expanded state
                 crewActionsTrayExpanded: meta?.crewActionsTrayExpanded || false,
                 crewSize: meta.crew.length,
@@ -2048,21 +2188,98 @@ class DungeonPage extends React.Component {
     }
 
     handleCardDuelFinish = (result) => {
-        try{
+        try {
             if (this.state.isCardScrimmage) {
                 this.setState({ toastMessage: `Scrimmage finished — Outcome: ${result && result.winner === 'player' ? 'Victory!' : 'Defeat'}` });
             } else {
-                if(result && result.winner === 'player'){
-                    // victory
-                } else if(result && result.winner === 'reaper'){
-                    // Surface a toast informing of the pending tax, but DO NOT apply it here.
-                    const taxPercent = 25;
-                    this.setState({ toastMessage: `You lost the duel — pending tax ${taxPercent}% gold (NOT applied in test)` });
+                const isCombatLoss = this.state.cardDuelTileId === 'combat_loss';
+                const meta = getMeta() || {};
+
+                if (result && result.winner === 'player') {
+                    if (isCombatLoss) {
+                        // Player won the duel after losing combat: they avoid the death tracker!
+                        this.setState({ toastMessage: 'Victory! You defeated the Reaper and avoided a death marker!' });
+                        // Perform the respawn/restore immediately without incrementing deathTracker
+                        this.battleOver('respawn');
+                    } else {
+                        // Player won the duel triggered by clicking an existing skull: remove one death marker
+                        let deaths = meta.deathTracker || 0;
+                        if (deaths > 0) {
+                            deaths = deaths - 1;
+                            meta.deathTracker = deaths;
+                            storeMeta(meta);
+                            this.handleDeathTrackerChanged(deaths);
+                            this.setState({ toastMessage: 'Victory! One death marker removed.' });
+                        }
+                    }
+                } else if (result && result.winner === 'reaper') {
+                    if (isCombatLoss) {
+                        // Player lost the duel after losing combat: they get a death tracker!
+                        let deaths = (meta.deathTracker || 0) + 1;
+                        meta.deathTracker = deaths;
+                        storeMeta(meta);
+                        this.handleDeathTrackerChanged(deaths);
+
+                        if (deaths >= 3) {
+                            // Trigger final death
+                            this.triggerFinalDeath();
+                        } else {
+                            this.setState({ toastMessage: 'You lost the duel. 25% gold forfeit, and a death marker added.' });
+                            this.battleOver('respawn');
+                        }
+                    } else {
+                        // Player lost the duel triggered by clicking an existing skull: just tax gold
+                        this.setState({ toastMessage: 'You lost the duel. 25% of your gold is forfeit.' });
+                        if (this.props.saveUserData) this.props.saveUserData();
+                    }
                 }
             }
-        } catch(e){ console.warn('handleCardDuelFinish failed', e); }
+        } catch (e) {
+            console.warn('handleCardDuelFinish failed', e);
+        }
         this.setState({ isCardScrimmage: false });
         this.closeCardDuel();
+        setTimeout(() => {
+            this.setState({ toastMessage: null });
+        }, 5000);
+    }
+
+    triggerFinalDeath = () => {
+        const meta = getMeta() || {};
+        try {
+            if (meta.dungeonId) {
+                deleteDungeonRequest(meta.dungeonId).catch(() => {});
+            }
+        } catch (e) {}
+
+        if (this.props.boardManager && this.props.boardManager.dungeon) {
+            this.props.boardManager.dungeon.id = null;
+        }
+        if (this.props.inventoryManager) {
+            this.props.inventoryManager.inventory = [];
+        }
+
+        meta.dungeonId = null;
+        meta.location = null;
+        meta.inventory = { items: [], gold: 0, shimmering_dust: 0, totems: 0 };
+        meta.crew = [];
+        meta.deathTracker = 0;
+        storeMeta(meta);
+
+        try {
+            updateUserRequest(getUserId(), meta).catch(() => {});
+        } catch (e) {}
+
+        if (this.props.crewManager) {
+            this.props.crewManager.initializeCrew([]);
+        }
+
+        if (this.props.setNarrativeSequence) {
+            this.props.setNarrativeSequence('death');
+        }
+        setTimeout(() => {
+            window.location.href = '/death';
+        }, 300);
     }
 
     preloadDungeonTiles() {
@@ -2570,6 +2787,22 @@ class DungeonPage extends React.Component {
         return maxLvl;
     }
 
+    getKeenEyeLevel = () => {
+        const meta = getMeta() || {};
+        const crew = meta.crew || [];
+        let maxLvl = 0;
+        crew.forEach(m => {
+            if (m && !m.dead && ((m.type || '').toLowerCase() === 'ranger' || (m.image || '').toLowerCase() === 'ranger') && m.globalSkills) {
+                const skill = m.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'keen_eye');
+                if (skill) {
+                    const lvl = typeof skill === 'string' ? 1 : (skill.level || 1);
+                    if (lvl > maxLvl) maxLvl = lvl;
+                }
+            }
+        });
+        return maxLvl;
+    }
+
     isScroungeActive = () => {
         const meta = getMeta() || {};
         if (meta.scroungeActive) {
@@ -2627,6 +2860,65 @@ class DungeonPage extends React.Component {
         if (typeof this.props.saveUserData === 'function') {
             this.props.saveUserData();
         }
+    }
+
+    handleImprintTattoo = () => {
+        const { tattooOverlayMemberId, tattooSelectedSlot, tattooSelectedDesign } = this.state;
+        if (!tattooSelectedSlot || !tattooSelectedDesign) return;
+
+        const meta = getMeta() || {};
+        const member = (meta.crew || []).find(m => m && m.id === tattooOverlayMemberId);
+        if (!member) return;
+
+        const tattoos = member.tattoos || [];
+        const tattooIndex = tattoos.length; // 0-based → duration table
+        if (tattooIndex >= 8) return;
+
+        // Check slot not already occupied
+        if (tattoos.some(t => t.slot === tattooSelectedSlot)) {
+            this.displayMessage('That body location already has a tattoo!');
+            return;
+        }
+
+        const durationMs = TATTOO_IMPRINT_DURATIONS_MS[tattooIndex] || TATTOO_IMPRINT_DURATIONS_MS[0];
+        const now = new Date();
+
+        member.tattooImprinting = {
+            design: tattooSelectedDesign,
+            slot: tattooSelectedSlot,
+            index: tattooIndex,
+            startDate: now.toISOString(),
+            endDate: new Date(now.getTime() + durationMs).toISOString(),
+        };
+
+        storeMeta(meta);
+        if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
+
+        const designName = TATTOO_DESIGNS[tattooSelectedDesign]?.name || tattooSelectedDesign;
+        const slotName = TATTOO_SLOT_LABELS[tattooSelectedSlot] || tattooSelectedSlot;
+        this.displayMessage(`🫡 ${member.name} begins imprinting ${designName} on their ${slotName}...`);
+
+        this.setState({
+            showTattooOverlay: false,
+            tattooOverlayMemberId: null,
+            tattooSelectedSlot: null,
+            tattooSelectedDesign: null,
+            numeralUpdate: !this.state.numeralUpdate,
+        });
+    }
+
+    getTattooImprintLabel = (member) => {
+        if (!member || !member.tattooImprinting) return null;
+        const end = new Date(member.tattooImprinting.endDate);
+        const diff = end - new Date();
+        if (diff <= 0) return 'Finishing...';
+        const totalMin = Math.floor(diff / 60000);
+        const days = Math.floor(totalMin / 1440);
+        const hrs  = Math.floor((totalMin % 1440) / 60);
+        const mins = totalMin % 60;
+        if (days > 0) return `Imprinting... ${days}d ${hrs}h`;
+        if (hrs > 0)  return `Imprinting... ${hrs}h ${mins}m`;
+        return `Imprinting... ${mins}m`;
     }
 
     pickRandomBoardForScout = () => {
@@ -2914,6 +3206,20 @@ class DungeonPage extends React.Component {
                 }
             }
 
+            // --- Trap check (only if no ambush was triggered) ---
+            let trapTriggered = false;
+            let trapResults = null;
+            if (playerMoved && !ambushTriggered) {
+                let destTileObj = bm.tiles[destIndex];
+                if (destTileObj && destTileObj.hasTrap) {
+                    trapTriggered = true;
+                    destTileObj.hasTrap = false; // disarm after trigger
+                    if (bm.trapTileIds) bm.trapTileIds.delete(destTileObj.id);
+                    destTileObj.trapRevealed = false;
+                    trapResults = this.calculateTrapDamage();
+                }
+            }
+
             if (!playerMoved) {
                 // Tiles unchanged on a blocked move — refreshTiles was not invoked by
                 // board-manager (move() returns early when blocked). Just reset UI state.
@@ -2942,9 +3248,11 @@ class DungeonPage extends React.Component {
                 playerAnimating: true,
                 animOriginIndex: originIndex,
                 animDestIndex: destIndex,
-                keysLocked: ambushTriggered ? true : this.state.keysLocked,
+                keysLocked: (ambushTriggered || trapTriggered) ? true : this.state.keysLocked,
                 showAmbushPopup: ambushTriggered ? true : this.state.showAmbushPopup,
-                ambushMonster: ambushTriggered ? ambushMonster : this.state.ambushMonster
+                ambushMonster: ambushTriggered ? ambushMonster : this.state.ambushMonster,
+                showTrapPopup: trapTriggered ? true : this.state.showTrapPopup,
+                trapResults: trapTriggered ? trapResults : this.state.trapResults
             }, () => {
                 if (ambushTriggered) {
                     this.ambushTimeout = setTimeout(() => {
@@ -3620,6 +3928,53 @@ class DungeonPage extends React.Component {
                 } catch (err) {
                     this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                 }
+            } else if (cmd === 'shrine reset' || cmd === 'shrinereset' || cmd === 'reset shrines' || cmd === 'resetshrines') {
+                try {
+                    const meta = getMeta() || {};
+                    meta.shrinesUsed = [];
+                    storeMeta(meta);
+                    try { updateUserRequest(getUserId(), meta).catch(()=>{}); } catch (e) {}
+
+                    const allDungeons = await loadAllDungeonsRequest();
+                    let dungeons = [];
+                    allDungeons.data.forEach((e) => {
+                        let d = JSON.parse(e.content);
+                        d.id = e._id;
+                        dungeons.push(d);
+                    });
+
+                    const activeDungeon = this.props.boardManager?.dungeon;
+                    let selectedDungeon = null;
+                    if (activeDungeon) {
+                        const templateId = meta.selectedDungeonTemplateId;
+                        if (templateId) {
+                            selectedDungeon = dungeons.find(d => d.id === templateId);
+                        }
+                    }
+                    if (!selectedDungeon) {
+                        selectedDungeon = dungeons[0] || null;
+                    }
+
+                    let respawned = 0;
+                    if (selectedDungeon && this.props.boardManager && typeof this.props.boardManager.respawnShrines === 'function') {
+                        respawned = this.props.boardManager.respawnShrines(selectedDungeon);
+                    }
+
+                    try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch (e) {}
+
+                    this.setState(prev => ({
+                        devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `All shrines reset successfully. Respawned ${respawned} shrine(s) on current board from template. You can commune with them again.`],
+                        devConsoleInput: ''
+                    }));
+                } catch (err) {
+                    this.setState(prev => ({
+                        devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`],
+                        devConsoleInput: ''
+                    }));
+                }
+                try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                e.preventDefault();
+                return;
             } else if (cmd === 'shrine respawn' || cmd === 'shrinerespawn') {
                 try {
                     const meta = getMeta() || {};
@@ -3736,6 +4091,7 @@ class DungeonPage extends React.Component {
                         'monster-spawn / monsterspawn / mspawn',
                         'item-spawn / itemspawn / ispawn',
                         'shrine respawn / shrinerespawn',
+                        'shrine reset / reset shrines — reset all used shrines so they can be accessed again',
                         'resolve — set the crew\'s resolve to 100',
                         'fullhealth / full-health / revive',
                         'food — fill food count to 55',
@@ -4673,7 +5029,7 @@ class DungeonPage extends React.Component {
             monster.minions.forEach((e,i)=>{
                 const minion = this.props.monsterManager.getMonster(e)
                 minion.id = minion.id + (i * 10) + 700;
-                let minionName = this.pickRandom(minion.monster_names)
+                let minionName = this.pickRandom(minion.monster_names) || (minion.type ? minion.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
                 minion.name = minionName
                 minion.inventory = [];
 
@@ -4683,7 +5039,7 @@ class DungeonPage extends React.Component {
 
 
         if(!monster) monster = this.props.monsterManager.getRandomMonster();
-        let monsterName = this.pickRandom(monster.monster_names)
+        let monsterName = this.pickRandom(monster.monster_names) || (monster.type ? monster.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
         monster.name = monsterName
         monster.inventory = [];
         this.setState({
@@ -4706,7 +5062,7 @@ class DungeonPage extends React.Component {
                 const minion = this.props.monsterManager.getMonster(e);
                 if (minion) {
                     minion.id = minion.id + (i * 10) + 700;
-                    let minionName = this.pickRandom(minion.monster_names);
+                    let minionName = this.pickRandom(minion.monster_names) || (minion.type ? minion.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
                     minion.name = minionName;
                     minion.inventory = [];
                     minions.push(minion);
@@ -4715,7 +5071,7 @@ class DungeonPage extends React.Component {
         }
 
         if (!monster.name) {
-            monster.name = this.pickRandom(monster.monster_names) || monster.type;
+            monster.name = this.pickRandom(monster.monster_names) || (monster.type ? monster.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
         }
         monster.inventory = [];
 
@@ -4728,6 +5084,80 @@ class DungeonPage extends React.Component {
             this.triggerMonsterBattle(true, playerIdx);
         });
     }
+
+    calculateTrapDamage = () => {
+        const meta = getMeta() || {};
+        const crew = meta.crew || [];
+
+        // Calculate collective crew level
+        const collectiveLevel = crew.reduce((sum, m) => sum + ((m && !m.dead && typeof m.level === 'number') ? m.level : 0), 0);
+
+        // Determine damage range based on collective level
+        let minDmg, maxDmg;
+        if (collectiveLevel <= 8) { minDmg = 5; maxDmg = 15; }
+        else if (collectiveLevel <= 14) { minDmg = 15; maxDmg = 30; }
+        else { minDmg = 30; maxDmg = 50; }
+
+        // Get Keen Eye level for DEX save bonus
+        const keenEyeLevel = this.getKeenEyeLevel();
+        const keenEyeDexBonus = keenEyeLevel >= 3 ? 3 : 0;
+
+        const DC = 12; // Difficulty class for DEX save
+        const crewResults = [];
+
+        crew.forEach((m, idx) => {
+            if (!m || m.dead) return;
+
+            const dex = (m.stats && typeof m.stats.dex === 'number') ? m.stats.dex : 1;
+            const d20Roll = Math.floor(Math.random() * 20) + 1; // 1-20
+            const totalRoll = d20Roll + dex + keenEyeDexBonus;
+            const saved = totalRoll >= DC;
+
+            let damageTaken = 0;
+            if (!saved) {
+                damageTaken = Math.floor(Math.random() * (maxDmg - minDmg + 1)) + minDmg;
+                const maxHp = (m.stats && typeof m.stats.hp === 'number') ? m.stats.hp : 1;
+                const currentHp = (typeof m.hp !== 'undefined') ? m.hp : maxHp;
+                const newHp = Math.max(0, currentHp - damageTaken);
+                m.hp = newHp;
+                // Mark dead if HP reaches 0
+                if (newHp <= 0) {
+                    m.dead = true;
+                }
+            }
+
+            crewResults.push({
+                name: m.name || 'Unknown',
+                type: (m.type || '').toLowerCase(),
+                dexStat: dex,
+                d20Roll,
+                keenEyeBonus: keenEyeDexBonus,
+                totalRoll,
+                saved,
+                damageTaken
+            });
+        });
+
+        // Persist HP/dead changes
+        try { storeMeta(meta); } catch (e) {}
+        try { if (this.props.saveUserData) this.props.saveUserData(); } catch (e) {}
+
+        return {
+            collectiveLevel,
+            damageRange: `${minDmg}-${maxDmg}`,
+            keenEyeLevel,
+            crewResults
+        };
+    }
+
+    dismissTrapPopup = () => {
+        this.setState({
+            showTrapPopup: false,
+            trapResults: null,
+            keysLocked: false
+        });
+    }
+
     getCurrentInventory = () => {
         return this.props.inventoryManager.inventory;
     }
@@ -4936,6 +5366,12 @@ class DungeonPage extends React.Component {
             if ((maybeKey === 'Enter' || maybeKey === 'Return') && this.state.showAmbushPopup) {
                 event.preventDefault();
                 this.startAmbushCombat();
+                return;
+            }
+            // Enter/Return should dismiss trap popup if visible
+            if ((maybeKey === 'Enter' || maybeKey === 'Return') && this.state.showTrapPopup) {
+                event.preventDefault();
+                this.dismissTrapPopup();
                 return;
             }
             // Enter should confirm summary panel when visible inside MonsterBattle
@@ -6450,6 +6886,16 @@ class DungeonPage extends React.Component {
             } catch(e) {}
             // Re-enable after a tick so any final in-flight combat callbacks have cleared
             setTimeout(() => { this._suppressFighterDeadHpUpdates = false; }, 0);
+        } else if(result === 'loss'){
+            this.setState({
+                inMonsterBattle: false,
+                keysLocked: false
+            }, () => {
+                this.setState({ isCardScrimmage: false, cardDuelTileId: 'combat_loss' }, () => {
+                    this.openCardDuel('combat_loss');
+                });
+            });
+            return;
         } else if(result === 'respawn'){
                   // Try to respawn the player at spawn point (guard against missing boardManager)
                   const meta2 = getMeta();
@@ -7017,6 +7463,18 @@ class DungeonPage extends React.Component {
             }
             nextState.brewBuilderOpen = !isOpen;
             if (isOpen) nextState.brewBuilderSlots = [];
+        }
+        // Open Imprint Tattoo overlay
+        if (action.type === 'imprint_tattoo') {
+            if (action.disabled) return;
+            const character = this.state.selectedCrewMember;
+            this.setState({
+                showTattooOverlay: true,
+                tattooOverlayMemberId: character ? character.id : null,
+                tattooSelectedSlot: null,
+                tattooSelectedDesign: null,
+            });
+            return;
         }
         // Toggle tactics builder open/closed when the Battle Tactics action row is clicked
         if (action.type === 'tactics') {
@@ -8369,6 +8827,211 @@ class DungeonPage extends React.Component {
                     </div>
                 );
             })()}
+            {this.state.showTrapPopup && this.state.trapResults && (() => {
+                const results = this.state.trapResults;
+                return (
+                    <div className="trap-popup-overlay">
+                        <div className="trap-popup-card">
+                            <h2 className="trap-title">Trap Sprung!</h2>
+                            <p className="trap-subtitle">
+                                Your party triggered a hidden trap! <span style={{color: '#aaa', fontSize: '0.85rem'}}>(Damage range: {results.damageRange})</span>
+                            </p>
+                            <div className="trap-crew-results">
+                                {results.crewResults.map((cr, idx) => (
+                                    <div key={idx} className={`trap-crew-row ${cr.saved ? 'saved' : 'hit'}`}>
+                                        <span className="trap-crew-name">{cr.name}</span>
+                                        <span className="trap-roll-info">
+                                            d20: {cr.d20Roll} + DEX {cr.dexStat}{cr.keenEyeBonus > 0 ? ` + KE ${cr.keenEyeBonus}` : ''} = {cr.totalRoll}
+                                        </span>
+                                        <span className={`trap-result-label ${cr.saved ? 'dodged' : 'damaged'}`}>
+                                            {cr.saved ? 'Dodged!' : `-${cr.damageTaken} HP`}
+                                        </span>
+                                    </div>
+                                ))}
+                            </div>
+                            {results.keenEyeLevel >= 3 && (
+                                <div style={{fontSize: '0.8rem', color: '#e67e22', marginBottom: '12px'}}>
+                                    ⦿ Keen Eye (L3): +3 DEX save bonus applied
+                                </div>
+                            )}
+                            <button className="trap-dismiss-btn" onClick={() => this.dismissTrapPopup()}>
+                                Continue
+                            </button>
+                            <div className="trap-shortcut-hint">
+                                Press [Enter] to Continue
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+            {/* ── Imprint Tattoo Overlay ── */}
+            {this.state.showTattooOverlay && (() => {
+                const meta = getMeta() || {};
+                const member = (meta.crew || []).find(m => m && m.id === this.state.tattooOverlayMemberId);
+                if (!member) return null;
+                const tattoos = member.tattoos || [];
+                const knownDesigns = member.knownTattoos || ['fire_bird', 'silver_serpent', 'tribal_hand'];
+                const tattooIndex = tattoos.length;
+                const durationMs = TATTOO_IMPRINT_DURATIONS_MS[tattooIndex] || 0;
+                const fmtDuration = (ms) => {
+                    const totalMin = Math.floor(ms / 60000);
+                    const days = Math.floor(totalMin / 1440);
+                    const hrs  = Math.floor((totalMin % 1440) / 60);
+                    const mins = totalMin % 60;
+                    if (days > 0) return `${days}d ${hrs}h`;
+                    if (hrs > 0)  return `${hrs}h ${mins}m`;
+                    return `${mins} min`;
+                };
+
+                // Slot positions as percentages over the body image
+                const SLOT_POSITIONS = [
+                    { key: 'head',       top: '10%', left: '50%' },  // center of head
+                    { key: 'torso',      top: '30%', left: '50%' },  // center of chest
+                    { key: 'left_arm',   top: '36%', left: '26%' },  // mid upper-left arm
+                    { key: 'right_arm',  top: '36%', left: '74%' },  // mid upper-right arm
+                    { key: 'left_hand',  top: '55%', left: '32%' },  // left wrist/hand
+                    { key: 'right_hand', top: '55%', left: '68%' },  // right wrist/hand
+                    { key: 'left_leg',   top: '70%', left: '40%' },  // left mid-thigh
+                    { key: 'right_leg',  top: '70%', left: '58%' },  // right mid-thigh
+                ];
+
+                const { tattooSelectedSlot, tattooSelectedDesign } = this.state;
+                const canConfirm = !!tattooSelectedSlot && !!tattooSelectedDesign;
+
+                return (
+                    <div
+                        className="tattoo-overlay"
+                        onClick={(e) => { if (e.target === e.currentTarget) this.setState({ showTattooOverlay: false }); }}
+                    >
+                        <div className="tattoo-overlay-card">
+                            {/* Header */}
+                            <div className="tattoo-overlay-header">
+                                <h2 className="tattoo-overlay-title">⚔ Imprint Tattoo</h2>
+                                <div className="tattoo-overlay-sub">{member.name} &nbsp;·&nbsp; {tattoos.length} / 8 tattoos</div>
+                                <button
+                                    className="tattoo-close-btn"
+                                    onClick={() => this.setState({ showTattooOverlay: false })}
+                                    aria-label="Close"
+                                >✕</button>
+                            </div>
+
+                            {/* Body */}
+                            <div className="tattoo-overlay-body">
+                                {/* Left — body silhouette with slots */}
+                                <div className="tattoo-body-section">
+                                    <div className="tattoo-body-label">Select a location</div>
+                                    <div className="tattoo-body-container">
+                                        <img
+                                            src={images.body_male}
+                                            alt="body silhouette"
+                                            className="tattoo-body-img"
+                                        />
+                                        {SLOT_POSITIONS.map(({ key, top, left }) => {
+                                            const existing = tattoos.find(t => t.slot === key);
+                                            const inProgress = member.tattooImprinting?.slot === key;
+                                            const isSelected = tattooSelectedSlot === key;
+                                            const design = existing ? TATTOO_DESIGNS[existing.design] : null;
+                                            return (
+                                                <div
+                                                    key={key}
+                                                    className={`tattoo-slot${existing ? ' filled' : ''}${inProgress ? ' imprinting' : ''}${isSelected ? ' selected' : ''}`}
+                                                    style={{
+                                                        top, left,
+                                                        backgroundColor: design ? design.color + 'aa' : undefined,
+                                                    }}
+                                                    title={TATTOO_SLOT_LABELS[key]}
+                                                    onClick={() => {
+                                                        if (existing || inProgress) return;
+                                                        this.setState({ tattooSelectedSlot: isSelected ? null : key });
+                                                    }}
+                                                >
+                                                    {existing ? '✓' : inProgress ? '⟳' : ''}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    {/* Slot legend */}
+                                    <div className="tattoo-slot-legend">
+                                        {SLOT_POSITIONS.map(({ key }) => {
+                                            const existing = tattoos.find(t => t.slot === key);
+                                            const design = existing ? TATTOO_DESIGNS[existing.design] : null;
+                                            return (
+                                                <div key={key} className={`tattoo-legend-row${existing ? ' legend-filled' : ''}${tattooSelectedSlot === key ? ' legend-selected' : ''}`}>
+                                                    <span className="tattoo-legend-dot" style={{ backgroundColor: design ? design.color : '#444' }} />
+                                                    <span className="tattoo-legend-name">{TATTOO_SLOT_LABELS[key]}</span>
+                                                    {existing && <span className="tattoo-legend-design">{TATTOO_DESIGNS[existing.design]?.name}</span>}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+
+                                {/* Right — design picker + confirm */}
+                                <div className="tattoo-design-panel">
+                                    <div className="tattoo-design-label">Choose a Design</div>
+                                    <div className="tattoo-design-grid">
+                                        {knownDesigns.map(designKey => {
+                                            const def = TATTOO_DESIGNS[designKey];
+                                            if (!def) return null;
+                                            const isSelected = tattooSelectedDesign === designKey;
+                                            const alreadyApplied = tattoos.some(t => t.design === designKey);
+                                            return (
+                                                <div
+                                                    key={designKey}
+                                                    className={`tattoo-design-card${isSelected ? ' selected' : ''}${alreadyApplied ? ' applied' : ''}`}
+                                                    style={{ borderColor: isSelected ? def.color : undefined }}
+                                                    onClick={() => {
+                                                        if (alreadyApplied) return;
+                                                        this.setState({ tattooSelectedDesign: isSelected ? null : designKey });
+                                                    }}
+                                                    title={alreadyApplied ? 'Already imprinted' : def.flavor}
+                                                >
+                                                    <div className="tattoo-design-icon" style={{ backgroundColor: def.color + '33' }}>
+                                                        <img
+                                                            src={images[def.iconKey] || images.avatar}
+                                                            alt={def.name}
+                                                        />
+                                                    </div>
+                                                    <div className="tattoo-design-info">
+                                                        <div className="tattoo-design-name" style={{ color: def.color }}>{def.name}</div>
+                                                        <div className="tattoo-design-desc">{def.desc}</div>
+                                                        {alreadyApplied && <div className="tattoo-design-applied-badge">✓ Imprinted</div>}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Confirm area */}
+                                    <div className="tattoo-confirm-area">
+                                        <div className="tattoo-selection-summary">
+                                            {tattoos.length >= 8
+                                                ? '⛔ All 8 tattoo slots are filled'
+                                                : canConfirm
+                                                    ? `${TATTOO_SLOT_LABELS[tattooSelectedSlot]} · ${TATTOO_DESIGNS[tattooSelectedDesign]?.name} · ~${fmtDuration(durationMs)}`
+                                                    : tattooSelectedSlot
+                                                        ? 'Now select a tattoo design →'
+                                                        : tattooSelectedDesign
+                                                            ? '← Select a body location'
+                                                            : 'Select a location and a design'}
+                                        </div>
+                                        <button
+                                            className={`tattoo-imprint-btn${canConfirm && tattoos.length < 8 ? '' : ' disabled'}`}
+                                            disabled={!canConfirm || tattoos.length >= 8}
+                                            onClick={() => this.handleImprintTattoo()}
+                                        >
+                                            Imprint {canConfirm ? `(~${fmtDuration(durationMs)})` : ''}
+                                        </button>
+                                        {tattoos.length < 8 && (
+                                            <div className="tattoo-slots-remaining">{8 - tattoos.length} slot{8 - tattoos.length !== 1 ? 's' : ''} remaining</div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
             {this.state.showNarrativeOverlay && this.state.activeNarrativeSequence && (
                 <NarrativeOverlay
                     sequence={this.state.activeNarrativeSequence}
@@ -8396,7 +9059,7 @@ class DungeonPage extends React.Component {
 
                 // Global skills for this class (from proposed_new_features spec)
                 const globalSkillsByClass = {
-                    ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }, { key: 'scrounging_rat', name: 'Scrounging Rat', desc: 'Forage for food in camp: 15-30 food (3h) / 30-50 food (2h) / 50-80 food (1h).' }, { key: 'fastidious_crow', name: 'Fastidious Crow', desc: 'Scout a 10x10 board area for 24h. Process: 20m. Cooldown: 6h / 3h. Reward: 5-20g / 25-80g + 30% shard chance.' }],
+                    ranger:   [{ key: 'keen_eye', name: 'Keen Eye', desc: 'L1: Reveals +2 fog tiles. L2: Reveals nearby traps. L3: +3 DEX to trap saves.' }, { key: 'hunters_quarry', name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' }, { key: 'read_the_land', name: 'Read the Land', desc: 'Adjacent tile types hinted on entry' }, { key: 'trailblaze', name: 'Trailblaze', desc: 'Visual breadcrumb to last camp spot' }, { key: 'scrounging_rat', name: 'Scrounging Rat', desc: 'Forage for food in camp: 15-30 food (3h) / 30-50 food (2h) / 50-80 food (1h).' }, { key: 'fastidious_crow', name: 'Fastidious Crow', desc: 'Scout a 10x10 board area for 24h. Process: 20m. Cooldown: 6h / 3h. Reward: 5-20g / 25-80g + 30% shard chance.' }],
                     sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }],
                     soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: 'Party Resolve never drops below 20 from deaths' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }, { key: 'strong_resolve', name: 'Strong Resolve', desc: 'Reduces Resolve penalties by 40%/75%/90%.' }],
                     wizard:   [{ key: 'arcane_sense', name: 'Arcane Sense', desc: 'Identifies chest tier before opening' }, { key: 'ley_tap', name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' }, { key: 'dimensional_pocket', name: 'Dimensional Pocket', desc: '+2 shared inventory slots' }, { key: 'scry', name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' }],
@@ -8587,7 +9250,7 @@ class DungeonPage extends React.Component {
             >
                 <CModalHeader closeButton={false}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                        <CModalTitle>🌀 Teleportation Beacons</CModalTitle>
+                        <CModalTitle><span role="img" aria-label="teleport">🌀</span> Teleportation Beacons</CModalTitle>
                         <button 
                             aria-label="Close teleport beacons"
                             className="camp-close" 
@@ -10086,7 +10749,7 @@ class DungeonPage extends React.Component {
                             if (globalSkills.length === 0) return null;
                             
                             const skillDetails = {
-                                keen_eye: { name: 'Keen Eye', desc: 'Reveals +2 fog tiles on miniboard entry' },
+                                keen_eye: { name: 'Keen Eye', desc: 'L1: Reveals +2 fog tiles. L2: Reveals nearby traps. L3: +3 DEX to trap saves.' },
                                 scrounging_rat: { name: 'Scrounging Rat', desc: 'Allows scrounging for food in camp: 15-30 food (3h) / 30-50 food (2h) / 50-80 food (1h).' },
                                 fastidious_crow: { name: 'Fastidious Crow', desc: 'Scouts a random board (10x10 fog reveal) for 24 hours. Process takes 20m. Cooldown and gold/gem reward based on level.' },
                                 hunters_quarry: { name: "Hunter's Quarry", desc: '+10% food drop on monster defeat' },
@@ -10787,6 +11450,7 @@ class DungeonPage extends React.Component {
                             borders={tile.borders}
                             inscriptions={tile.inscriptions}
                             partialObscured={!!tile.partialObscured}
+                            trapRevealed={!!tile.trapRevealed}
                             coordinates={tile.coordinates}
                             index={tile.id}
                             showCoordinates={this.props.showCoordinates}
@@ -11530,6 +12194,7 @@ class DungeonPage extends React.Component {
                         crew={this.props.crewManager ? this.props.crewManager.crew : []}
                         meta={getMeta()}
                         dungeonDepth={(() => { try { const m = getMeta(); const lid = m && m.location && m.location.levelId; return lid != null ? Math.max(1, Number(lid)) : 1; } catch(e) { return 1; } })()}
+                        isCombatLoss={this.state.cardDuelTileId === 'combat_loss'}
                     />
                 </div>
             )}

@@ -84,6 +84,16 @@ export function CrewManager(){
                 }
             }
 
+            // Barbarian starts with 3 known tattoo designs (migration-safe)
+            if ((member.type || member.image) === 'barbarian') {
+                if (!Array.isArray(member.knownTattoos)) {
+                    member.knownTattoos = ['fire_bird', 'silver_serpent', 'tribal_hand'];
+                }
+                if (!Array.isArray(member.tattoos)) {
+                    member.tattoos = [];
+                }
+            }
+
             member.specialActions.forEach(a=>{
                 let end = new Date(a.endDate),
                 now = new Date();

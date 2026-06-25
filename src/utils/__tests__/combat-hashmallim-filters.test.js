@@ -228,4 +228,60 @@ describe('Hashmallim custom spell logic, animation parameter passing, and meteor
     expect(target.facing).toBe('right'); // target is at (3,4), hashmallim at (4,4), so dx = 1 > 0 -> facing 'right'
     expect(target.activeDebuffs.length).toBe(0);
   });
+
+  test('entropic_kindred should shift units at or past insertion point right and expand depth boundaries', () => {
+    const ekAbility = { id: 'entropic_kindred', range: 'medium', type: 'special' };
+    
+    // Make Hashmallim huge
+    hashmallim.huge = true;
+    // Position Hashmallim at x=5 (past insertion point 4)
+    hashmallim.coordinates = { x: 5, y: 3 };
+    // Position target at x=2 (before insertion point 4)
+    target.coordinates = { x: 2, y: 3 };
+    
+    cm.combatants = { [hashmallim.id]: hashmallim, [target.id]: target };
+    cm.entropicKindredActive = false;
+    cm.numColumns = 8;
+    
+    // Initialize occupied coordinates before board expansion
+    cm._setCombatantOccupiedCoords(hashmallim, cm.combatants);
+    
+    // Verify it occupies column 3, 4, 5 initially
+    expect(hashmallim.occupiedCoords.some(c => c.x === 3)).toBe(true);
+    expect(hashmallim.occupiedCoords.some(c => c.x === 4)).toBe(true);
+    expect(hashmallim.occupiedCoords.some(c => c.x === 5)).toBe(true);
+    
+    // Spy on triggerBoardEvent and animManagerRedux
+    cm.triggerBoardEvent = jest.fn();
+    cm.animManagerRedux = {
+      triggerEntropicKindred: jest.fn()
+    };
+    
+    cm.useAbility(hashmallim, ekAbility, hashmallim);
+    
+    // Hashmallim coordinates should shift from 5 to 8
+    expect(hashmallim.coordinates.x).toBe(8);
+    // Target coordinates should remain at 2
+    expect(target.coordinates.x).toBe(2);
+    
+    // Board columns and active flag should update
+    expect(cm.numColumns).toBe(11);
+    expect(cm.entropicKindredActive).toBe(true);
+    
+    // Verify that its occupied coordinates shifted contiguously (should be 6, 7, 8)
+    // There should be no stale column 3 coordinate left behind!
+    expect(hashmallim.occupiedCoords.some(c => c.x === 3)).toBe(false);
+    expect(hashmallim.occupiedCoords.some(c => c.x === 4)).toBe(false);
+    expect(hashmallim.occupiedCoords.some(c => c.x === 5)).toBe(false);
+    
+    const occupiedColumns = new Set(hashmallim.occupiedCoords.map(c => c.x));
+    expect(occupiedColumns.has(6)).toBe(true);
+    expect(occupiedColumns.has(7)).toBe(true);
+    expect(occupiedColumns.has(8)).toBe(true);
+    expect(occupiedColumns.size).toBe(3); // only columns 6, 7, 8
+    
+    // triggerBoardEvent should be called
+    expect(cm.triggerBoardEvent).toHaveBeenCalledWith('entropic_kindred', { addedCols: 3, insertAt: 4 });
+  });
 });
+

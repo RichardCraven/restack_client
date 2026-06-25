@@ -306,6 +306,9 @@ export class AnimationManagerRedux {
         this._shadowArmorDispel(sourceCoords, isTargetLarge, targetOccupiedCoords);
         break;
       case 'heal':
+      case 'healing_hands':
+      case 'healing_hands_type':
+      case 'healing_hand':
       case 'healing_hymn':
       case 'regenerate':
         this._heal(sourceCoords, targetCoords);

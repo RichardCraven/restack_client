@@ -343,6 +343,10 @@ function Tile(props) {
                 }} />
            )}
 
+           {/* Trap indicator (Keen Eye reveal) */}
+           { color !== 'black' && props.trapRevealed && (
+                <div className="trap-indicator-overlay" />
+           )}
 
            {/* Inscription marker: 3 diagonal lines drawn on wall tiles */}
            { color !== 'black' && ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (

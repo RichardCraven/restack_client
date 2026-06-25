@@ -292,4 +292,33 @@ describe('BoardManager fog/respawn harness', () => {
     expect(bm.tiles[46].color).toBe('#6b6057');
     expect(bm.tiles[31].color).toBe('#6b6057');
   });
+
+  test('persisted white tile color is filtered out and defaults to neutral dark-stone color (#6b6057) during fog reveal', () => {
+    const bm = new BoardManager();
+    bm.updateDungeon = jest.fn();
+    bm.refreshTiles = jest.fn();
+
+    const board = makeEmptyBoard(801);
+    
+    // Set up a key tile with persisted legacy color 'white'
+    const keyIndex = 45; // Row 3, Col 0
+    board.tiles[keyIndex].contains = { type: 'item', subtype: 'minor_key' };
+    board.tiles[keyIndex].color = 'white';
+
+    // Place player at Row 4, Col 0 (index 60), adjacent to key
+    const playerIndex = 60;
+    board.tiles[playerIndex].contains = { type: 'passage', subtype: null };
+
+    const level = { id: 8, front: { miniboards: [board] }, back: { miniboards: [] }, name: 'L8' };
+    bm.dungeon = { levels: [level] };
+    bm.currentLevel = level;
+    bm.currentBoard = board;
+    bm.currentOrientation = 'F';
+
+    bm.playerTile = { location: bm.getCoordinatesFromIndex(playerIndex), boardIndex: 0 };
+    bm.initializeTilesFromMap(0, bm.getIndexFromCoordinates(bm.playerTile.location));
+
+    // Verify key tile gets the dark stone color fallback #6b6057, not white
+    expect(bm.tiles[keyIndex].color).toBe('#6b6057');
+  });
 });

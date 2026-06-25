@@ -1093,8 +1093,8 @@ export function BoardManager(){
                     const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id] && this.currentBoard.tiles[templateTile.id].color;
                     // sensible default for monsters so they show up if no color is present
                     const defaultMonsterColor = '#ff000078';
-                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black');
-                    // Prefer a non-black template color, then a non-black board color, otherwise default
+                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black' && c !== 'white');
+                    // Prefer a non-black/non-white template color, then a non-black/non-white board color, otherwise default
                     const colorToUse = isValidColor(templateColor) ? templateColor : (isValidColor(boardColor) ? boardColor : defaultMonsterColor);
                     equivalentTile.color = colorToUse;
                     // Persist the color into the in-memory currentBoard and dungeon so
@@ -1128,7 +1128,7 @@ export function BoardManager(){
                         this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[templateTile.id].contains = equivalentTile.contains;
                     }
                 } catch (e) {}
-                this.tiles[templateTile.id] = equivalentTile;
+                this.tiles[templateTile.id] = { ...equivalentTile };
             }
         })
     // After respawning monsters, recompute large-monster stacking markers
@@ -1187,7 +1187,7 @@ export function BoardManager(){
                 try {
                     const templateColor = templateTile && templateTile.color;
                     const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id] && this.currentBoard.tiles[templateTile.id].color;
-                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black');
+                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black' && c !== 'white');
                     const colorToUse = isValidColor(templateColor) ? templateColor : (isValidColor(boardColor) ? boardColor : null);
                     if (colorToUse) {
                         equivalentTile.color = colorToUse;
@@ -1220,7 +1220,7 @@ export function BoardManager(){
                         this.dungeon.levels.find(e=>e.id === this.currentLevel.id).back.miniboards.find(b=>b.id === this.currentBoard.id).tiles[templateTile.id].contains = equivalentTile.contains;
                     }
                 } catch (e) {}
-                this.tiles[templateTile.id] = equivalentTile;
+                this.tiles[templateTile.id] = { ...equivalentTile };
             }
         })
 
@@ -1302,14 +1302,20 @@ export function BoardManager(){
                     const templateColor = templateTile && templateTile.color;
                     const boardColor = this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id] && this.currentBoard.tiles[templateTile.id].color;
                     const defaultColor = '#6b6057';
-                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black');
+                    const isValidColor = (c) => (c !== null && c !== undefined && c !== '' && c !== 'black' && c !== 'white');
                     const colorToUse = isValidColor(templateColor) ? templateColor : (isValidColor(boardColor) ? boardColor : defaultColor);
                     equivalentTile.color = colorToUse;
+                    if (templateTile && templateTile.borders) {
+                        equivalentTile.borders = templateTile.borders;
+                    }
 
                     if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[templateTile.id]) {
                         this.currentBoard.tiles[templateTile.id].color = colorToUse;
                         this.currentBoard.tiles[templateTile.id].contains = equivalentTile.contains;
                         this.currentBoard.tiles[templateTile.id].image = equivalentTile.image;
+                        if (templateTile && templateTile.borders) {
+                            this.currentBoard.tiles[templateTile.id].borders = templateTile.borders;
+                        }
                     }
                     if (this.currentOrientation === 'F') {
                         const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
@@ -1319,6 +1325,9 @@ export function BoardManager(){
                                 b.tiles[templateTile.id].color = colorToUse;
                                 b.tiles[templateTile.id].contains = equivalentTile.contains;
                                 b.tiles[templateTile.id].image = equivalentTile.image;
+                                if (templateTile && templateTile.borders) {
+                                    b.tiles[templateTile.id].borders = templateTile.borders;
+                                }
                             }
                         }
                     } else {
@@ -1329,12 +1338,15 @@ export function BoardManager(){
                                 b.tiles[templateTile.id].color = colorToUse;
                                 b.tiles[templateTile.id].contains = equivalentTile.contains;
                                 b.tiles[templateTile.id].image = equivalentTile.image;
+                                if (templateTile && templateTile.borders) {
+                                    b.tiles[templateTile.id].borders = templateTile.borders;
+                                }
                             }
                         }
                     }
                 } catch (e) {}
 
-                this.tiles[templateTile.id] = equivalentTile;
+                this.tiles[templateTile.id] = { ...equivalentTile };
             }
         });
 
@@ -2020,9 +2032,7 @@ export function BoardManager(){
     try { this.overlayTiles.forEach(t => { if (t) { t.color = null; t.borders = null } }) } catch (e) {}
         const highlightColor = (tile) => {
             let color = null;
-            if(this.isMonster(tile)) color = '#ff000078'
-            const subtype = this.getContainsSubtype(tile.contains);
-            if(subtype && this.availableItems.includes(subtype)) color = 'lightyellow'
+            if(this.isMonster(tile)) color = '#ff000078';
             return color;
         }
         const curIndex = this.getIndexFromCoordinates(this.playerTile.location);
@@ -2407,6 +2417,7 @@ export function BoardManager(){
             e.image = null;
             e.borders = null;
             e.partialObscured = false;
+            e.trapRevealed = false;
         });
 
         const visibleTileIds = this.getReachableTilesWithinSteps(destinationTile.id, 2);
@@ -2460,8 +2471,8 @@ export function BoardManager(){
                 if ((inScoutedArea || (manhattan <= 2 && visibleTileIds.has(e.id))) && (!isVoid || hasInscriptions)) {
                     const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
                     const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].borders);
-                    const runtimeColor = (e.color && e.color !== 'black' && e.color !== 'null') ? e.color : null;
-                    const boardColor = (persistedColor && persistedColor !== 'black' && persistedColor !== 'null') ? persistedColor : (runtimeColor || null);
+                    const runtimeColor = (e.color && e.color !== 'black' && e.color !== 'white' && e.color !== 'null') ? e.color : null;
+                    const boardColor = (persistedColor && persistedColor !== 'black' && persistedColor !== 'white' && persistedColor !== 'null') ? persistedColor : (runtimeColor || null);
                     // Use persisted/runtime board color when available.  Fall back to a
                     // neutral dark-stone tone rather than 'white' — white tiles were a
                     // jarring visual glitch when server data had no explicit color saved.
@@ -2473,6 +2484,30 @@ export function BoardManager(){
                 }
             } catch (err) {}
         });
+
+        // Keen Eye trap reveal: mark visible trap tiles as revealed when keenEyeLevel >= 2
+        try {
+            let keenEyeLvl = 0;
+            const keMetadata = getMeta() || {};
+            const keCrew = keMetadata.crew || [];
+            keCrew.forEach(m => {
+                if (m && !m.dead && ((m.type || '').toLowerCase() === 'ranger' || (m.image || '').toLowerCase() === 'ranger') && m.globalSkills) {
+                    const skill = m.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'keen_eye');
+                    if (skill) {
+                        const lvl = typeof skill === 'string' ? 1 : (skill.level || 1);
+                        if (lvl > keenEyeLvl) keenEyeLvl = lvl;
+                    }
+                }
+            });
+            if (keenEyeLvl >= 2 && this.trapTileIds && this.trapTileIds.size > 0) {
+                this.tiles.forEach((tile) => {
+                    if (!tile || tile.color === 'black') return; // not visible
+                    if (tile.hasTrap) {
+                        tile.trapRevealed = true;
+                    }
+                });
+            }
+        } catch (e) {}
 
         // Vendor visibility rule:
         // - If player is cardinal-adjacent to any tile in a vendor 2x2 group,
@@ -2507,8 +2542,8 @@ export function BoardManager(){
                     groupTiles.forEach((tile) => {
                         const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].color);
                         const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tile.id] && this.currentBoard.tiles[tile.id].borders);
-                        const runtimeColor = (tile.color && tile.color !== 'black' && tile.color !== 'null') ? tile.color : null;
-                        const boardColor = (persistedColor && persistedColor !== 'black' && persistedColor !== 'null') ? persistedColor : (runtimeColor || null);
+                        const runtimeColor = (tile.color && tile.color !== 'black' && tile.color !== 'white' && tile.color !== 'null') ? tile.color : null;
+                        const boardColor = (persistedColor && persistedColor !== 'black' && persistedColor !== 'white' && persistedColor !== 'null') ? persistedColor : (runtimeColor || null);
                         tile.color = boardColor || '#6b6057';
                         tile.image = this.getImageForContains(tile.contains, tile);
                         tile.borders = this.normalizeFogBorders(persistedBorders);

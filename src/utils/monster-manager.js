@@ -701,7 +701,7 @@ export function MonsterManager() {
                 speed: 10, // elemental mastery enhances evasion
                 willpower: 10,
                 str: 5,
-                int: 8,
+                int: 11,
                 dex: 7,
                 fort: 7
             },
@@ -723,10 +723,20 @@ export function MonsterManager() {
             key: 'precipice_guardian',
             image_names: ['precipice_guardian'],
             monster_names: [],
-            stats: { hp: 1, atk: 0, def: 0, speed: 0, willpower: 0, str: 0, int: 0, dex: 0, fort: 0 },
-            level: 1,
+            stats: {
+                hp: 370,
+                atk: 13,
+                def: 3,
+                speed: 7,
+                willpower: 8,
+                str: 7,
+                int: 8,
+                dex: 5,
+                fort: 5
+            },
+            level: 17,
             portrait: images['precipice_guardian_portrait'],
-            greetings: [], deathCries: [], skills: [], weaknesses: [], drops: []
+            greetings: ['go no further'], deathCries: ['then I must perish'], skills: ['rake', 'madness', 'magic_missile'], weaknesses: [], drops: []
         },
         sphinx: {
             type: 'sphinx',
@@ -752,7 +762,7 @@ export function MonsterManager() {
             portrait: images['sphinx_portrait2'],
             greetings: ['be thee worthy?'],
             deathCries: ['you may pass'],
-            skills: ['claw_strike', 'claw_strike', 'induce_madness', 'lightning', 'third_eye', 'polymorph', 'hex', 'begin_the_trials', 'magic_missile'],
+            skills: ['claw_strike', 'induce_madness', 'third_eye', 'polymorph', 'hex', 'begin_the_trials', 'magic_missile'],
             weaknesses: ['arcane'],
             minions: ['djinn'],
             drops: [

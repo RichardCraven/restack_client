@@ -1178,6 +1178,8 @@ export default function CombatGrid(props) {
                     className="portrait-relative-container"
                     style={{
                         position: 'relative',
+                        width: '100%',
+                        height: '100%',
                         pointerEvents: 'auto',
                         overflow: 'visible',
                         animation: activeLeapAnim 

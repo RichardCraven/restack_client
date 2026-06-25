@@ -147,12 +147,10 @@ class CrewManagerPage extends React.Component{
     // }
 
   componentDidMount(){
-    // ...existing code...
+    window.addEventListener('keydown', this.handleKeyDown);
     let options = this.props.crewManager.adventurers;
-    // ...existing code...
     const meta = getMeta();
     let selectedCrew = [];
-    // ...existing code...
     if(meta && meta.crew && meta.crew.length){
         // Re-hydrate portrait from the live adventurers list so stale sessionStorage
         // URLs (from a previous webpack build) don't cause blank portraits in the tray.
@@ -172,6 +170,16 @@ class CrewManagerPage extends React.Component{
         selectedCrew,
         selectedCrewMember: selectedCrew[0]
     })
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener('keydown', this.handleKeyDown);
+  }
+
+  handleKeyDown = (event) => {
+    if (event.key === 'Enter') {
+      this.submit();
+    }
   }
 
   getDungeonDetails = async () => {
