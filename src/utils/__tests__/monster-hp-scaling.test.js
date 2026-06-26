@@ -63,6 +63,45 @@ describe('Monster HP scaling based on tier', () => {
       expect(boss.starting_hp).toBe(120);
       expect(boss.hp).toBe(120);
     });
+
+    test('lord properties are correctly copied and stat boosts applied', () => {
+      const cm = new CombatManagerRedux();
+      const data = createMockData(2, 'mummy', 100);
+      data.monster.name = 'mummy';
+      data.monster.isLord = true;
+      data.monster.lordBadge = 'vermine';
+      data.monster.stats.int = 9;
+
+      cm.initializeCombat(data);
+
+      const boss = cm.combatants['boss_1'];
+      expect(boss).toBeDefined();
+      expect(boss.isLord).toBe(true);
+      expect(boss.lordBadge).toBe('vermine');
+      expect(boss.starting_hp).toBe(300);
+      expect(boss.hp).toBe(300);
+      expect(boss.stats.int).toBe(11);
+      expect(boss.name).toBe('mummy lord of Vermine');
+    });
+
+    test('lord properties utilize lordName if provided', () => {
+      const cm = new CombatManagerRedux();
+      const data = createMockData(1, 'skeleton', 50);
+      data.monster.name = 'bones';
+      data.monster.isLord = true;
+      data.monster.lordBadge = 'rubedo';
+      data.monster.lordName = 'Bonelord';
+
+      cm.initializeCombat(data);
+
+      const boss = cm.combatants['boss_1'];
+      expect(boss).toBeDefined();
+      expect(boss.isLord).toBe(true);
+      expect(boss.lordBadge).toBe('rubedo');
+      expect(boss.lordName).toBe('Bonelord');
+      expect(boss.name).toBe('Bonelord of Rubedo');
+    });
+
   });
 
 });

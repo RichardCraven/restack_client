@@ -173,6 +173,8 @@ export function createFighter(fighter, callbacks, FIGHT_INTERVAL) {
     attacks: formattedAttacks,
     specials: (typeof formatSpecials === 'function') ? formatSpecials(rawSpecials, fighter) : rawSpecials,
         specialActions: fighter.specialActions, // Now uses flat structure: type, name, iconUrl, subtype, etc.
+        globalSkills: fighter.globalSkills,
+        skills: fighter.skills,
         targettedBy: [],
         passives: Array.isArray(fighter.passives) ? [...fighter.passives] : [],
         reassembleUsed: !!fighter.reassembleUsed,

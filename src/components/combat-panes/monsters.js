@@ -196,6 +196,16 @@ const MonstersCombatGrid = ({
         });
     }, [indicatorQueues, visibleDamageIndicators, battleData]);
 
+    const isMountedRef = React.useRef(true);
+    React.useEffect(() => {
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+        };
+    }, []);
+
+    const deathTimeoutsRef = React.useRef({});
+
     // Delay removal of monster/minion portrait after death for death animation
     const [showDeathAnimation, setShowDeathAnimation] = React.useState({});
     const [fullyDead, setFullyDead] = React.useState({});
@@ -208,15 +218,25 @@ const MonstersCombatGrid = ({
                 // Fallback: if onAnimationEnd never fires (e.g. animation conflict),
                 // force fullyDead after the death animation duration + buffer.
                 const id = monster.id;
+                if (deathTimeoutsRef.current[id]) {
+                    clearTimeout(deathTimeoutsRef.current[id]);
+                }
                 const t = setTimeout(() => {
-                    setFullyDead(prev => {
-                        if (!prev[id]) return { ...prev, [id]: true };
-                        return prev;
-                    });
-                    setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                    if (isMountedRef.current) {
+                        setFullyDead(prev => {
+                            if (!prev[id]) return { ...prev, [id]: true };
+                            return prev;
+                        });
+                        setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                    }
+                    delete deathTimeoutsRef.current[id];
                 }, 2400); // meltDownDeath is 2000ms + 400ms buffer
-                return () => clearTimeout(t);
+                deathTimeoutsRef.current[id] = t;
             } else if (!battleData[monster.id].dead && (showDeathAnimation[monster.id] || fullyDead[monster.id])) {
+                if (deathTimeoutsRef.current[monster.id]) {
+                    clearTimeout(deathTimeoutsRef.current[monster.id]);
+                    delete deathTimeoutsRef.current[monster.id];
+                }
                 setShowDeathAnimation(prev => ({ ...prev, [monster.id]: false }));
                 setFullyDead(prev => ({ ...prev, [monster.id]: false }));
             }
@@ -227,7 +247,26 @@ const MonstersCombatGrid = ({
                 // Don't trigger the death animation for bifurcating minions — they use their own shrink animation
                 if (minion.dead && !minion.bifurcating && !showDeathAnimation[minion.id] && !fullyDead[minion.id]) {
                     setShowDeathAnimation(prev => ({ ...prev, [minion.id]: true }));
+                    const id = minion.id;
+                    if (deathTimeoutsRef.current[id]) {
+                        clearTimeout(deathTimeoutsRef.current[id]);
+                    }
+                    const t = setTimeout(() => {
+                        if (isMountedRef.current) {
+                            setFullyDead(prev => {
+                                if (!prev[id]) return { ...prev, [id]: true };
+                                return prev;
+                            });
+                            setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
+                        }
+                        delete deathTimeoutsRef.current[id];
+                    }, 2400);
+                    deathTimeoutsRef.current[id] = t;
                 } else if (!minion.dead && (showDeathAnimation[minion.id] || fullyDead[minion.id])) {
+                    if (deathTimeoutsRef.current[minion.id]) {
+                        clearTimeout(deathTimeoutsRef.current[minion.id]);
+                        delete deathTimeoutsRef.current[minion.id];
+                    }
                     setShowDeathAnimation(prev => ({ ...prev, [minion.id]: false }));
                     setFullyDead(prev => ({ ...prev, [minion.id]: false }));
                 }
@@ -236,25 +275,14 @@ const MonstersCombatGrid = ({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battleData, monster]);
 
-    // Fallback: ensure minion fullyDead is set after death animation even if onAnimationEnd is missed
     React.useEffect(() => {
-        const timers = [];
-        Object.values(battleData).forEach(minion => {
-            if (minion.isMinion && minion.dead && showDeathAnimation[minion.id] && !fullyDead[minion.id]) {
-                const id = minion.id;
-                const t = setTimeout(() => {
-                    setFullyDead(prev => {
-                        if (!prev[id]) return { ...prev, [id]: true };
-                        return prev;
-                    });
-                    setShowDeathAnimation(prev => ({ ...prev, [id]: false }));
-                }, 2400);
-                timers.push(t);
+        const timeouts = deathTimeoutsRef.current;
+        return () => {
+            if (timeouts) {
+                Object.values(timeouts).forEach(t => clearTimeout(t));
             }
-        });
-        return () => timers.forEach(t => clearTimeout(t));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [showDeathAnimation]);
+        };
+    }, []);
 
     // Determine if monster or minion is teleporting (by id)
     const isTeleporting = (id) => {

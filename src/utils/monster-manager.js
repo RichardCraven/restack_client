@@ -36,6 +36,7 @@ export function MonsterManager() {
             key: 'goblin',
             image_names: ['goblin'],
             monster_names: ['Wiggit', 'Miggi', "Gurnak"],
+            lordName: 'Glundok the Cruel',
             stats: {
                 hp: 38,
                 atk: 3,
@@ -67,6 +68,7 @@ export function MonsterManager() {
             key: 'skeleton',
             image_names: ['skeleton'],
             monster_names: ['bones'],
+            lordName: 'Bonelord',
             stats: {
                 hp: 50,
                 atk: 5,
@@ -99,6 +101,7 @@ export function MonsterManager() {
             key: 'kabuki_demon_minion',
             image_names: ['kabuki_demon_minion'],
             monster_names: ['Ikiro', 'Jimbu'],
+            lordName: 'Lord Sargas',
             stats: {
                 hp: 50,
                 atk: 5,
@@ -132,6 +135,7 @@ export function MonsterManager() {
             key: 'beholder_minion',
             image_names: ['beholder_minion'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon'],
+            lordName: 'The Putrid Crawler',
             stats: {
                 hp: 60,
                 atk: 7,
@@ -165,6 +169,7 @@ export function MonsterManager() {
             key: 'horned_pet',
             image_names: ['horned_pet'],
             monster_names: ['Spiketooth', 'Gorehound', 'Ravager'],
+            lordName: `Hashmalim's Dog`,
             stats: {
                 hp: 60,
                 atk: 7,
@@ -195,7 +200,8 @@ export function MonsterManager() {
             subtype: 'undead',
             key: 'ghoul',
             image_names: ['ghoul'],
-            monster_names: [],
+            monster_names: ['lurch'],
+            lordName: 'Skrabl',
             stats: {
                 hp: 80,
                 atk: 7,
@@ -604,6 +610,7 @@ export function MonsterManager() {
             key: 'beholder',
             image_names: ['beholder'],
             monster_names: ['Nirnuceks', 'Adalak', 'Vemrindon', 'Sardaresh'],
+            lordName: 'The Great Tyrant',
             stats: {
                 hp: 310,
                 atk: 15,

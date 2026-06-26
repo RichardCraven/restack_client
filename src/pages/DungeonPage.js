@@ -393,14 +393,30 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                 </div>
             )}
 
-            {modalType === 'PrepComplete' && (
-                <div>
-                    <p>Spell preparation completed.</p>
-                    {(updates || []).map((update, i) => (
-                        <div key={i}>{update.text}</div>
-                    ))}
-                </div>
-            )}
+            {modalType === 'PrepComplete' && (() => {
+                const firstUpdate = (updates && updates[0]) || {};
+                const actionType = firstUpdate.actionType || '';
+                
+                let title = "Preparation completed.";
+                if (actionType === 'tactics') {
+                    title = "Tactic preparation completed.";
+                } else if (actionType === 'compound' || actionType === 'brew') {
+                    title = "Alchemy preparation completed.";
+                } else if (actionType === 'inner_discipline') {
+                    title = "Inner discipline training completed.";
+                } else if (actionType === 'glyph') {
+                    title = "Glyph etching completed.";
+                }
+
+                return (
+                    <div>
+                        <p>{title}</p>
+                        {(updates || []).map((update, i) => (
+                            <div key={i}>{update.text}</div>
+                        ))}
+                    </div>
+                );
+            })()}
 
             {modalType === 'RitualComplete' && (
                 <div className="ritual-complete-zone">
@@ -965,7 +981,7 @@ class DungeonPage extends React.Component {
                 new Date(character.tattooImprinting.endDate) > new Date();
             actions.push({
                 type: 'imprint_tattoo',
-                name: 'Imprint Tattoo',
+                name: 'Tattoos',
                 iconUrl: images['tattoo_ink'] || images['tattoo_placeholder'] || '',
                 noMaxCap: true,
                 disabled: tattoos.length >= 8 || isImprinting,
@@ -1858,10 +1874,10 @@ class DungeonPage extends React.Component {
         this._nextPlaceholderId = 1;
         this._lastDrawTimestamp = 0;
         this._fpsLimit = 30; // cap draw loop to 30fps
-        // Breadcrumb trail: Map keyed "boardIndex:row:col" → { boardIndex, row, col, ts, seq }
         this._breadcrumbs = new Map();
         this._breadcrumbSeq = 0;
         this._monsterSightings = new Map();
+        this._wasPoiPanelExpanded = !!((getMeta() || {}).camping);
         this.state = {
             tileSize: 0,
             boardSize: 0,
@@ -1876,7 +1892,7 @@ class DungeonPage extends React.Component {
             currentBoard: '',
             leftPanelExpanded: false,
             rightPanelExpanded: false,
-            poiPanelExpanded: true,
+            poiPanelExpanded: !((getMeta() || {}).camping),
 
             inventoryHoverMatrix: {},
             crewHoverMatrix: {},
@@ -2935,13 +2951,7 @@ class DungeonPage extends React.Component {
         const end = new Date(member.tattooImprinting.endDate);
         const diff = end - new Date();
         if (diff <= 0) return 'Finishing...';
-        const totalMin = Math.floor(diff / 60000);
-        const days = Math.floor(totalMin / 1440);
-        const hrs  = Math.floor((totalMin % 1440) / 60);
-        const mins = totalMin % 60;
-        if (days > 0) return `Imprinting... ${days}d ${hrs}h`;
-        if (hrs > 0)  return `Imprinting... ${hrs}h ${mins}m`;
-        return `Imprinting... ${mins}m`;
+        return 'Imprinting...';
     }
 
     pickRandomBoardForScout = () => {
@@ -9156,7 +9166,7 @@ class DungeonPage extends React.Component {
                     sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }],
                     soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: 'Party Resolve never drops below 20 from deaths' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }, { key: 'strong_resolve', name: 'Strong Resolve', desc: 'Reduces Resolve penalties by 40%/75%/90%.' }],
                     wizard:   [{ key: 'arcane_sense', name: 'Arcane Sense', desc: 'Identifies chest tier before opening' }, { key: 'ley_tap', name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' }, { key: 'dimensional_pocket', name: 'Dimensional Pocket', desc: '+2 shared inventory slots' }, { key: 'scry', name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' }],
-                    barbarian:[{ key: 'iron_gut', name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' }, { key: 'savage_haul', name: 'Savage Haul', desc: 'Heavy items take only 1 inventory slot' }, { key: 'bloodhound', name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' }, { key: 'endure', name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' }],
+                    barbarian:[{ key: 'iron_gut', name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' }, { key: 'savage_haul', name: 'Savage Haul', desc: 'Grants +2/+4/+6 Strength and +10/+20/+30 Max HP' }, { key: 'bloodhound', name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' }, { key: 'endure', name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' }],
                     monk:     [{ key: 'swift_step', name: 'Swift Step', desc: 'Movement animation 30% faster' }, { key: 'focused_rest', name: 'Focused Rest', desc: 'Camping duration -30% (same healing)' }, { key: 'pressure_points', name: 'Pressure Points', desc: '15% vendor discount once per vendor' }, { key: 'astral_map', name: 'Astral Map', desc: 'Full fog reveal for 60s once per run' }],
                     summoner: [{ key: 'spirit_sight', name: 'Spirit Sight', desc: 'Narrative tiles glow through fog' }, { key: 'plunder', name: 'Plunder', desc: 'Open a chest a second time once per run' }, { key: 'soul_tithe', name: 'Soul Tithe', desc: '+1 Shimmering Dust per combat victory' }, { key: 'dark_pact', name: 'Dark Pact', desc: 'Trade Shimmering Dust at vendors (1 Dust = 25g)' }],
                 };
@@ -10884,7 +10894,7 @@ class DungeonPage extends React.Component {
                                 dimensional_pocket: { name: 'Dimensional Pocket', desc: '+2 shared inventory slots' },
                                 scry: { name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' },
                                 iron_gut: { name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' },
-                                savage_haul: { name: 'Savage Haul', desc: 'Heavy items take only 1 inventory slot' },
+                                savage_haul: { name: 'Savage Haul', desc: 'Grants +2/+4/+6 Strength and +10/+20/+30 Max HP' },
                                 bloodhound: { name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' },
                                 endure: { name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' },
                                 swift_step: { name: 'Swift Step', desc: 'Movement animation 30% faster' },
@@ -12364,8 +12374,9 @@ class DungeonPage extends React.Component {
                                             {item && (
                                                 <div className="idp-icon" style={{ position: 'relative', overflow: 'hidden' }}>
                                                     {item.type === 'soul_shard' ? (() => {
-                                                        const monsterType = item.monsterType;
-                                                        const portraitUrl = images[monsterType] || images[`${monsterType}_portrait`] || images[`${monsterType}_portrait2`] || null;
+                                                        const monsterType = item.monsterType || '';
+                                                        const mTypeLower = monsterType.toLowerCase();
+                                                        const portraitUrl = images[monsterType] || images[mTypeLower] || images[`${mTypeLower}_portrait`] || images[`${mTypeLower}_portrait2`] || null;
                                                         return (
                                                             <>
                                                                 {portraitUrl && (

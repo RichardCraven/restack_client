@@ -722,15 +722,20 @@ export default function CombatGrid(props) {
                 }
             }
         });
-        return () => {
-            Object.values(deathTimeoutsRef.current).forEach(item => {
-                if (item.timeout) clearTimeout(item.timeout);
-                if (item.animId) cancelAnimationFrame(item.animId);
-            });
-            deathTimeoutsRef.current = {};
-        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [battleData]);
+
+    React.useEffect(() => {
+        const timeouts = deathTimeoutsRef.current;
+        return () => {
+            if (timeouts) {
+                Object.values(timeouts).forEach(item => {
+                    if (item.timeout) clearTimeout(item.timeout);
+                    if (item.animId) cancelAnimationFrame(item.animId);
+                });
+            }
+        };
+    }, []);
 
     // ── Damage indicator system ───────────────────────────────────────────────
     const [visibleDamageIndicators, setVisibleDamageIndicators] = React.useState({});
@@ -1928,14 +1933,6 @@ export default function CombatGrid(props) {
                         transition: typeof unit.opacityTransition === 'string' ? unit.opacityTransition : 'opacity 0.25s ease-in-out'
                     }}
                 >
-                    {unit.isLord && unit.lordBadge && (
-                        <div 
-                            className="lord-badge"
-                            style={{
-                                backgroundImage: `url(${resolvePortrait(images[`${unit.lordBadge}_badge`])})`
-                            }}
-                        />
-                    )}
                     <div
                         className={portraitClasses}
                         style={{
@@ -1968,6 +1965,14 @@ export default function CombatGrid(props) {
                             }
                         }}
                     >
+                        {unit.isLord && unit.lordBadge && (
+                            <div 
+                                className="lord-badge"
+                                style={{
+                                    backgroundImage: `url("${resolvePortrait(`${unit.lordBadge}_badge`)}")`
+                                }}
+                            />
+                        )}
                         {SHOW_MONSTER_IDS ? unit.id : null}
                         {unit.wounded && <div className="hit-flash-overlay" />}
                         {unit.type === 'darkness_sphere' && (

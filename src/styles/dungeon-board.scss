@@ -323,7 +323,8 @@
         .quick-actions-strip {
             padding: 6px 8px;
             border-top: 1px solid rgba(255,255,255,0.08);
-            height: 106px;
+            height: auto;
+            min-height: 122px; /* Prevent height shift during recuperating state */
             box-sizing: border-box;
 
             /* Camp progress overlay — same rules as .crew-actions-tray */
@@ -399,6 +400,7 @@
             font-size: 12px;
             text-align: left;
             padding: 5px 8px;
+            height: 26px; /* fixed height to ensure precise height calculations */
             cursor: pointer;
             border-radius: 5px;
             width: 100%;

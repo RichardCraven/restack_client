@@ -178,14 +178,30 @@ const SkillTree = ({ crewMember, onClose }) => {
                                             });
                                             const isKnown = skill.knownByDefault || !!gsRecord;
                                             const level = gsRecord ? (typeof gsRecord === 'string' ? 1 : (gsRecord.level || 1)) : (skill.knownByDefault ? 1 : 0);
+                                            
+                                            let finalSkill = { ...skill };
+                                            if (skill.id === 'heal') {
+                                                const effectiveLevel = Math.max(1, level);
+                                                if (effectiveLevel === 1) {
+                                                    finalSkill.range = 'close';
+                                                    finalSkill.desc = 'Restore 30 HP to an ally.';
+                                                } else if (effectiveLevel === 2) {
+                                                    finalSkill.range = 'medium';
+                                                    finalSkill.desc = 'Restore 30 HP to an ally.';
+                                                } else if (effectiveLevel === 3) {
+                                                    finalSkill.range = 'medium';
+                                                    finalSkill.desc = 'Restore 45 HP to an ally.';
+                                                }
+                                            }
+
                                             return (
                                                 <div 
                                                     key={skill.id} 
                                                     ref={(el) => setNodeRef(skill.id, el)}
                                                     className={`skill-node ${isKnown ? 'known' : 'locked'}`}
-                                                    title={`${skill.name}\n${skill.desc}${level > 0 ? `\nLevel: ${level}` : ''}\nCooldown: ${skill.cooldown}`}
+                                                    title={`${finalSkill.name}\n${finalSkill.desc}${level > 0 ? `\nLevel: ${level}` : ''}\nCooldown: ${finalSkill.cooldown}`}
                                                     onClick={() => setSelectedSkill({
-                                                        ...skill,
+                                                        ...finalSkill,
                                                         isKnown,
                                                         level
                                                     })}

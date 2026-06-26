@@ -84,6 +84,7 @@ class ShrineScreen extends React.Component {
             currentRound: 1,
             totalRounds: TOTAL_ROUNDS,
             roundTimeRemainingRatio: 1,
+            concentrationProgress: 0,
 
             // ── Log messages
             log: [],
@@ -186,7 +187,8 @@ class ShrineScreen extends React.Component {
 
             this.setState({
                 battleData: cloned,
-                currentRound: this.combatManager.round,
+                currentRound: Math.min(TOTAL_ROUNDS, Math.floor(this.combatManager.concentrationProgress || 0) + 1),
+                concentrationProgress: this.combatManager.concentrationProgress || 0,
                 roundTimeRemainingRatio: this.combatManager.roundTimeRemainingRatio !== undefined ? this.combatManager.roundTimeRemainingRatio : 1,
                 log: combatLog
             }, () => {
@@ -459,8 +461,8 @@ class ShrineScreen extends React.Component {
             }
         }
 
-        // 2. Check if 6 rounds have completed
-        if (this.combatManager && this.combatManager.round >= 7) {
+        // 2. Check if concentration is fully charged (6 rounds of progress)
+        if (this.combatManager && this.combatManager.concentrationProgress >= TOTAL_ROUNDS) {
             if (this.combatManager) this.combatManager.shutdown();
             this.setState({
                 phase: 'done',
@@ -514,7 +516,7 @@ class ShrineScreen extends React.Component {
             sage:     [{ key: 'herbalism', name: 'Herbalism', desc: 'Camp costs 1 less food per member' }, { key: 'mend', name: 'Mend', desc: 'Out-of-combat potions restore +15% HP' }, { key: 'ritual_efficiency', name: 'Ritual Efficiency', desc: 'Ritual prep time -25%' }, { key: 'revive', name: 'Revive', desc: 'Once per run: fallen member revived at 25% HP' }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }],
             soldier:  [{ key: 'fortify', name: 'Fortify', desc: 'Resolve does not decay while camping' }, { key: 'breacher', name: 'Breacher', desc: 'Force open a Minor Key gate once per level' }, { key: 'rally', name: 'Rally', desc: '+5 bonus Resolve on combat victory' }, { key: 'iron_will', name: 'Iron Will', desc: "Party Resolve never drops below 20 from deaths" }, { key: 'awake_refreshed', name: 'Awake Refreshed', desc: 'Recuperates an additional +10/+20/+40 Resolve after camping.' }, { key: 'strong_resolve', name: 'Strong Resolve', desc: 'Reduces Resolve penalties by 40%/75%/90%.' }],
             wizard:   [{ key: 'arcane_sense', name: 'Arcane Sense', desc: 'Identifies chest tier before opening' }, { key: 'ley_tap', name: 'Ley Tap', desc: 'Draw energy at Magic Nexus — recover 15% endurance' }, { key: 'dimensional_pocket', name: 'Dimensional Pocket', desc: '+2 shared inventory slots' }, { key: 'scry', name: 'Scry', desc: 'Reveals all chests and monsters for 30s once per run' }],
-            barbarian:[{ key: 'iron_gut', name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' }, { key: 'savage_haul', name: 'Savage Haul', desc: 'Heavy items take only 1 inventory slot' }, { key: 'bloodhound', name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' }, { key: 'endure', name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' }],
+            barbarian:[{ key: 'iron_gut', name: 'Iron Gut', desc: 'Barbarian does not count toward camping food cost' }, { key: 'savage_haul', name: 'Savage Haul', desc: 'Grants +2/+4/+6 Strength and +10/+20/+30 Max HP' }, { key: 'bloodhound', name: 'Bloodhound', desc: 'Reveals all monsters on miniboard entry' }, { key: 'endure', name: 'Endure', desc: 'Zero-food camp: no Resolve penalty, crew heals to 50%' }],
             monk:     [{ key: 'swift_step', name: 'Swift Step', desc: 'Movement animation 30% faster' }, { key: 'focused_rest', name: 'Focused Rest', desc: 'Camping duration -30% (same healing)' }, { key: 'pressure_points', name: 'Pressure Points', desc: '15% vendor discount once per vendor' }, { key: 'astral_map', name: 'Astral Map', desc: 'Full fog reveal for 60s once per run' }],
             summoner: [{ key: 'spirit_sight', name: 'Spirit Sight', desc: 'Narrative tiles glow through fog' }, { key: 'plunder', name: 'Plunder', desc: 'Open a chest a second time once per run' }, { key: 'soul_tithe', name: 'Soul Tithe', desc: '+1 Shimmering Dust per combat victory' }, { key: 'dark_pact', name: 'Dark Pact', desc: 'Trade Shimmering Dust at vendors (1 Dust = 25g)' }],
         };
@@ -539,7 +541,7 @@ class ShrineScreen extends React.Component {
 
     render() {
         const { shrineData } = this.props;
-        const { phase, stoneTileMap, currentRound, totalRounds, roundTimeRemainingRatio, log, outcome, showSkillSelect } = this.state;
+        const { phase, stoneTileMap, currentRound, totalRounds, log, outcome, showSkillSelect } = this.state;
 
         const shrineClass = shrineData && shrineData.shrineClass;
         const classLabel = shrineClass ? capitalize(shrineClass) : 'Unknown';
@@ -694,9 +696,8 @@ class ShrineScreen extends React.Component {
                                 </div>
                                 <div style={{ background: 'rgba(0,0,0,0.7)', borderRadius: '3px', height: '8px', border: '1px solid rgba(201,162,39,0.4)', overflow: 'hidden' }}>
                                     {(() => {
-                                        const elapsedInRound = 1 - (roundTimeRemainingRatio !== undefined ? roundTimeRemainingRatio : 1);
-                                        const completedRounds = (currentRound - 1) + elapsedInRound;
-                                        const smoothProgressPct = Math.min(100, Math.max(0, (completedRounds / totalRounds) * 100));
+                                        const progress = this.state.concentrationProgress !== undefined ? this.state.concentrationProgress : 0;
+                                        const smoothProgressPct = Math.min(100, Math.max(0, (progress / totalRounds) * 100));
                                         return (
                                             <div style={{
                                                 height: '100%',

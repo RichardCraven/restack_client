@@ -495,7 +495,7 @@
             // Center them fully within the available space.
             .crew-panels {
                 min-height: 480px;
-                max-height: 520px;
+                max-height: 600px;
                 justify-content: center;    // center the single panel horizontally
                 align-items: center;        // center it vertically too
                 align-content: center;      // needed when flex-wrap: wrap

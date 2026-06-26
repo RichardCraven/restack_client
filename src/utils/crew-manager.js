@@ -190,13 +190,29 @@ export function CrewManager(){
             s.def = combine(defCon[0]);
         }
 
-    // HP (max hitpoints) = baseHp + fortitude-derived contribution
-    const hpCon = this.statConstituents.hp.all[0];
-    const fortContribution = combine(hpCon);
-    // ensure baseHp exists (should be set during initialization/add)
-    const baseHp = (typeof s.baseHp === 'number') ? s.baseHp : 10;
-    s.hp = baseHp + fortContribution;
-    member.starting_hp = s.hp;
+        // Ensure we preserve the raw un-boosted base stats for recalculations
+        if (typeof s.baseStr !== 'number') s.baseStr = s.str || 1;
+        if (typeof s.rawBaseHp !== 'number') s.rawBaseHp = s.baseHp || 10;
+
+        let savageHaulStr = 0;
+        let savageHaulHp = 0;
+        if (Array.isArray(member.globalSkills)) {
+            const shSkill = member.globalSkills.find(g => g && (g === 'savage_haul' || g.key === 'savage_haul'));
+            if (shSkill) {
+                const lvl = typeof shSkill === 'string' ? 1 : (shSkill.level || 1);
+                savageHaulStr = lvl === 3 ? 6 : (lvl === 2 ? 4 : 2);
+                savageHaulHp = lvl === 3 ? 30 : (lvl === 2 ? 20 : 10);
+            }
+        }
+
+        s.str = s.baseStr + savageHaulStr;
+        s.baseHp = s.rawBaseHp + savageHaulHp;
+
+        // HP (max hitpoints) = baseHp + fortitude-derived contribution
+        const hpCon = this.statConstituents.hp.all[0];
+        const fortContribution = combine(hpCon);
+        s.hp = s.baseHp + fortContribution;
+        member.starting_hp = s.hp;
 
         // Energy (max energy)
         const enCon = this.statConstituents.energy.all[0];
@@ -286,39 +302,48 @@ export function CrewManager(){
         switch (crewMember.type) {
             case 'wizard':
                 crewMember.stats.int = (crewMember.stats.int || 0) + 1;
+                if (typeof crewMember.stats.baseInt === 'number') crewMember.stats.baseInt += 1;
                 gains.int = 1;
                 break;
             case 'summoner':
                 crewMember.stats.int = (crewMember.stats.int || 0) + 1;
+                if (typeof crewMember.stats.baseInt === 'number') crewMember.stats.baseInt += 1;
                 gains.int = 1;
                 break;
             case 'engineer':
                 crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
+                if (typeof crewMember.stats.baseDex === 'number') crewMember.stats.baseDex += 1;
                 gains.dex = 1;
                 break;
             case 'ranger':
                 crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
+                if (typeof crewMember.stats.baseDex === 'number') crewMember.stats.baseDex += 1;
                 gains.dex = 1;
                 break;
             case 'sage':
                 crewMember.stats.int = (crewMember.stats.int || 0) + 1;
+                if (typeof crewMember.stats.baseInt === 'number') crewMember.stats.baseInt += 1;
                 gains.int = (gains.int || 0) + 1;
                 break;
             case 'monk':
                 crewMember.stats.dex = (crewMember.stats.dex || 0) + 1;
+                if (typeof crewMember.stats.baseDex === 'number') crewMember.stats.baseDex += 1;
                 gains.dex = (gains.dex || 0) + 1;
                 break;
             case 'soldier':
                 crewMember.stats.str = (crewMember.stats.str || 0) + 1;
+                if (typeof crewMember.stats.baseStr === 'number') crewMember.stats.baseStr += 1;
                 gains.str = 1;
                 break;
             case 'barbarian':
                 crewMember.stats.str = (crewMember.stats.str || 0) + 1;
+                if (typeof crewMember.stats.baseStr === 'number') crewMember.stats.baseStr += 1;
                 gains.str = (gains.str || 0) + 1;
                 break;
             default:
                 // Fallback: give +1 to fort if type unknown
                 crewMember.stats.fort = (crewMember.stats.fort || 0) + 1;
+                if (typeof crewMember.stats.baseFort === 'number') crewMember.stats.baseFort += 1;
                 gains.fort = 1;
                 break;
         }
@@ -332,6 +357,7 @@ export function CrewManager(){
         // Increase baseHp by 5 on level-up, then recompute derived stats
     try {
         crewMember.stats.baseHp = (typeof crewMember.stats.baseHp === 'number') ? crewMember.stats.baseHp + 5 : ((crewMember.type === 'barbarian') ? 12 + 5 : 10 + 5);
+        if (typeof crewMember.stats.rawBaseHp === 'number') crewMember.stats.rawBaseHp += 5;
     } catch (e) {
         console.warn('levelUp: failed to increment baseHp', e, crewMember);
     }
@@ -374,7 +400,13 @@ export function CrewManager(){
             if (!crewMember || !crewMember.stats) return;
             if (choices && choices.attrBoost) {
                 const { stat, amount } = choices.attrBoost;
-                if (stat && typeof amount === 'number') crewMember.stats[stat] = (crewMember.stats[stat] || 0) + amount;
+                if (stat && typeof amount === 'number') {
+                    crewMember.stats[stat] = (crewMember.stats[stat] || 0) + amount;
+                    if (stat === 'str' && typeof crewMember.stats.baseStr === 'number') crewMember.stats.baseStr += amount;
+                    if (stat === 'int' && typeof crewMember.stats.baseInt === 'number') crewMember.stats.baseInt += amount;
+                    if (stat === 'dex' && typeof crewMember.stats.baseDex === 'number') crewMember.stats.baseDex += amount;
+                    if (stat === 'fort' && typeof crewMember.stats.baseFort === 'number') crewMember.stats.baseFort += amount;
+                }
             }
             if (choices && choices.skillKey) {
                 if (!Array.isArray(crewMember.skills)) crewMember.skills = [];
@@ -384,6 +416,12 @@ export function CrewManager(){
                 const dust = choices.dustBonus;
                 if ((dust.type === 'physical' || dust.type === 'arcane') && dust.stat) {
                     crewMember.stats[dust.stat] = (crewMember.stats[dust.stat] || 0) + (dust.amount || 2);
+                    const stat = dust.stat;
+                    const amount = dust.amount || 2;
+                    if (stat === 'str' && typeof crewMember.stats.baseStr === 'number') crewMember.stats.baseStr += amount;
+                    if (stat === 'int' && typeof crewMember.stats.baseInt === 'number') crewMember.stats.baseInt += amount;
+                    if (stat === 'dex' && typeof crewMember.stats.baseDex === 'number') crewMember.stats.baseDex += amount;
+                    if (stat === 'fort' && typeof crewMember.stats.baseFort === 'number') crewMember.stats.baseFort += amount;
                 }
                 if ((dust.type === 'skill' || dust.type === 'supreme') && dust.skillKey) {
                     if (!Array.isArray(crewMember.skills)) crewMember.skills = [];
@@ -392,6 +430,10 @@ export function CrewManager(){
                 if (dust.type === 'supreme') {
                     ['str', 'int', 'dex', 'fort'].forEach(s => {
                         crewMember.stats[s] = (crewMember.stats[s] || 0) + 1;
+                        if (s === 'str' && typeof crewMember.stats.baseStr === 'number') crewMember.stats.baseStr += 1;
+                        if (s === 'int' && typeof crewMember.stats.baseInt === 'number') crewMember.stats.baseInt += 1;
+                        if (s === 'dex' && typeof crewMember.stats.baseDex === 'number') crewMember.stats.baseDex += 1;
+                        if (s === 'fort' && typeof crewMember.stats.baseFort === 'number') crewMember.stats.baseFort += 1;
                     });
                 }
             }

@@ -2311,7 +2311,11 @@ class MonsterBattle extends React.Component {
             <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
                 {/* Monster name in upper left */}
                 <div style={{ position: 'absolute', top: -35, left: 20, color: 'white', fontSize: '18px', zIndex: 1000 }}>
-                    {this.props.monster && this.props.monster.name ? `Fighting: ${this.props.monster.name}` : 'Fighting: Unknown'}
+                    {(() => {
+                        const liveMonster = this.monster();
+                        const name = liveMonster?.name || this.props.monster?.name;
+                        return name ? `Fighting: ${name}` : 'Fighting: Unknown';
+                    })()}
                 </div>
                 {/* Game speed / Round clock readout in upper right */}
                 <div style={{ position: 'absolute', top: -45, right: 20, display: 'flex', alignItems: 'center', gap: '15px', color: 'white', fontSize: '14px', zIndex: 1000 }}>
@@ -3067,7 +3071,6 @@ class MonsterBattle extends React.Component {
 
                             {/* LEFT COLUMN: stat bars + current target */}
                             <div className="redux-stats-col">
-                                <div className="interaction-header">Status</div>
 
                                 {/* ── Active Battle Tactic badge ──────────────── */}
                                 {(() => {
@@ -3353,7 +3356,6 @@ class MonsterBattle extends React.Component {
 
                             {/* MIDDLE COLUMN: ability cooldown grid */}
                             <div className="redux-abilities-col">
-                                <div className="interaction-header">Abilities</div>
                                 <div className="interaction-tile-container">
                                     {liveSelectedFighter && (() => {
                                         const rawSpecials = [
@@ -3523,7 +3525,6 @@ class MonsterBattle extends React.Component {
                         /* ── Legacy Manual Mode ─────────────────────────────────────────── */
                         <div className="interaction-row">
                             <div className="inventory-col">
-                                <div className="interaction-header">Consumables</div>
                                 <div className="interaction-tooltip" style={{ fontSize: this.state.hoveredInventoryTile?.length > 8 ? '10px' : 'inherit' }}>{this.state.hoveredInventoryTile}</div>
                                 <div className="interaction-tile-container">
                                     {this.state.selectedFighter && (() => {

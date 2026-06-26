@@ -246,7 +246,7 @@ const skillsMatrix = {
         cooldown: 2,
         initialCooldown: 1,
         duration: 'instant',
-        range: 'medium',
+        range: 'close',
         type: 'heal',
         flatDamage: -30, // negative damage is healing
         regeneration_percent: 30
@@ -757,7 +757,7 @@ const skillsMatrix = {
         id: 'savage_haul',
         tier: 2,
         name: 'Savage Haul',
-        desc: 'Heavy items take only 1 inventory slot.',
+        desc: 'Grants +2/+4/+6 Strength and +10/+20/+30 Max HP.',
         icon: images.savage_haul_barbarian,
         cooldown: 0,
         type: 'passive',

@@ -218,6 +218,7 @@ export function CombatManagerRedux() {
         this.vctByMonster = {};
         this.pendingBombardments = [];
         this.bombardWarnings = null;
+        this.concentrationProgress = 0;
         this.meteorWarnings = null;
         if (typeof this.updateData === 'function') this.updateData({});
     };
@@ -250,21 +251,38 @@ export function CombatManagerRedux() {
         const key = (specialKey || '').toString();
         const normalized = key.replace(/\s+/g, '_').toLowerCase();
         let arr = [];
+        let caller = null;
         if (callerOrArray) {
             if (Array.isArray(callerOrArray.skills)) arr = arr.concat(callerOrArray.skills);
             if (Array.isArray(callerOrArray.specials)) arr = arr.concat(callerOrArray.specials);
             if (Array.isArray(callerOrArray.attacks)) arr = arr.concat(callerOrArray.attacks);
             if (Array.isArray(callerOrArray.specialActions)) arr = arr.concat(callerOrArray.specialActions);
             if (Array.isArray(callerOrArray)) arr = arr.concat(callerOrArray);
+            if (!Array.isArray(callerOrArray)) {
+                caller = callerOrArray;
+            }
         }
 
-        const applyBlalokOverrides = (ability) => {
+        const applyOverrides = (ability) => {
             if (!ability) return ability;
-            if (callerOrArray && (callerOrArray.type === 'blalok' || callerOrArray.key === 'blalok' || callerOrArray.image === 'blalok')) {
+            if (caller && (caller.type === 'blalok' || caller.key === 'blalok' || caller.image === 'blalok')) {
                 if (ability.id === 'claw_strike' || ability.key === 'claw_strike') ability.icon = images.blalok_claw_strike;
                 if (ability.id === 'bite' || ability.key === 'bite') ability.icon = images.blalok_bite;
                 if (ability.id === 'regenerate' || ability.key === 'regenerate') ability.icon = images.blalok_regenerate;
                 if (ability.id === 'sacrificial_mending' || ability.key === 'sacrificial_mending') ability.icon = images.blalok_sacrificial_mending;
+            }
+            if (ability.id === 'heal' && caller) {
+                const lvl = this.getSkillLevel(caller, 'heal');
+                if (lvl === 1) {
+                    ability.range = 'close';
+                    ability.flatDamage = -30;
+                } else if (lvl === 2) {
+                    ability.range = 'medium';
+                    ability.flatDamage = -30;
+                } else if (lvl === 3) {
+                    ability.range = 'medium';
+                    ability.flatDamage = -45;
+                }
             }
             return ability;
         };
@@ -276,7 +294,7 @@ export function CombatManagerRedux() {
                     const sNorm = s.replace(/\s+/g, '_').toLowerCase();
                     if (s.toLowerCase() === key.toLowerCase() || sNorm === normalized) {
                         const expanded = specialsMatrix[normalized] || attacksMatrix[normalized];
-                        if (expanded) return applyBlalokOverrides(clone(expanded));
+                        if (expanded) return applyOverrides(clone(expanded));
                         if (normalized === 'loose') {
                             return {
                                 id: 'loose',
@@ -289,14 +307,14 @@ export function CombatManagerRedux() {
                         return { name: key };
                     }
                 } else if (typeof s === 'object') {
-                    if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return applyBlalokOverrides(clone(s));
-                    if (s.key && s.key.toLowerCase() === normalized) return applyBlalokOverrides(clone(s));
-                    if (s.id && s.id.toLowerCase() === normalized) return applyBlalokOverrides(clone(s));
+                    if (s.name && (s.name.toLowerCase() === key.toLowerCase() || s.name.toLowerCase() === normalized)) return applyOverrides(clone(s));
+                    if (s.key && s.key.toLowerCase() === normalized) return applyOverrides(clone(s));
+                    if (s.id && s.id.toLowerCase() === normalized) return applyOverrides(clone(s));
                 }
             }
         }
         const expanded = specialsMatrix[normalized] || attacksMatrix[normalized];
-        if (expanded) return applyBlalokOverrides(clone(expanded));
+        if (expanded) return applyOverrides(clone(expanded));
         if (normalized === 'loose') {
             return {
                 id: 'loose',
@@ -322,6 +340,13 @@ export function CombatManagerRedux() {
             this.roundDurationMs = 1000;
         }
     };
+
+    try {
+        const meta = getMeta();
+        if (meta && INTERVALS.includes(meta.combatSpeed)) {
+            this.updateAllFightIntervals(meta.combatSpeed);
+        }
+    } catch (e) {}
 
     this.setSelectedFighter = (selectedFighter) => {
         this.selectedFighter = selectedFighter;
@@ -423,9 +448,7 @@ export function CombatManagerRedux() {
             const roll = Math.random();
             const isLord = (typeof this.data.monster.isLord === 'boolean') 
                 ? this.data.monster.isLord 
-                : (process.env.NODE_ENV !== 'test' && roll < 0.80);
-
-            console.log(`[CombatManagerRedux] Lord check for "${this.data.monster.name || this.data.monster.type}": predefined isLord = ${typeof this.data.monster.isLord === 'boolean' ? this.data.monster.isLord : 'none'}, rolled = ${roll.toFixed(4)} (threshold < 0.80), result = ${isLord}`);
+                : (process.env.NODE_ENV !== 'test' && roll < 0.15);
 
             if (isLord) {
                 this.data.monster.isLord = true;
@@ -434,19 +457,23 @@ export function CombatManagerRedux() {
                     this.data.monster.lordBadge = badges[Math.floor(Math.random() * badges.length)];
                 }
                 
-                // Mutate the name to "<monster name> lord of <badge type>"
+                // Mutate the name to "<lordName> of <badge type>" if lordName is defined, otherwise "<monster name> lord of <badge type>"
                 const badgeTitle = this.data.monster.lordBadge.charAt(0).toUpperCase() + this.data.monster.lordBadge.slice(1);
-                this.data.monster.name = `${this.data.monster.name} lord of ${badgeTitle}`;
+                if (this.data.monster.lordName) {
+                    this.data.monster.name = `${this.data.monster.lordName} of ${badgeTitle}`;
+                } else {
+                    this.data.monster.name = `${this.data.monster.name} lord of ${badgeTitle}`;
+                }
 
-                // Double HP
+                // Boost HP by 50%
                 if (this.data.monster.stats && typeof this.data.monster.stats.hp === 'number') {
-                    this.data.monster.stats.hp *= 2;
+                    this.data.monster.stats.hp = Math.floor(this.data.monster.stats.hp * 1.5);
                 }
                 if (typeof this.data.monster.hp === 'number') {
-                    this.data.monster.hp *= 2;
+                    this.data.monster.hp = Math.floor(this.data.monster.hp * 1.5);
                 }
                 if (typeof this.data.monster.starting_hp === 'number') {
-                    this.data.monster.starting_hp *= 2;
+                    this.data.monster.starting_hp = Math.floor(this.data.monster.starting_hp * 1.5);
                 }
 
                 // 33% boost to Intelligence (floored)
@@ -465,7 +492,7 @@ export function CombatManagerRedux() {
                     ? this.data.monster.stats.int
                     : (typeof this.data.monster.int === 'number' ? this.data.monster.int : null);
 
-                console.log(`[CombatManagerRedux] Lord stats boosted for "${this.data.monster.name}": HP doubled, INT boosted from ${oldInt} to ${newInt}`);
+                console.log(`[CombatManagerRedux] Lord stats boosted for "${this.data.monster.name}": HP boosted by 50%, INT boosted from ${oldInt} to ${newInt}`);
 
                 // Spawn an additional minion of the lowest tier
                 if (this.data.minions && this.data.minions.length > 0) {
@@ -673,6 +700,9 @@ export function CombatManagerRedux() {
         const monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
         monster.isShrineGuardian = this.data.monster.isShrineGuardian;
+        monster.isLord = this.data.monster.isLord;
+        monster.lordBadge = this.data.monster.lordBadge;
+        monster.lordName = this.data.monster.lordName;
         monster.tier = this.data.monster.tier;
         monster.maxEndurance = this.data.monster.stats.vitality || Math.round(20 + (this.data.monster.stats.def || 5) * 2);
         monster.endurance = monster.maxEndurance;
@@ -1102,6 +1132,9 @@ export function CombatManagerRedux() {
             )
         );
 
+        if (isHuge && y < 2) return false;
+        if (isLarge && y < 1) return false;
+
         if (isHuge) {
             const hOffset = (x >= 4) ? -1 : 1;
             const extraCoords = [
@@ -1140,14 +1173,44 @@ export function CombatManagerRedux() {
         if (unit.type === 'dragon_egg' || unit.type === 'trials_icon' || unit.isTrialIcon || unit.type === 'darkness_sphere') {
             return;
         }
+
+        const isHuge = !unit.isShrineGuardian && (
+            (typeof unit.huge === 'boolean' && unit.huge === true)
+            || (unit.type === 'dragon')
+            || (unit.tier === 4)
+            || (typeof unit.size === 'number' && unit.size === 3)
+            || (typeof unit.scale === 'number' && unit.scale === 3)
+        );
+
+        const LARGE_COMBAT_KEYS = ['dragon', 'beholder', 'ogre', 'sphinx', 'manticore', 'wyvern', 'wyvern_alt', 'mummy', 'djinn', 'vampire', 'summoned_djinn', 'summoned_mummy', 'summoned_ogre', 'summoned_vampire'];
+        const isLarge = !unit.isShrineGuardian && (
+            !isHuge && (
+                (typeof unit.large === 'boolean' && unit.large === true)
+                || (unit.type && LARGE_COMBAT_KEYS.includes(unit.type) && (unit.isMinion !== true || unit.tier === 3 || unit.tier === 4))
+                || (typeof unit.size === 'number' && unit.size >= 2)
+                || (typeof unit.scale === 'number' && unit.scale >= 2)
+                || (unit.isMonster === true && (unit.isMinion !== true || unit.tier === 3 || unit.tier === 4))
+                || (unit.tier === 3)
+            )
+        );
+
+        let clampedY = ny;
+        if (isHuge) {
+            clampedY = Math.max(2, ny);
+        } else if (isLarge) {
+            clampedY = Math.max(1, ny);
+        } else {
+            clampedY = Math.max(0, ny);
+        }
+
         const ox = unit.coordinates.x;
         const oy = unit.coordinates.y;
         unit.coordinates.x = nx;
-        unit.coordinates.y = ny;
+        unit.coordinates.y = clampedY;
         if (nx !== ox) {
             unit.facing = nx > ox ? 'right' : 'left';
-        } else if (ny !== oy) {
-            unit.facing = ny > oy ? 'down' : 'up';
+        } else if (clampedY !== oy) {
+            unit.facing = clampedY > oy ? 'down' : 'up';
         }
         this._setCombatantOccupiedCoords(unit, this.combatants);
         this.syncVCTs();
@@ -1406,6 +1469,23 @@ export function CombatManagerRedux() {
         }
 
         return Math.max(1, finalDamage);
+    };
+
+    this.checkShrinerConcentrationDamage = (attacker, target, damage) => {
+        if (!target || !target.isConcentrating || damage <= 0) return;
+        if (attacker && attacker.isShrineGuardian) {
+            const roll = Math.random();
+            if (roll < 0.33) {
+                this.concentrationProgress = Math.max(0, (this.concentrationProgress || 0) * 0.5);
+                this.appendCombatLog(`⚡ Guardian hit! ${this.getCombatantLogName(target)}'s concentration level reduced by 50%!`);
+            } else if (roll < 0.67) {
+                this.appendCombatLog(`🛡️ Guardian hit! ${this.getCombatantLogName(target)} maintains concentration.`);
+            } else {
+                this.concentrationProgress = 0;
+                this.appendCombatLog(`💥 Guardian hit! ${this.getCombatantLogName(target)}'s concentration level reduced to 0!`);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+        }
     };
 
     this.targetInRange = (caller, target, rangeType) => {
@@ -3459,7 +3539,7 @@ export function CombatManagerRedux() {
         if (woundedPct < 0.7 && this._abilityReady(unit, 'heal')) {
             const pick = this.resolveSpecial(unit, 'heal');
             if (pick && woundedAlly) {
-                const healAmount = 30; // base healing
+                const healAmount = Math.abs(typeof pick.flatDamage === 'number' ? pick.flatDamage : -30);
                 woundedAlly.hp = Math.min(woundedAlly.starting_hp || woundedAlly.hp, woundedAlly.hp + healAmount);
                 woundedAlly.damageIndicators = woundedAlly.damageIndicators || [];
                 woundedAlly.damageIndicators.push({ id: Date.now() + Math.random(), value: `+${healAmount}`, source: 'Healing Hands', type: 'heal' });
@@ -6038,6 +6118,7 @@ export function CombatManagerRedux() {
         }
 
         target.hp = Math.max(0, target.hp - damage);
+        this.checkShrinerConcentrationDamage(spider, target, damage);
 
         target.damageIndicators = target.damageIndicators || [];
         target.damageIndicators.push({
@@ -6088,6 +6169,7 @@ export function CombatManagerRedux() {
             name: `Spider`,
             isMinion: true,
             isMonster: true,
+            isShrineGuardian: spawner.isShrineGuardian,
             dead: false,
             asleep: false,
             sleepRounds: 0,
@@ -6156,6 +6238,7 @@ export function CombatManagerRedux() {
                             if (hit) {
                                 let finalDmg = this.damageCheck(caster || { stats: { atk: 15 } }, c, baseDamage);
                                 c.hp = Math.max(0, c.hp - finalDmg);
+                                this.checkShrinerConcentrationDamage(caster || { isMonster: true, isShrineGuardian: true }, c, finalDmg);
                                 if (finalDmg > 0) {
                                     this.wakeSleepingTarget(c, skillName);
                                 }
@@ -6366,7 +6449,8 @@ export function CombatManagerRedux() {
             if (target && (!!unit.isMonster !== !!target.isMonster)) {
                 return;
             }
-            const healAmount = 30; // base healing
+            const pick = this.resolveSpecial(unit, 'heal');
+            const healAmount = Math.abs(pick && typeof pick.flatDamage === 'number' ? pick.flatDamage : -30);
             const maxHp = target.starting_hp || target.hp || 100;
             const healedHp = Math.min(healAmount, maxHp - target.hp);
             if (healedHp > 0) {
@@ -6642,6 +6726,7 @@ export function CombatManagerRedux() {
                 const dmg = Math.max(1, stamDrain);
                 c.stamina = Math.max(0, (c.stamina || 0) - stamDrain);
                 c.hp = Math.max(0, c.hp - dmg);
+                this.checkShrinerConcentrationDamage(unit, c, dmg);
                 if (!Array.isArray(c.damageIndicators)) c.damageIndicators = [];
                 const indId = Date.now() + Math.random();
                 c.damageIndicators.push({ id: indId, value: `-${dmg}`, source: 'Destitution' });
@@ -7107,6 +7192,7 @@ export function CombatManagerRedux() {
                     const rawDamage = Math.round((unit.stats.atk || 9) * 1.5);
                     const finalDmg = this.damageCheck(unit, c, rawDamage, false);
                     c.hp = Math.max(0, c.hp - finalDmg);
+                    this.checkShrinerConcentrationDamage(unit, c, finalDmg);
                     if (finalDmg > 0) this.wakeSleepingTarget(c, 'Stomp');
                     c.damageIndicators = c.damageIndicators || [];
                     c.damageIndicators.push({
@@ -7159,6 +7245,7 @@ export function CombatManagerRedux() {
                     const rawDamage = unit.stats.atk || 10;
                     const finalDmg = this.damageCheck(unit, c, rawDamage, true);
                     c.hp = Math.max(0, c.hp - finalDmg);
+                    this.checkShrinerConcentrationDamage(unit, c, finalDmg);
                     if (finalDmg > 0) this.wakeSleepingTarget(c, 'Whirlwind');
                     c.damageIndicators = c.damageIndicators || [];
                     c.damageIndicators.push({
@@ -7666,6 +7753,7 @@ export function CombatManagerRedux() {
                     if (hit) {
                         let finalDmg = this.damageCheck(unit, c, rawDamage, true);
                         c.hp = Math.max(0, c.hp - finalDmg);
+                        this.checkShrinerConcentrationDamage(unit, c, finalDmg);
                         if (finalDmg > 0) this.wakeSleepingTarget(c, 'Blue Dragon Breath');
                         c.damageIndicators = c.damageIndicators || [];
                         c.damageIndicators.push({
@@ -8185,6 +8273,7 @@ export function CombatManagerRedux() {
                         finalDmg = critRes.damage;
                     }
                     c.hp = Math.max(0, c.hp - finalDmg);
+                    this.checkShrinerConcentrationDamage(unit, c, finalDmg);
                     if (finalDmg > 0) this.wakeSleepingTarget(c, ability.name || this.getCombatActionName(ability));
                     c.damageIndicators = c.damageIndicators || [];
                     c.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${finalDmg}`, source: ability.name, type: 'damage' });
@@ -8305,6 +8394,7 @@ export function CombatManagerRedux() {
                         }
                     }
                     target.hp = Math.max(0, target.hp - finalDmg);
+                    this.checkShrinerConcentrationDamage(unit, target, finalDmg);
                     this.wakeSleepingTarget(target, ability.name || this.getCombatActionName(ability));
                     if (finalDmg > 0) {
                         target.damageIndicators = target.damageIndicators || [];
@@ -8380,7 +8470,7 @@ export function CombatManagerRedux() {
                             if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
                                 const actionName = abilityId === 'shield_slam' ? 'Shield Slam' : 'Headbutt';
                                 if (this.shouldPushbackSucceed(target)) {
-                                    if (!this.isTileOccupied(newX, newY, target.id)) {
+                                    if (this.canFitAt(target, newX, newY)) {
                                         this.updateUnitCoordinates(target, newX, newY);
                                         this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back 1 space by ${actionName}!`);
                                     } else {
@@ -8528,7 +8618,7 @@ export function CombatManagerRedux() {
 
                             if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
                                 if (this.shouldPushbackSucceed(target, true)) {
-                                    if (!this.isTileOccupied(newX, newY, target.id)) {
+                                    if (this.canFitAt(target, newX, newY)) {
                                         this.updateUnitCoordinates(target, newX, newY);
                                         this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
                                     } else {
@@ -9010,7 +9100,7 @@ export function CombatManagerRedux() {
                             const newY = Math.max(0, Math.min(MAX_LANES - 1, target.coordinates.y + pushY));
                             if ((newX !== target.coordinates.x || newY !== target.coordinates.y)) {
                                 if (this.shouldPushbackSucceed(target, true)) {
-                                    if (!this.isTileOccupied(newX, newY, target.id)) {
+                                    if (this.canFitAt(target, newX, newY)) {
                                         this.updateUnitCoordinates(target, newX, newY);
                                         this.appendCombatLog(`${this.getCombatantLogName(target)} is pushed back by the force arrow!`);
                                     } else {
@@ -9538,6 +9628,11 @@ export function CombatManagerRedux() {
                 this.incrementRound();
             }
 
+            const hasConcentratingUnit = Object.values(this.combatants).some(c => c && c.isConcentrating && !c.dead && c.hp > 0);
+            if (hasConcentratingUnit) {
+                this.concentrationProgress = Math.min(6.0, (this.concentrationProgress || 0) + (deltaMs / roundDurationMs));
+            }
+
             this.roundTimeRemainingRatio = Math.max(0, 1 - (this.roundTimeElapsedMs / roundDurationMs));
             this.updateTick(deltaMs);
 
@@ -9813,6 +9908,20 @@ export function CombatManagerRedux() {
         if (intVal < 5) return 'dumb';
         if (intVal < 10) return 'capable';
         return 'intelligent';
+    };
+    this.getSkillLevel = (unit, skillId) => {
+        if (!unit) return 1;
+        const gs = unit.globalSkills;
+        if (Array.isArray(gs)) {
+            const record = gs.find(s => {
+                const k = typeof s === 'string' ? s : s.key;
+                return k === skillId;
+            });
+            if (record) {
+                return typeof record === 'string' ? 1 : (record.level || 1);
+            }
+        }
+        return 1;
     };
     this.shutdown = () => {
         if (this.roundTimerInterval) {

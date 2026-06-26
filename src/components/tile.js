@@ -326,8 +326,9 @@ function Tile(props) {
 
             {/* Soul Shard custom overlay */}
             { props.data && props.data.type === 'soul_shard' && (() => {
-                const monsterType = props.data.monsterType;
-                const portraitUrl = images[monsterType] || images[`${monsterType}_portrait`] || images[`${monsterType}_portrait2`] || null;
+                const monsterType = props.data.monsterType || '';
+                const mTypeLower = monsterType.toLowerCase();
+                const portraitUrl = images[monsterType] || images[mTypeLower] || images[`${mTypeLower}_portrait`] || images[`${mTypeLower}_portrait2`] || null;
                 return (
                     <>
                         {/* 50% opacity monster portrait underlay */}
