@@ -278,9 +278,17 @@ class MonsterBattle extends React.Component {
             numBoardColumns: NUM_COLUMNS,
             // Animated column-flash strips for entropic_kindred board expansion
             entropicKindredNewCols: [],
+            // ── Manual Input drag-to-target visuals ──────────────────────────
+            dragSource: null,         // { id, x, y } fighter being dragged
+            dragTargetTile: null,     // { x, y } current hover tile (null if on source or off-grid)
+            dragTargetIsEnemy: false, // true when cursor is over an enemy unit
+            dragFlashTile: null,      // { x, y, color } tile playing flash-on-release
+            _preDragPaused: false,    // was combat paused before drag started?
         }
         this.combatLogContainerRef = React.createRef();
         this.latestCombatLogEntryRef = React.createRef();
+        // Ref to the .combat-grid-container div — used to convert mouse coords to grid coords
+        this.boardContainerRef = React.createRef();
         // Internal flags for special group-death flow
         this._suppressPersistFinalHP = false;
         // Internal flag to ensure we only inject wizard spells once for simulation battles
@@ -290,6 +298,9 @@ class MonsterBattle extends React.Component {
         this._intervals = [];
         this._setTimeout = (fn, t) => { const id = setTimeout(fn, t); try { this._timers.push(id); } catch (e) { }; return id };
         this._setInterval = (fn, t) => { const id = setInterval(fn, t); try { this._intervals.push(id); } catch (e) { }; return id };
+        // Bound drag handlers — stored so we can remove them from window
+        this._boundDragMouseMove = this._handleDragMouseMove.bind(this);
+        this._boundDragMouseUp = this._handleDragMouseUp.bind(this);
     }
 
     // Public method to force sync battleData from combatManager (including VCT positions)
@@ -644,6 +655,9 @@ class MonsterBattle extends React.Component {
         // Clear any timers/intervals this component created
         try { if (Array.isArray(this._timers)) { this._timers.forEach(t => clearTimeout(t)); this._timers = []; } } catch (e) { }
         try { if (Array.isArray(this._intervals)) { this._intervals.forEach(i => clearInterval(i)); this._intervals = []; } } catch (e) { }
+        // Clean up any lingering drag listeners
+        try { window.removeEventListener('mousemove', this._boundDragMouseMove); } catch (e) { }
+        try { window.removeEventListener('mouseup', this._boundDragMouseUp); } catch (e) { }
     }
     monster = () => {
         // console.log('monster: ', this.state.battleData[this.props.monster.id]);
@@ -2035,6 +2049,114 @@ class MonsterBattle extends React.Component {
         if (fighter.manualMovesCurrent < 1) return '#818d6e'
         return 'greenyellow'
     }
+
+    // ── Manual Input: drag-to-target handlers ────────────────────────────────
+
+    /**
+     * Called from CombatGrid when the player mousedowns on a PC fighter portrait.
+     * Saves pre-drag pause state, pauses combat, and attaches window listeners.
+     */
+    onFighterMouseDown = (fighter, event) => {
+        if (!fighter || !fighter.coordinates) return;
+        const details = this.state.battleData[fighter.id];
+        if (!details || details.dead) return;
+        // Store whether combat was already paused so we can restore it on mouseup
+        const wasPaused = !!(this.props.combatManager?.combatPaused || this.props.paused);
+        if (this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+            this.props.combatManager.pauseCombat(true);
+        }
+        // Cache the board rect at drag-start — avoids repeated layout thrashing on mousemove
+        const boardEl = this.boardContainerRef && this.boardContainerRef.current;
+        this._dragBoardRect = boardEl ? boardEl.getBoundingClientRect() : null;
+        this.setState({
+            dragSource: { id: fighter.id, x: fighter.coordinates.x, y: fighter.coordinates.y },
+            dragTargetTile: null,
+            dragTargetIsEnemy: false,
+            _preDragPaused: wasPaused,
+        });
+        window.addEventListener('mousemove', this._boundDragMouseMove);
+        window.addEventListener('mouseup', this._boundDragMouseUp);
+    }
+
+    /**
+     * Window mousemove handler — converts cursor to grid coords, detects enemies,
+     * and updates highlight state. Arc only appears once cursor leaves source tile.
+     */
+    _handleDragMouseMove = (event) => {
+        if (!this.state.dragSource) return;
+        const rect = this._dragBoardRect;
+        if (!rect) return;
+        const EFFECTIVE_CELL = TILE_SIZE + (SHOW_TILE_BORDERS ? 2 : 0); // 102px
+        const rawX = Math.floor((event.clientX - rect.left) / EFFECTIVE_CELL);
+        const rawY = Math.floor((event.clientY - rect.top) / EFFECTIVE_CELL);
+        const numCols = this.state.numBoardColumns;
+        // Clamp to valid grid bounds
+        const gridX = Math.max(0, Math.min(numCols - 1, rawX));
+        const gridY = Math.max(0, Math.min(MAX_ROWS - 1, rawY));
+        // Off-board: suppress target when cursor is clearly outside the board
+        const offBoard = event.clientX < rect.left || event.clientX > rect.right ||
+                         event.clientY < rect.top  || event.clientY > rect.bottom;
+        if (offBoard) {
+            this.setState({ dragTargetTile: null, dragTargetIsEnemy: false });
+            return;
+        }
+        // Suppress highlight when on the source tile (arc only appears after leaving)
+        const onSource = gridX === this.state.dragSource.x && gridY === this.state.dragSource.y;
+        if (onSource) {
+            this.setState({ dragTargetTile: null, dragTargetIsEnemy: false });
+            return;
+        }
+        // Detect enemy at this grid position
+        const isEnemy = Object.values(this.state.battleData).some(u =>
+            u && !u.dead && (u.isMonster || u.isMinion) &&
+            u.coordinates && u.coordinates.x === gridX && u.coordinates.y === gridY
+        );
+        this.setState({ dragTargetTile: { x: gridX, y: gridY }, dragTargetIsEnemy: isEnemy });
+    }
+
+    /**
+     * Window mouseup handler — triggers tile flash, issues AI stub order,
+     * restores pause state, and cleans up drag state.
+     */
+    _handleDragMouseUp = (event) => {
+        window.removeEventListener('mousemove', this._boundDragMouseMove);
+        window.removeEventListener('mouseup', this._boundDragMouseUp);
+        const { dragSource, dragTargetTile, dragTargetIsEnemy, _preDragPaused } = this.state;
+        // Restore pre-drag pause state
+        if (this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+            this.props.combatManager.pauseCombat(!!_preDragPaused);
+        }
+        // Flash the release tile if there's a valid target
+        if (dragSource && dragTargetTile) {
+            const flashColor = dragTargetIsEnemy ? 'red' : 'yellow';
+            this.setState({ dragFlashTile: { ...dragTargetTile, color: flashColor } });
+            // ── Issue the manual AI command ──────────────────────────────────────────
+            const cm = this.props.combatManager;
+            if (cm) {
+                if (dragTargetIsEnemy) {
+                    // Dragged onto an enemy — lock this fighter to prioritise that target.
+                    const enemyUnit = Object.values(this.state.battleData).find(u =>
+                        u && !u.dead && (u.isMonster || u.isMinion) &&
+                        u.coordinates && u.coordinates.x === dragTargetTile.x && u.coordinates.y === dragTargetTile.y
+                    );
+                    if (enemyUnit && typeof cm.setManualTarget === 'function') {
+                        cm.setManualTarget(dragSource.id, enemyUnit.id);
+                    }
+                } else {
+                    // Dragged onto an empty tile — send the fighter toward that destination.
+                    if (typeof cm.setFighterDestination === 'function') {
+                        cm.setFighterDestination(dragSource.id, dragTargetTile);
+                    }
+                }
+            }
+            // Clear flash after animation completes
+            this._setTimeout(() => {
+                this.setState({ dragFlashTile: null });
+            }, 650);
+        }
+        // Always reset drag state
+        this.setState({ dragSource: null, dragTargetTile: null, dragTargetIsEnemy: false });
+    }
     monsterCombatPortraitClicked = (id) => {
         // console.log('battle data: ', this.state.battleData);
         // console.log('images[this.state.battleData[e]?.portrait]', this.state.battleData[id].targettedBy);
@@ -2355,6 +2477,7 @@ class MonsterBattle extends React.Component {
                 </div>
                 {this.state.navToDeathScene && <Redirect to='/death' />}
                 <div className="combat-grid-container"
+                    ref={this.boardContainerRef}
                     style={{
                         position: 'relative',
                         width: TILE_SIZE * this.state.numBoardColumns + (SHOW_TILE_BORDERS ? this.state.numBoardColumns * 2 : 0) + 'px',
@@ -2692,30 +2815,45 @@ class MonsterBattle extends React.Component {
                         {this.state.combatTiles.map((t, i) => {
                             const isSelectedFighter = this.state.selectedFighter?.id && Object.values(this.state.battleData).some(e => e.id === this.state.selectedFighter.id && !e.dead && e.coordinates && e.coordinates.x === t.x && e.coordinates.y === t.y);
                             const isSelectedMonster = this.state.selectedMonster?.id && Object.values(this.state.battleData).some(e => e.id === this.state.selectedMonster.id && !e.dead && e.coordinates && e.coordinates.x === t.x && e.coordinates.y === t.y);
+                            // Manual drag highlight
+                            const isDragTarget = this.state.dragTargetTile && this.state.dragTargetTile.x === t.x && this.state.dragTargetTile.y === t.y;
+                            const isDragFlash  = this.state.dragFlashTile  && this.state.dragFlashTile.x  === t.x && this.state.dragFlashTile.y  === t.y;
+                            const dragEnemy    = isDragTarget && this.state.dragTargetIsEnemy;
+                            let tileClassName = 'combat-tile';
+                            if (isDragFlash) {
+                                tileClassName += this.state.dragFlashTile.color === 'red'
+                                    ? ' combat-tile--flash-red'
+                                    : ' combat-tile--flash-yellow';
+                            }
                             return (
                                 <div
                                     key={i}
-                                    className="combat-tile"
+                                    className={tileClassName}
                                     onDragOver={(event) => this.onDragOver(event, i)}
                                     onDrop={() => { this.onDrop(i) }}
                                     style={{
-                                        border: isSelectedFighter
-                                            ? '1px dashed rgba(255, 183, 3, 0.25)'
-                                            : isSelectedMonster
-                                                ? '1px dashed rgba(255, 84, 0, 0.25)'
-                                                : '1px solid rgba(255, 255, 255, 0.04)',
-                                        background: this.state.draggedOverCombatTileId === i
-                                            ? '#cccca4c1'
+                                        border: isDragTarget
+                                            ? (dragEnemy ? '2px solid rgba(231, 76, 60, 0.9)' : '2px solid rgba(255, 183, 3, 0.8)')
                                             : isSelectedFighter
-                                                ? 'rgba(255, 183, 3, 0.06)'
+                                                ? '1px dashed rgba(255, 183, 3, 0.25)'
                                                 : isSelectedMonster
-                                                    ? 'rgba(255, 84, 0, 0.06)'
-                                                    : (t.x + t.y) % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'rgba(0, 0, 0, 0.15)',
+                                                    ? '1px dashed rgba(255, 84, 0, 0.25)'
+                                                    : '1px solid rgba(255, 255, 255, 0.04)',
+                                        background: isDragTarget
+                                            ? (dragEnemy ? 'rgba(231, 76, 60, 0.35)' : 'rgba(255, 183, 3, 0.4)')
+                                            : this.state.draggedOverCombatTileId === i
+                                                ? '#cccca4c1'
+                                                : isSelectedFighter
+                                                    ? 'rgba(255, 183, 3, 0.06)'
+                                                    : isSelectedMonster
+                                                        ? 'rgba(255, 84, 0, 0.06)'
+                                                        : (t.x + t.y) % 2 === 0 ? 'rgba(255, 255, 255, 0.01)' : 'rgba(0, 0, 0, 0.15)',
                                         position: 'relative',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         cursor: 'pointer',
+                                        boxSizing: 'border-box',
                                     }}
                                 >
                                     {/* Cell Coordinates */}
@@ -2824,6 +2962,7 @@ class MonsterBattle extends React.Component {
                             fighterPortraitClicked={this.fighterPortraitClicked}
                             monsterCombatPortraitClicked={this.monsterCombatPortraitClicked}
                             onDragStart={this.onDragStart}
+                            onFighterMouseDown={this.onFighterMouseDown}
                             getActionBarLeftValForFighter={this.getActionBarLeftValForFighter}
                             getManualMovementArc={this.getManualMovementArc}
                             getManualMovementArcColor={this.getManualMovementArcColor}
@@ -2838,6 +2977,60 @@ class MonsterBattle extends React.Component {
                             TILE_SIZE={TILE_SIZE}
                             SHOW_TILE_BORDERS={SHOW_TILE_BORDERS}
                         />
+
+                        {/* ── Manual Input drag arc SVG overlay ──────────────────────── */}
+                        {this.state.dragSource && this.state.dragTargetTile && (() => {
+                            const CELL = TILE_SIZE + (SHOW_TILE_BORDERS ? 2 : 0); // 102px
+                            const srcCx = this.state.dragSource.x * CELL + CELL / 2;
+                            const srcCy = this.state.dragSource.y * CELL + CELL / 2;
+                            const dstCx = this.state.dragTargetTile.x * CELL + CELL / 2;
+                            const dstCy = this.state.dragTargetTile.y * CELL + CELL / 2;
+                            // Control point arcs upward (above both points)
+                            const cpX = (srcCx + dstCx) / 2;
+                            const cpY = Math.min(srcCy, dstCy) - 90;
+                            const arcColor = this.state.dragTargetIsEnemy ? '#e74c3c' : '#f9b115';
+                            const boardW = TILE_SIZE * this.state.numBoardColumns + (SHOW_TILE_BORDERS ? this.state.numBoardColumns * 2 : 0);
+                            const boardH = TILE_SIZE * MAX_ROWS + (SHOW_TILE_BORDERS ? MAX_ROWS * 2 : 0);
+                            const d = `M ${srcCx} ${srcCy} Q ${cpX} ${cpY} ${dstCx} ${dstCy}`;
+                            return (
+                                <svg
+                                    style={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        width: boardW,
+                                        height: boardH,
+                                        pointerEvents: 'none',
+                                        zIndex: 5000,
+                                        overflow: 'visible',
+                                    }}
+                                >
+                                    <defs>
+                                        <filter id="drag-arc-glow" x="-50%" y="-50%" width="200%" height="200%">
+                                            <feGaussianBlur stdDeviation="4" result="blur" />
+                                            <feMerge>
+                                                <feMergeNode in="blur" />
+                                                <feMergeNode in="SourceGraphic" />
+                                            </feMerge>
+                                        </filter>
+                                    </defs>
+                                    {/* Glow halo */}
+                                    <path d={d} fill="none" stroke={arcColor} strokeWidth="8" strokeOpacity="0.2"
+                                          strokeDasharray="12 7" />
+                                    {/* Main marching-ants arc */}
+                                    <path d={d} fill="none" stroke={arcColor} strokeWidth="2.5"
+                                          strokeDasharray="12 7" filter="url(#drag-arc-glow)"
+                                          className="drag-arc-line" />
+                                    {/* Destination dot */}
+                                    <circle cx={dstCx} cy={dstCy} r="7"
+                                            fill={arcColor} opacity="0.9"
+                                            filter="url(#drag-arc-glow)" />
+                                    {/* Source dot */}
+                                    <circle cx={srcCx} cy={srcCy} r="4"
+                                            fill={arcColor} opacity="0.5" />
+                                </svg>
+                            );
+                        })()}
                     </div>
                 </div>
 

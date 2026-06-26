@@ -443,18 +443,15 @@ class ShrineScreen extends React.Component {
             if (shrineUnit && (shrineUnit.dead || shrineUnit.hp <= 0)) {
                 if (!this.state.shrinerDying) {
                     this.setState({ shrinerDying: true });
-                    if (this.combatManager) {
-                        this.combatManager.pauseCombat(true);
-                    }
+                    // Let the combat engine continue running so the death animation plays fully.
                     setTimeout(() => {
                         if (this._isMounted) {
                             if (this.combatManager) this.combatManager.shutdown();
-                            this.setState({
-                                phase: 'done',
-                                outcome: 'failure',
-                                message: '',
-                                shrinerDying: false
-                            });
+                            // Skip the 'done'/failure overlay and directly return failure to DungeonPage
+                            // to hide the Shrine screen and show the combat loss message immediately after the animation.
+                            if (this.props.onShrineComplete) {
+                                this.props.onShrineComplete({ success: false, shrineData: this.props.shrineData });
+                            }
                         }
                     }, 2500);
                 }

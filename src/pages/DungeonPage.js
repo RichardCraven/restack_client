@@ -966,12 +966,12 @@ class DungeonPage extends React.Component {
             actions.push({
                 type: 'imprint_tattoo',
                 name: 'Imprint Tattoo',
-                iconUrl: images['avatar'] || '',
+                iconUrl: images['tattoo_ink'] || images['tattoo_placeholder'] || '',
                 noMaxCap: true,
                 disabled: tattoos.length >= 8 || isImprinting,
                 tattooCount: tattoos.length,
                 isImprinting,
-                tattooImprintingEndDate: character.tattooImprinting?.endDate || null,
+                tattooImprintingEndDate: (character.tattooImprinting && character.tattooImprinting.endDate) || null,
                 subTypes: []
             });
         }
@@ -1876,6 +1876,8 @@ class DungeonPage extends React.Component {
             currentBoard: '',
             leftPanelExpanded: false,
             rightPanelExpanded: false,
+            poiPanelExpanded: true,
+
             inventoryHoverMatrix: {},
             crewHoverMatrix: {},
             selectedCrewMember: {},
@@ -1960,6 +1962,8 @@ class DungeonPage extends React.Component {
             , showTrainingOverlay: false
             , trainingResults: {} // { memberId: { stat, delta, risk, message } }
             , showCodex: false
+            , codexEntry: null  // { tab, search, entryId } — set when opening codex from a POI card
+            , noCodexEntry: false // show "no entry" popup
             , activeNarrativeSequence: null
             , showNarrativeOverlay: false
             , showAmbushPopup: false
@@ -2462,7 +2466,10 @@ class DungeonPage extends React.Component {
             const nowSec = Math.floor(Date.now() / 1000);
             if (nowSec !== this._lastSecRender) {
                 this._lastSecRender = nowSec;
-                if (this.state.showCampPopup || this.state.showMapOverlay) {
+                const meta = getMeta() || {};
+                const crew = (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) ? this.props.crewManager.crew : (meta.crew || []);
+                const hasActiveTattoo = crew.some(m => m && m.tattooImprinting);
+                if (this.state.showCampPopup || this.state.showMapOverlay || hasActiveTattoo) {
                     this.forceUpdate();
                 }
             }
@@ -2518,15 +2525,27 @@ class DungeonPage extends React.Component {
                 // No updates/modified flags — but the cooldown visuals rely on frequent re-renders
                 // (getActionCooldownPercentage uses current time). Only trigger a lightweight
                 // re-render if any special action is currently in-progress to avoid needless work.
-                const anyActive = meta.crew && meta.crew.some(member =>
-                    (member.specialActions || []).some(a => {
+                const isCookingActive = meta.campCooking && (() => {
+                    const start = new Date(meta.campCooking.startDate);
+                    const end = new Date(meta.campCooking.endDate);
+                    const now = new Date();
+                    return now >= start && now < end;
+                })();
+                const anyActive = isCookingActive || (meta.crew && meta.crew.some(member => {
+                    if (member.tattooImprinting && member.tattooImprinting.startDate && member.tattooImprinting.endDate) {
+                        const start = new Date(member.tattooImprinting.startDate);
+                        const end = new Date(member.tattooImprinting.endDate);
+                        const now = new Date();
+                        if (now >= start && now < end) return true;
+                    }
+                    return (member.specialActions || []).some(a => {
                         if (!a || !a.startDate || !a.endDate) return false;
                         const start = new Date(a.startDate);
                         const end = new Date(a.endDate);
                         const now = new Date();
                         return now >= start && now < end;
-                    })
-                );
+                    });
+                }));
                 if (anyActive) {
                     // ensure canvas draw loop is running — no setState needed, the rAF
                     // loop draws independently of React renders so triggering a re-render
@@ -2866,8 +2885,9 @@ class DungeonPage extends React.Component {
         const { tattooOverlayMemberId, tattooSelectedSlot, tattooSelectedDesign } = this.state;
         if (!tattooSelectedSlot || !tattooSelectedDesign) return;
 
-        const meta = getMeta() || {};
-        const member = (meta.crew || []).find(m => m && m.id === tattooOverlayMemberId);
+        const member = (this.props.crewManager && Array.isArray(this.props.crewManager.crew))
+            ? this.props.crewManager.crew.find(m => m && m.id === tattooOverlayMemberId)
+            : null;
         if (!member) return;
 
         const tattoos = member.tattoos || [];
@@ -2891,6 +2911,8 @@ class DungeonPage extends React.Component {
             endDate: new Date(now.getTime() + durationMs).toISOString(),
         };
 
+        const meta = getMeta() || {};
+        meta.crew = this.props.crewManager.crew;
         storeMeta(meta);
         if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
 
@@ -2903,6 +2925,7 @@ class DungeonPage extends React.Component {
             tattooOverlayMemberId: null,
             tattooSelectedSlot: null,
             tattooSelectedDesign: null,
+            selectedCrewMember: { ...member },
             numeralUpdate: !this.state.numeralUpdate,
         });
     }
@@ -3213,9 +3236,7 @@ class DungeonPage extends React.Component {
                 let destTileObj = bm.tiles[destIndex];
                 if (destTileObj && destTileObj.hasTrap) {
                     trapTriggered = true;
-                    destTileObj.hasTrap = false; // disarm after trigger
-                    if (bm.trapTileIds) bm.trapTileIds.delete(destTileObj.id);
-                    destTileObj.trapRevealed = false;
+                    bm.disarmTrap(destTileObj.id);
                     trapResults = this.calculateTrapDamage();
                 }
             }
@@ -4164,6 +4185,32 @@ class DungeonPage extends React.Component {
                     e.preventDefault();
                     return;
                 }
+                // ingredients — add 1 of each brew ingredient to inventory
+                if (cmd === 'ingredients') {
+                    try {
+                        BREW_INGREDIENT_KEYS.forEach(rKey => {
+                            this.props.inventoryManager.addItem({ ...BREW_INGREDIENTS[rKey] });
+                        });
+                        try {
+                            const meta = getMeta();
+                            meta.inventory = {
+                                items: this.props.inventoryManager.inventory,
+                                gold: this.props.inventoryManager.gold,
+                                shimmering_dust: this.props.inventoryManager.shimmering_dust,
+                                totems: this.props.inventoryManager.totems,
+                            };
+                            storeMeta(meta);
+                            if (typeof this.props.saveUserData === 'function') this.props.saveUserData();
+                        } catch(e){}
+                        this.forceUpdate();
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Added 1 of each brew ingredient (${BREW_INGREDIENT_KEYS.length} total) to inventory`], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
                 // reagents — add 1 of each reagent type to inventory
                 if (cmd === 'reagents') {
                     try {
@@ -4509,7 +4556,12 @@ class DungeonPage extends React.Component {
     // ref callback used to register/unregister placeholders
     placeholderRef = (el, id, start, end) => {
         try {
+            this._cleanupTimeouts = this._cleanupTimeouts || {};
             if (el) {
+                if (this._cleanupTimeouts[id]) {
+                    clearTimeout(this._cleanupTimeouts[id]);
+                    delete this._cleanupTimeouts[id];
+                }
                 // normalize start/end to Date
                 const s = start ? new Date(start) : null;
                 const e = end ? new Date(end) : null;
@@ -4535,17 +4587,9 @@ class DungeonPage extends React.Component {
                     }
                 } catch (e) {}
             } else {
-                // React fires ref=null just before firing ref=el on the same element during
-                // re-renders (e.g. the respawn interval setState fires every second and causes
-                // the whole component to re-render). Deleting the registry entry here and
-                // re-adding it a frame later creates a gap that the canvas draws a blank frame
-                // into, causing visible flicker.
-                // Instead: just null out the el reference so the draw loop skips this entry,
-                // but keep the entry itself so the start/end times survive the re-render.
-                // The next ref=el call will restore the live element.
                 const existing = this._placeholderRegistry.get(id);
                 if (existing) {
-                    existing.el = null;
+                    existing.pending = true;
                 }
                 // Only fully remove the entry (and possibly stop the loop) if this id was
                 // never re-registered within the same microtask — schedule cleanup deferred.
@@ -4556,14 +4600,14 @@ class DungeonPage extends React.Component {
         }
     }
 
-    // Deferred cleanup: if a placeholder id has el===null after a short delay it has
+    // Deferred cleanup: if a placeholder id has pending===true after a short delay it has
     // truly unmounted (component removed), so stop the loop if no more active entries.
     _schedulePlaceholderCleanup = (id) => {
         try {
             setTimeout(() => {
                 try {
                     const entry = this._placeholderRegistry.get(id);
-                    if (!entry || entry.el !== null) return; // re-mounted, skip
+                    if (!entry || !entry.pending) return; // re-mounted, skip
                     this._placeholderRegistry.delete(id);
                     if (!this.hasActiveCooldowns() && !this._forcedDraw && this.cooldownAnimationFrame) {
                         cancelAnimationFrame(this.cooldownAnimationFrame);
@@ -4737,7 +4781,7 @@ class DungeonPage extends React.Component {
             this.props.inventoryManager.addItem(itemDefinition)
         }
         const matrix = this.state.inventoryHoverMatrix;
-        this.props.inventoryManager.inventory.forEach((e,i)=>{
+        this.getCombinedInventory().forEach((e,i)=>{
             matrix[i] = '';
         })
         this.displayMessage(`You found a ${itemDisplayName}!`)
@@ -5160,6 +5204,29 @@ class DungeonPage extends React.Component {
 
     getCurrentInventory = () => {
         return this.props.inventoryManager.inventory;
+    }
+    
+    getCombinedInventory = () => {
+        const inv = [...((this.props.inventoryManager && this.props.inventoryManager.inventory) || [])];
+        const meta = getMeta() || {};
+        const soulShards = meta.soulShards || {};
+        Object.keys(soulShards).forEach((monsterType) => {
+            const count = soulShards[monsterType];
+            if (count > 0) {
+                for (let i = 0; i < count; i++) {
+                    inv.push({
+                        id: `soul_shard_${monsterType}_${i}`,
+                        name: `${monsterType.charAt(0).toUpperCase() + monsterType.slice(1)} Shard`,
+                        type: 'soul_shard',
+                        monsterType: monsterType,
+                        count: count,
+                        icon: images['sould_shards'] || 'sould_shards',
+                        description: `A soul shard of a ${monsterType}. Collect 3 to forge an Echo Card at the Pyre & Echo camp station.`
+                    });
+                }
+            }
+        });
+        return inv;
     }
     
     handleLevelChange = (newLevelId) => {
@@ -5724,6 +5791,7 @@ class DungeonPage extends React.Component {
         const type = String(item.type || '').toLowerCase();
         const subtype = String(item.subtype || '').toLowerCase();
         
+        if (type === 'soul_shard') return 'Materials & Jewels';
         if (type === 'weapon') return 'Weapons';
         if (type === 'armor' || subtype === 'shield' || subtype === 'boots' || subtype === 'helm' || subtype === 'mask' || subtype === 'tabard') return 'Armor';
         if (type === 'consumable' || type === 'potion') return 'Consumables';
@@ -5743,7 +5811,7 @@ class DungeonPage extends React.Component {
 
         let inv = this.state.inventoryHoverMatrix,
         descriptionText = '';
-        this.props.inventoryManager.inventory.forEach((e,i)=>{
+        this.getCombinedInventory().forEach((e,i)=>{
             inv[i] = '';
         })
         if(tileProps){
@@ -6055,6 +6123,7 @@ class DungeonPage extends React.Component {
     handleItemClick = (item, index) => {
         // New equip logic: place item into an appropriate equip slot on the selected crew member
         if(!item || index === undefined || index === null) return;
+        if(item.type === 'soul_shard') return;
         const selected = this.state.selectedCrewMember;
         if(!selected || selected.id === undefined || selected.id === null){
             // nothing to equip to
@@ -9042,9 +9111,33 @@ class DungeonPage extends React.Component {
             {/* Codex Modal */}
             <CodexModal
                 visible={!!this.state.showCodex}
-                onClose={() => this.setState({ showCodex: false })}
+                onClose={() => this.setState({ showCodex: false, codexEntry: null })}
                 monsterManager={this.props.monsterManager}
+                initialTab={this.state.codexEntry && this.state.codexEntry.tab}
+                initialSearch={this.state.codexEntry && this.state.codexEntry.search}
+                initialEntryId={this.state.codexEntry && this.state.codexEntry.entryId}
             />
+
+            {/* No Codex Entry popup */}
+            {this.state.noCodexEntry && (
+                <div
+                    className="trap-popup-overlay"
+                    style={{ zIndex: 10001 }}
+                    onClick={() => this.setState({ noCodexEntry: false })}
+                >
+                    <div className="trap-popup-card" style={{ width: 320, borderColor: 'rgba(140,140,160,0.6)' }}>
+                        <div className="trap-title" style={{ color: '#aaa', fontSize: '1.4rem' }}>📖 No Entry Found</div>
+                        <div className="trap-subtitle">There is no Codex entry for this tile yet.</div>
+                        <button
+                            className="trap-dismiss-btn"
+                            style={{ background: 'linear-gradient(185deg,#444 0%,#222 100%)', borderColor: '#666' }}
+                            onClick={() => this.setState({ noCodexEntry: false })}
+                        >
+                            Dismiss
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {/* Shrine Encounter Overlay */}
             {this.state.showShrineOverlay && this.state.shrineData && (() => {
@@ -9579,7 +9672,30 @@ class DungeonPage extends React.Component {
                                             </div>
                                             <div className="recipe-card-duration"><span role="img" aria-label="timer">⏱</span> {cookTimeLabel}</div>
                                             {isCookingThis ? (
-                                                <div className="recipe-card-btn cooking-badge">Cooking…</div>
+                                                <div className="recipe-card-btn cooking-badge" style={{ position: 'relative', overflow: 'hidden' }}>
+                                                    Cooking…
+                                                    {(() => {
+                                                        const placeholderId = `po-camp-cooking-${recipe.key}`;
+                                                        const start = meta.campCooking ? meta.campCooking.startDate : '';
+                                                        const end = meta.campCooking ? meta.campCooking.endDate : '';
+                                                        return (
+                                                            <div
+                                                                id={placeholderId}
+                                                                ref={el => this.placeholderRef(el, placeholderId, start, end)}
+                                                                className="progress-overlay progress-overlay-placeholder"
+                                                                style={{
+                                                                    position: 'absolute',
+                                                                    top: 0,
+                                                                    left: 0,
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    pointerEvents: 'none',
+                                                                    opacity: 0
+                                                                }}
+                                                            ></div>
+                                                        );
+                                                    })()}
+                                                </div>
                                             ) : (
                                                 <div
                                                     className={`recipe-card-btn${canAfford && !isCookingAnything ? ' start-btn' : ' disabled'}`}
@@ -11170,47 +11286,7 @@ class DungeonPage extends React.Component {
                             </div>
                         })}
                     </div>
-                    {/* Backside indicator: shows centered text when the board is on the backside plane */}
-                    
-                        <div className="backside-indicator">
-                            {this.props.boardManager && this.props.boardManager.currentOrientation === 'B' && <span>backside</span>}
-                        </div>
-                    <div className={`tray-wrapper ${this.state.minimapZoomedTile !== null ? (this.state.minimapMarkerTrayOpen ? 'double-expanded' : 'expanded') : ''}`}>
-                        {/* <button className="one" onClick={() => this.setState({minimapZoomedTile: null, minimapMarkerTrayOpen: false})}>Zoom Out</button> */}
-                        {/* <button className="one" onClick={() => this.beginMarkingMap()}>Mark Map</button> */}
-                        <CButton onClick={() => this.setState({minimapZoomedTile: null, minimapMarkerTrayOpen: false})}>Zoom Out</CButton>
-                        <CButton onClick={() => this.beginMarkingMap()}>Mark Map</CButton>
 
-
-                        {/* <button className="one">three</button> */}
-                        <div className={`mark-map-tray ${this.state.minimapMarkerTrayOpen ? 'expanded' : ''}`}>
-                            <CFormSelect 
-                                aria-label="Marker Selector"
-                                // ref={this.state.markerSelectVal}
-                                options={
-                                    ['Marker Type'].concat(MARKER_TYPES.map((e, i)=>{
-                                    return e
-                                    }))
-                                }
-                                value={this.state.markerType}
-                                
-                                onChange={e => this.onMarkerTypeDropdownChange(e.target.value)}
-                                // onChange={this.props.dungeonSelectOnChange}
-                            />
-                            <CFormInput
-                                type="text"
-                                // ref={this.state.mapMarkerInput}
-                                value={this.state.markerName}
-                                onChange={e => this.onMarkerNameInputChange(e.target.value)}
-                                placeholder="marker name"
-                                aria-describedby="marker name"
-                            ></CFormInput>
-                            <CButton onClick={() => this.placeMapMarkerStart()} className='place-marker-button' component="a" color="light" href="#" role="button">Place Marker</CButton>
-                            <CButton onClick={() => this.submitMarkers()} component="a" color="light" href="#" role="button">Submit</CButton>
-
-                        </div>
-                        <CButton className='clear-all-markers' onClick={() => this.clearAllMarkers()} color="danger">Clear All Markers</CButton>
-                    </div>
                 </div>
                 <div className="crew-container">
                     {/* <div className="title">Crew</div> */}
@@ -11299,24 +11375,44 @@ class DungeonPage extends React.Component {
                                 const end = meta.campingEnd || '';
                                 const placeholderId = 'camp-progress-placeholder';
                                 return (
-                                    <div className="crew-action-item action-row" style={{position:'relative'}}>
-                                        <div className="camp-label">
-                                            <span style={{position: 'relative', zIndex: 2}}>Recuperating in Camp...</span>
-                                            <div
-                                                id={placeholderId}
-                                                ref={el => this.placeholderRef(el, placeholderId, start, end)}
-                                                className={`progress-overlay camp-anim`}
-                                                data-start={start}
-                                                data-end={end}
-                                            ></div>
-                                            <div
-                                                onClick={() => this.endCamp()}
-                                                role="button"
-                                                aria-label="Close camp"
-                                                style={{position: 'absolute', right: 6, top: 2, cursor: 'pointer', fontWeight: 700, zIndex: 3}}
-                                            >
-                                                ×
+                                    <div className="quick-actions-camping-container" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                        <div className="crew-action-item action-row" style={{position:'relative', margin: 0}}>
+                                            <div className="camp-label">
+                                                <span style={{position: 'relative', zIndex: 2}}>Recuperating in Camp...</span>
+                                                <div
+                                                    id={placeholderId}
+                                                    ref={el => this.placeholderRef(el, placeholderId, start, end)}
+                                                    className={`progress-overlay camp-anim`}
+                                                    data-start={start}
+                                                    data-end={end}
+                                                ></div>
+                                                <div
+                                                    onClick={() => this.endCamp()}
+                                                    role="button"
+                                                    aria-label="Close camp"
+                                                    style={{position: 'absolute', right: 6, top: 2, cursor: 'pointer', fontWeight: 700, zIndex: 3}}
+                                                >
+                                                    ×
+                                                </div>
                                             </div>
+                                        </div>
+                                        <div className="quick-actions-btns" style={{ gap: '2px' }}>
+                                            <button
+                                                className="quick-action-btn"
+                                                onClick={() => this.handleOpenCampPopup()}
+                                                title="Go to Camp"
+                                            >
+                                                <span><span role="img" aria-label="camp">🏕</span> Go To Camp</span>
+                                                <span className="hotkey-indicator">C</span>
+                                            </button>
+                                            <button
+                                                className="quick-action-btn"
+                                                onClick={() => this.setState({ showCodex: true })}
+                                                title="Open the Codex"
+                                            >
+                                                <span><span role="img" aria-label="codex">📖</span> Codex</span>
+                                                <span className="hotkey-indicator">X</span>
+                                            </button>
                                         </div>
                                     </div>
                                 );
@@ -11368,6 +11464,289 @@ class DungeonPage extends React.Component {
                             );
                         })()}
                     </div>
+
+                    {/* ── Points of Interest panel ─────────────────────────────── */}
+                    <div className="poi-panel">
+                        {/* Toggle button: open eye = visible, closed eye = collapsed */}
+                        <button
+                            className="poi-toggle-btn"
+                            onClick={() => this.setState(s => ({ poiPanelExpanded: !s.poiPanelExpanded }))}
+                            title={this.state.poiPanelExpanded ? 'Hide nearby points of interest' : 'Show nearby points of interest'}
+                        >
+                            <img
+                                src={this.state.poiPanelExpanded ? images['eye_open'] : images['eye_closed']}
+                                alt={this.state.poiPanelExpanded ? 'Hide POI' : 'Show POI'}
+                                className="poi-eye-icon"
+                            />
+                        </button>
+
+                        {this.state.poiPanelExpanded && (() => {
+                            // Use the live boardManager tiles (indexed array, not state copy)
+                            const bm = this.props.boardManager;
+                            const liveTiles = (bm && bm.tiles) ? bm.tiles : (this.state.tiles || []);
+
+                            // Resolve player position from meta → tileIndex → [x, y]
+                            const meta = getMeta() || {};
+                            const playerTileIndex = meta.location && meta.location.tileIndex != null
+                                ? meta.location.tileIndex
+                                : null;
+                            const playerCoords = (playerTileIndex !== null && bm && typeof bm.getCoordinatesFromIndex === 'function')
+                                ? bm.getCoordinatesFromIndex(playerTileIndex)
+                                : null; // [x, y]
+
+                            // Gate type names — boardManager returns the subtype directly for gates
+                            const GATE_TYPES = new Set([
+                                'gate', 'dungeon_door', 'gryphon_gate', 'bat_gate', 'evil_gate',
+                                'minor_gate', 'major_gate', 'treasury_gate', 'imperial_gate',
+                                'necrotic_gate', 'master_necrotic_gate', 'dimensional_gate',
+                                'cyan_gate', 'violet_gate', 'rubicund_gate',
+                            ]);
+
+                            // Chests are stored as type='item' with a chest subtype
+                            const CHEST_SUBTYPES = new Set([
+                                'silver_chest', 'gold_chest', 'ornate_chest',
+                                'wooden_chest', 'iron_chest', 'steel_chest',
+                                'gilded_casket', 'ancient_casket', 'treasury_chest', 'cryptic_chest',
+                            ]);
+
+                            const NOTABLE_TYPES = new Set([
+                                'monster', 'chest', 'item', 'shop', 'vendor', 'shrine', 'portal',
+                                'boss', 'npc', 'well', 'altar', 'trap', 'treasure',
+                                'campfire', 'camp', 'artifact', 'event', 'dungeon_entrance',
+                                'spawn', 'narrative', 'lore_tablet', 'spell',
+                                'dungeon_portal', 'dungeon portal',
+                                ...GATE_TYPES,
+                            ]);
+
+                            const MAX_DIST = 6; // Chebyshev distance in grid units
+
+                            // ── Codex deep-link lookup ─────────────────────────
+                            // Maps a POI type (or subtype) to a { tab, entryId, search } object.
+                            // Add an entry here whenever a new INTERACTABLE id is added to CodexModal.
+                            const POI_CODEX_MAP = {
+                                // vendors
+                                vendor: { tab: 'interactables', entryId: 'merchant', search: 'merchant' },
+                                shop:   { tab: 'interactables', entryId: 'merchant', search: 'merchant' },
+                                merchant:  { tab: 'interactables', entryId: 'merchant', search: 'merchant' },
+                                alchemist: { tab: 'interactables', entryId: 'alchemist', search: 'alchemist' },
+                                // gates
+                                minor_gate:        { tab: 'interactables', entryId: 'minor_gate',        search: 'minor gate' },
+                                major_gate:        { tab: 'interactables', entryId: 'major_gate',        search: 'major gate' },
+                                treasury_gate:     { tab: 'interactables', entryId: 'treasury_gate',     search: 'treasury gate' },
+                                necrotic_gate:     { tab: 'interactables', entryId: 'necrotic_gate',     search: 'necrotic gate' },
+                                dimensional_gate:  { tab: 'interactables', entryId: 'dimensional_gate',  search: 'dimensional gate' },
+                                // chests
+                                silver_chest:  { tab: 'interactables', entryId: 'chest_silver', search: 'silver chest' },
+                                gold_chest:    { tab: 'interactables', entryId: 'chest_gold',   search: 'gold chest' },
+                                ornate_chest:  { tab: 'interactables', entryId: 'chest_ornate', search: 'ornate chest' },
+                                wooden_chest:  { tab: 'interactables', entryId: 'chest_silver', search: 'chest' },
+                                iron_chest:    { tab: 'interactables', entryId: 'chest_silver', search: 'chest' },
+                                steel_chest:   { tab: 'interactables', entryId: 'chest_gold',   search: 'chest' },
+                                gilded_casket: { tab: 'interactables', entryId: 'chest_ornate', search: 'ornate chest' },
+                                ancient_casket:{ tab: 'interactables', entryId: 'chest_ornate', search: 'ornate chest' },
+                                treasury_chest:{ tab: 'interactables', entryId: 'chest_ornate', search: 'ornate chest' },
+                                cryptic_chest: { tab: 'interactables', entryId: 'chest_ornate', search: 'ornate chest' },
+                                // navigation
+                                stairs:       { tab: 'interactables', entryId: 'stairs_down', search: 'stairs' },
+                                dungeon_portal:  { tab: 'interactables', entryId: 'dungeon_portal', search: 'teleporter' },
+                                'dungeon portal':{ tab: 'interactables', entryId: 'dungeon_portal', search: 'teleporter' },
+                                // lore / narrative
+                                narrative:    { tab: 'interactables', entryId: 'narrative',    search: 'narrative' },
+                                lore_tablet:  { tab: 'interactables', entryId: 'lore_tablet',  search: 'lore tablet' },
+                                // spawn
+                                spawn:        { tab: 'interactables', entryId: 'spawn_point',  search: 'spawn' },
+                                // misc
+                                camp:     { tab: 'interactables', entryId: 'camp',     search: 'camp' },
+                                campfire: { tab: 'interactables', entryId: 'camp',     search: 'camp' },
+                                oracle:   { tab: 'interactables', entryId: 'oracle',   search: 'oracle' },
+                                shrine:   { tab: 'interactables', entryId: 'shrine',   search: 'shrine' },
+                            };
+
+                            // Returns codex entry params for a given type+subtype, or null
+                            const getCodexEntry = (type, subtype) => {
+                                // Monsters → navigate to Monsters tab and search by name
+                                if (type === 'monster' && subtype) {
+                                    return { tab: 'monsters', entryId: null, search: subtype };
+                                }
+                                if (type === 'monster') {
+                                    return { tab: 'monsters', entryId: null, search: '' };
+                                }
+                                // For types where the type alone is enough (spawn, shrines, etc.)
+                                // check type first to avoid accidental subtype collision
+                                if (POI_CODEX_MAP[type]) {
+                                    // For chests and gates, subtype is more specific — prefer subtype
+                                    if ((type === 'item' || type === 'chest' || GATE_TYPES.has(type)) && POI_CODEX_MAP[subtype]) {
+                                        return POI_CODEX_MAP[subtype];
+                                    }
+                                    return POI_CODEX_MAP[type];
+                                }
+                                return POI_CODEX_MAP[subtype] || null;
+                            };
+
+                            const openPoiCodex = (type, subtype) => {
+                                const entry = getCodexEntry(type, subtype);
+                                if (entry) {
+                                    this.setState({
+                                        showCodex: true,
+                                        codexEntry: entry,
+                                    });
+                                } else {
+                                    this.setState({ noCodexEntry: true });
+                                }
+                            };
+
+                            // Mirror boardManager.getContainsType: for gate objects, return the subtype
+                            const getType = (contains) => {
+                                if (!contains) return null;
+                                if (typeof contains === 'object') {
+                                    if (contains.type === 'gate' && contains.subtype) return contains.subtype;
+                                    return contains.type || null;
+                                }
+                                return contains; // string legacy
+                            };
+                            const getSubtype = (contains) => {
+                                if (!contains) return null;
+                                if (typeof contains === 'object') return contains.subtype || null;
+                                return null;
+                            };
+
+                            const poi = liveTiles.filter((t, idx) => {
+                                if (!t) return false;
+                                // Skip fogged tiles
+                                if (t.color === 'black' || t.fog === true) return false;
+                                const type = getType(t.contains);
+                                if (!type || !NOTABLE_TYPES.has(type)) return false;
+                                // Distance filter using tile index → grid coords
+                                if (playerCoords && bm && typeof bm.getCoordinatesFromIndex === 'function') {
+                                    const tileId = t.id != null ? t.id : idx;
+                                    const tc = bm.getCoordinatesFromIndex(tileId);
+                                    const chebyshev = Math.max(
+                                        Math.abs(tc[0] - playerCoords[0]),
+                                        Math.abs(tc[1] - playerCoords[1])
+                                    );
+                                    return chebyshev <= MAX_DIST;
+                                }
+                                return true;
+                            });
+
+                            // Deduplicate multi-tile structures (e.g. a 2×2 vendor
+                            // occupies 4 tiles all with the same type+subtype+image).
+                            // Keep only the first tile for each unique combination.
+                            const seenPoi = new Set();
+                            const uniquePoi = poi.filter(t => {
+                                const type    = getType(t.contains);
+                                const subtype = getSubtype(t.contains);
+                                const key = `${type}|${subtype || ''}|${t.image || ''}`;
+                                if (seenPoi.has(key)) return false;
+                                seenPoi.add(key);
+                                return true;
+                            });
+
+                            if (uniquePoi.length === 0) {
+                                return (
+                                    <div className="poi-empty">
+                                        <span>Nothing notable nearby</span>
+                                    </div>
+                                );
+                            }
+
+                            return (
+                                <div className="poi-list">
+                                    {uniquePoi.map((t, i) => {
+                                        const type = getType(t.contains);
+                                        const subtype = getSubtype(t.contains);
+                                        const isShrine = type === 'shrine';
+
+                                        if (isShrine) {
+                                            // Shrine: building image + class portrait side-by-side
+                                            const shrineImg = images['shrine'] || null;
+                                            // subtype is the class key (e.g. 'wizard', 'ranger', 'barbarian')
+                                            const classPortrait = subtype
+                                                ? (images[subtype + '_portrait'] || images[subtype] || null)
+                                                : null;
+                                            const label = subtype
+                                                ? `${subtype.replace(/_/g, ' ')} Shrine`
+                                                : 'Shrine';
+                                            return (
+                                                <div
+                                                    key={i}
+                                                    className="poi-portrait-card poi-shrine-card"
+                                                    style={{ cursor: 'pointer' }}
+                                                    title="Click to open Codex"
+                                                    onClick={() => openPoiCodex(type, subtype)}
+                                                >
+                                                    <div className="poi-shrine-images">
+                                                        <div className="poi-shrine-half">
+                                                            {shrineImg
+                                                                ? <img src={shrineImg} alt="Shrine" className="poi-shrine-img" />
+                                                                : <div className="poi-portrait-placeholder" />
+                                                            }
+                                                        </div>
+                                                        <div className="poi-shrine-half">
+                                                            {classPortrait
+                                                                ? <img src={classPortrait} alt={subtype} className="poi-shrine-img" />
+                                                                : <div className="poi-portrait-placeholder" />
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <div className="poi-portrait-name">{label}</div>
+                                                </div>
+                                            );
+                                        }
+
+                                        // Classify for card theming
+                                        const isChest    = type === 'chest' || (type === 'item' && CHEST_SUBTYPES.has(subtype));
+                                        const isGate     = GATE_TYPES.has(type);
+                                        const isVendor   = type === 'vendor' || type === 'shop';
+                                        const isNarrative = type === 'narrative' || type === 'lore_tablet';
+                                        const isSpawn    = type === 'spawn';
+                                        const isPortal   = type === 'dungeon_portal' || type === 'dungeon portal';
+                                        // Image: prefer tile.image (already resolved by boardManager)
+                                        const icon = t.image
+                                            ? (images[t.image] || t.image)
+                                            : (images[subtype] || images[type] || null);
+                                        const label = isGate
+                                            ? (type || 'Gate').replace(/_/g, ' ')
+                                            : isSpawn
+                                                ? 'Spawn Point'
+                                                : isPortal
+                                                    ? 'Teleporter'
+                                                    : isNarrative
+                                                        ? (subtype ? subtype.replace(/_/g, ' ') : 'Narrative')
+                                                        : subtype
+                                                            ? subtype.replace(/_/g, ' ')
+                                                            : (type ? type.replace(/_/g, ' ') : 'Unknown');
+                                        const cardClass = isChest     ? ' poi-chest-card'
+                                            : isGate      ? ' poi-gate-card'
+                                            : isVendor    ? ' poi-vendor-card'
+                                            : isNarrative ? ' poi-narrative-card'
+                                            : isSpawn     ? ' poi-spawn-card'
+                                            : isPortal    ? ' poi-portal-card'
+                                            : '';
+                                        return (
+                                            <div
+                                                key={i}
+                                                className={`poi-portrait-card${cardClass}`}
+                                                style={{ cursor: 'pointer' }}
+                                                title="Click to open Codex"
+                                                onClick={() => openPoiCodex(type, subtype)}
+                                            >
+                                                <div className="poi-portrait-img-wrap">
+                                                    {icon
+                                                        ? <img src={icon} alt={label} className="poi-portrait-img" />
+                                                        : <div className="poi-portrait-placeholder" />
+                                                    }
+                                                </div>
+                                                <div className="poi-portrait-name">{label}</div>
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            );
+                        })()}
+                    </div>
+                    {/* ── /Points of Interest panel ───────────────────────────── */}
+
                 </div>
                 <div className="expand-collapse-button icon-container" onClick={this.toggleRightSidePanel}>
                     <CIcon icon={cilCaretLeft} className={`expand-icon ${this.state.rightPanelExpanded ? 'expanded' : ''}`} size="sm"/>
@@ -11983,8 +12362,37 @@ class DungeonPage extends React.Component {
                                     return (
                                         <div className="idp-content">
                                             {item && (
-                                                <div className="idp-icon">
-                                                    {iconImg && <img src={iconImg} alt={item.name || ''} />}
+                                                <div className="idp-icon" style={{ position: 'relative', overflow: 'hidden' }}>
+                                                    {item.type === 'soul_shard' ? (() => {
+                                                        const monsterType = item.monsterType;
+                                                        const portraitUrl = images[monsterType] || images[`${monsterType}_portrait`] || images[`${monsterType}_portrait2`] || null;
+                                                        return (
+                                                            <>
+                                                                {portraitUrl && (
+                                                                    <div style={{
+                                                                        position: 'absolute',
+                                                                        top: 0, left: 0, right: 0, bottom: 0,
+                                                                        backgroundImage: `url(${portraitUrl.default || portraitUrl})`,
+                                                                        backgroundSize: 'cover',
+                                                                        backgroundPosition: 'center',
+                                                                        opacity: 0.5,
+                                                                        zIndex: 1
+                                                                    }} />
+                                                                )}
+                                                                <div style={{
+                                                                    position: 'absolute',
+                                                                    top: 0, left: 0, right: 0, bottom: 0,
+                                                                    backgroundImage: `url(${images['sould_shards'] || iconImg})`,
+                                                                    backgroundSize: '80% 80%',
+                                                                    backgroundPosition: 'center',
+                                                                    backgroundRepeat: 'no-repeat',
+                                                                    zIndex: 2
+                                                                }} />
+                                                            </>
+                                                        );
+                                                    })() : (
+                                                        iconImg && <img src={iconImg} alt={item.name || ''} style={{ zIndex: 2 }} />
+                                                    )}
                                                 </div>
                                             )}
                                             <div className="idp-details">
@@ -12013,7 +12421,7 @@ class DungeonPage extends React.Component {
                                 <div className='inventory-strip-wrapper'>
                                     <div className='inventory-strip'>
                                         {(() => {
-                                            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+                                            const inv = this.getCombinedInventory();
                                             const grouped = {};
                                             inv.forEach((item, idx) => {
                                                 const key = item.name || item.type || `item_${idx}`;
@@ -12049,7 +12457,7 @@ class DungeonPage extends React.Component {
                                                             className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
                                                             isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
                                                         />
-                                                        {(count > 1 || isShardStack) && (
+                                                        {(count > 1 || isShardStack) && item.type !== 'soul_shard' && (
                                                             <div className='stack-count-badge'>
                                                                 {count}
                                                             </div>
@@ -12073,7 +12481,7 @@ class DungeonPage extends React.Component {
                         </div>
 
                         {this.state.isInventoryExpanded && (() => {
-                            const inv = (this.props.inventoryManager && this.props.inventoryManager.inventory) || [];
+                            const inv = this.getCombinedInventory();
                             const categorized = {
                                 'Weapons': {},
                                 'Armor': {},
@@ -12155,7 +12563,7 @@ class DungeonPage extends React.Component {
                                                                         className={`inventory-tile ${this.state.activeInventoryItem?.id === firstIndex ? 'active' : ''}`}
                                                                         isActiveInventory={this.state.activeInventoryItem?.id === firstIndex}
                                                                     />
-                                                                    {(count > 1 || isShardStack) && (
+                                                                    {(count > 1 || isShardStack) && item.type !== 'soul_shard' && (
                                                                         <div className='stack-count-badge'>
                                                                             {count}
                                                                         </div>

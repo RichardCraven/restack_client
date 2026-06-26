@@ -27,10 +27,10 @@ export function clearDrainedEffect(target) {
 
 export function isUndead(unit) {
     if (!unit) return false;
-    const subtype = (unit.subtype || '').toLowerCase();
-    const type = (unit.type || '').toLowerCase();
-    const key = (unit.key || '').toLowerCase();
-    const id = (unit.id || '').toLowerCase();
+    const subtype = String(unit.subtype || '').toLowerCase();
+    const type = String(unit.type || '').toLowerCase();
+    const key = String(unit.key || '').toLowerCase();
+    const id = String(unit.id || '').toLowerCase();
     return subtype === 'undead' ||
            type === 'skeleton' || type === 'zombie' || type === 'wraith' || type === 'vampire' || type === 'ghoul' || type === 'mummy' ||
            key === 'skeleton' || key === 'zombie' || key === 'wraith' || key === 'vampire' || key === 'ghoul' || key === 'mummy' ||

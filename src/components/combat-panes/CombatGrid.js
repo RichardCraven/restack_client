@@ -601,6 +601,7 @@ export default function CombatGrid(props) {
         fighterPortraitClicked,
         monsterCombatPortraitClicked,
         onDragStart,
+        onFighterMouseDown,
         getManualMovementArc,
         getManualMovementArcColor,
         getFighterDetails,
@@ -1220,6 +1221,13 @@ export default function CombatGrid(props) {
                                     : undefined),
                         }}
                         onClick={() => fighterPortraitClicked(fighter.id)}
+                        onMouseDown={(e) => {
+                            if (onFighterMouseDown && !details?.dead && !details?.isMonster && !details?.isMinion) {
+                                e.preventDefault();
+                                const liveDetails = getLiveCombatant(fighter.id) || details || fighter;
+                                onFighterMouseDown(liveDetails, e);
+                            }
+                        }}
                         onMouseEnter={() => portraitHovered(fighter.id)}
                         onMouseLeave={() => portraitHovered(null)}
                         onDragStart={(event) => onDragStart(fighter)}

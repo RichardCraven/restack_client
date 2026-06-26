@@ -426,6 +426,8 @@ import trap from '../assets/icons/trap.png';
 import spawn_point from '../assets/icons/spawn.png'
 import eye from '../assets/icons/misc/eye.png'
 import eye_inverted from '../assets/icons/misc/eye_inverted.png'
+import eye_open from '../assets/icons/misc/eye_open.png'
+import eye_closed from '../assets/icons/misc/eye_closed.png'
 import wide_skull from '../assets/icons/misc/wide_skull.png'
 import eclipse from '../assets/icons/misc/eclipse.png'
 import magic_moon_1 from '../assets/icons/misc/magic_moon_1.png'
@@ -437,6 +439,7 @@ import mascali_badge from '../assets/icons/misc/mascali badge.png'
 import quarine_badge from '../assets/icons/misc/quarine badge.png'
 import rubedo_badge from '../assets/icons/misc/rubedo badge.png'
 import vermine_badge from '../assets/icons/misc/vermine badge.png'
+import sould_shards from '../assets/icons/misc/sould shards.png'
 
 
 // loot
@@ -1061,8 +1064,9 @@ import rubedo_dust from '../assets/icons/loot/rubedo_dust.png';
 import spectral_dust from '../assets/icons/loot/spectral_dust.png';
 import monadic_dust from '../assets/icons/loot/monadic_dust.png';
 import monadic_nugget from '../assets/icons/loot/monadic_nugget.png';
+import tattoo_ink from '../assets/icons/items/potions/Res_42_ink.png';
 
-const tattoo_placeholder = trap; // placeholder until real tattoo art is added
+const tattoo_placeholder = tattoo_ink; // placeholder until real tattoo art is added
 const _terrainBase = [terrain_1, terrain_2, terrain_3, terrain_4, terrain_5, terrain_6, terrain_7, terrain_8, terrain_9, terrain_10, terrain_11, terrain_12, terrain_13, terrain_14, terrain_15, terrain_16];
 const _terrainLight = [terrain_1_light, terrain_2_light, terrain_3_light, terrain_4_light, terrain_5_light, terrain_6_light, terrain_7_light, terrain_8_light, terrain_9_light, terrain_10_light, terrain_11_light, terrain_12_light, terrain_13_light, terrain_14_light, terrain_15_light, terrain_16_light];
 const _terrainDark = [terrain_1_dark, terrain_2_dark, terrain_3_dark, terrain_4_dark, terrain_5_dark, terrain_6_dark, terrain_7_dark, terrain_8_dark, terrain_9_dark, terrain_10_dark, terrain_11_dark, terrain_12_dark, terrain_13_dark, terrain_14_dark, terrain_15_dark, terrain_16_dark];
@@ -1509,11 +1513,14 @@ export {
 
     trash,
     trap,
+    tattoo_ink,
     tattoo_placeholder,
     spawn_point,
     wide_skull,
     eye,
     eye_inverted,
+    eye_open,
+    eye_closed,
     eclipse,
     magic_moon_1,
     food,
@@ -2047,4 +2054,5 @@ export {
     quarine_badge,
     rubedo_badge,
     vermine_badge,
+    sould_shards,
 };

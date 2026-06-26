@@ -6879,3 +6879,47 @@
 }
 
 
+/* ── Manual Input: drag-to-target arc & tile flash ──────────────────────── */
+
+/* Marching-ants animation on the SVG arc path */
+@keyframes drag-arc-march {
+    from { stroke-dashoffset: 0; }
+    to   { stroke-dashoffset: -38; }
+}
+
+.drag-arc-line {
+    animation: drag-arc-march 0.5s linear infinite;
+}
+
+/* Yellow flash when releasing on an empty tile */
+@keyframes combat-tile-flash-yellow {
+    0%   {
+        background: rgba(255, 183, 3, 0.9) !important;
+        box-shadow: inset 0 0 0 2px rgba(255, 183, 3, 1), 0 0 20px rgba(255, 183, 3, 0.7);
+    }
+    100% {
+        background: transparent !important;
+        box-shadow: none;
+    }
+}
+
+/* Red flash when releasing on an enemy tile */
+@keyframes combat-tile-flash-red {
+    0%   {
+        background: rgba(231, 76, 60, 0.9) !important;
+        box-shadow: inset 0 0 0 2px rgba(231, 76, 60, 1), 0 0 20px rgba(231, 76, 60, 0.7);
+    }
+    100% {
+        background: transparent !important;
+        box-shadow: none;
+    }
+}
+
+.combat-tile--flash-yellow {
+    animation: combat-tile-flash-yellow 0.65s ease-out forwards !important;
+}
+
+.combat-tile--flash-red {
+    animation: combat-tile-flash-red 0.65s ease-out forwards !important;
+}
+

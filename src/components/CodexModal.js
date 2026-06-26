@@ -4,14 +4,14 @@ import * as images from '../utils/images';
 import { DURATION_ROUNDS } from '../utils/shared-constants';
 
 const CLASS_BASE_STATS = {
-    wizard:    { str: 3, int: 7, dex: 5, fort: 7, hp: 10 },
-    soldier:   { str: 8, int: 5, dex: 6, fort: 7, hp: 11 },
-    monk:      { str: 5, int: 6, dex: 7, fort: 7, hp: 10 },
-    sage:      { str: 3, int: 7, dex: 5, fort: 7, hp: 10 },
-    ranger:    { str: 5, int: 5, dex: 6, fort: 3, hp: 10 },
+    wizard: { str: 3, int: 7, dex: 5, fort: 7, hp: 10 },
+    soldier: { str: 8, int: 5, dex: 6, fort: 7, hp: 11 },
+    monk: { str: 5, int: 6, dex: 7, fort: 7, hp: 10 },
+    sage: { str: 3, int: 7, dex: 5, fort: 7, hp: 10 },
+    ranger: { str: 5, int: 5, dex: 6, fort: 3, hp: 10 },
     barbarian: { str: 8, int: 3, dex: 4, fort: 6, hp: 52 },
-    engineer:  { str: 5, int: 6, dex: 7, fort: 6, hp: 10 },
-    summoner:  { str: 3, int: 8, dex: 5, fort: 6, hp: 10 },
+    engineer: { str: 5, int: 6, dex: 7, fort: 6, hp: 10 },
+    summoner: { str: 3, int: 8, dex: 5, fort: 6, hp: 10 },
 };
 
 function PowerRatingsPanel({ stats, classId }) {
@@ -29,24 +29,24 @@ function PowerRatingsPanel({ stats, classId }) {
         };
     }
 
-    const strVal  = typeof s.str === 'number' ? s.str : 0;
-    const spdVal  = typeof s.speed === 'number' ? s.speed : (typeof s.spd === 'number' ? s.spd : 0);
-    const dexVal  = typeof s.dex === 'number' ? s.dex : 0;
+    const strVal = typeof s.str === 'number' ? s.str : 0;
+    const spdVal = typeof s.speed === 'number' ? s.speed : (typeof s.spd === 'number' ? s.spd : 0);
+    const dexVal = typeof s.dex === 'number' ? s.dex : 0;
     const fortVal = typeof s.fort === 'number' ? s.fort : 0;
-    const defVal  = typeof s.def === 'number' ? s.def : 0;
-    const intVal  = typeof s.int === 'number' ? s.int : 0;
-    const hpVal   = typeof s.hp === 'number' ? s.hp : 0;
+    const defVal = typeof s.def === 'number' ? s.def : 0;
+    const intVal = typeof s.int === 'number' ? s.int : 0;
+    const hpVal = typeof s.hp === 'number' ? s.hp : 0;
 
     const items = [
-        { label: 'STRENGTH',     val: strVal,  max: 15 },
-        { label: 'SPEED',        val: spdVal,  max: 20 },
-        { label: 'AGILITY',      val: dexVal,  max: 15 },
-        { label: 'STAMINA',      val: fortVal, max: 15 },
-        { label: 'DURABILITY',   val: defVal,  max: 20 },
-        { label: 'INTELLIGENCE', val: intVal,  max: 15 }
+        { label: 'STRENGTH', val: strVal, max: 15 },
+        { label: 'SPEED', val: spdVal, max: 20 },
+        { label: 'AGILITY', val: dexVal, max: 15 },
+        { label: 'STAMINA', val: fortVal, max: 15 },
+        { label: 'DURABILITY', val: defVal, max: 20 },
+        { label: 'INTELLIGENCE', val: intVal, max: 15 }
     ];
     if (!classId) {
-        items.push({ label: 'HEALTH (HP)',  val: hpVal,   max: 500 });
+        items.push({ label: 'HEALTH (HP)', val: hpVal, max: 500 });
     }
 
     return (
@@ -242,52 +242,69 @@ const INTERACTABLES = [
         desc: 'Currency used to buy items from vendors. Dropped by monsters and found in chests.',
         tags: ['currency', 'item'],
     },
+    {
+        id: 'dungeon_portal',
+        name: 'Teleporter',
+        icon: images.dungeon_portal,
+        category: 'interactable',
+        desc: 'A glowing dimensional beacon. Step onto it to be instantly teleported to a linked location elsewhere in the dungeon.',
+        tags: ['portal', 'teleporter', 'navigation', 'dungeon_portal'],
+    },
+    {
+        id: 'spawn_point',
+        name: 'Spawn Point',
+        icon: images.spawn_point,
+        category: 'interactable',
+        desc: 'A marked location where encounters or creatures may be triggered. Sometimes tied to dungeon events.',
+        tags: ['spawn', 'event'],
+    },
 ];
 
 // ── Monster descriptions ──────────────────────────────────────────────────────
 // Supplements data from MonsterManager with lore/tactical notes.
 
-const MONSTER_LORE = {
-    goblin:           { lore: 'Fast and fragile. Notorious for surprise attacks. Weak to crushing and electricity.', tactics: 'Dispatch quickly — their high dex makes them hard to hit. AoE attacks shine here.' },
-    skeleton:         { lore: 'Undead soldier reanimated by dark magic. Can reassemble after being defeated.', tactics: 'Apply fire damage to prevent Reassembly. Focus fire to ensure destruction.' },
-    troll:            { lore: 'A hulking regenerating brute. Nearly impossible to keep down without sustained damage.', tactics: 'Stack damage-over-time effects. Prevent healing with bleed or acid.' },
-    ogre:             { lore: 'A brutish giant with earth-shaking attacks. Slow but devastating in close quarters.', tactics: 'Keep ranged units mobile. Tank with Soldier or Barbarian.' },
-    vampire:          { lore: 'A cunning undead predator. Drains life and transforms into bats to reposition.', tactics: 'Interrupt Bat Fly to prevent retreats. Heal mitigation helps against Soul Suck.' },
-    mummy:            { lore: 'Ancient cursed remains wrapped in death-magic. Induces fear and drains energy.', tactics: 'High willpower units resist Induce Fear. Keep back-row safe from Energy Drain.' },
-    wraith:           { lore: 'An incorporeal spirit that phases through defenses. Ignores conventional armor.', tactics: 'Use magical attacks. Physical damage is heavily reduced against wraiths.' },
-    sphinx:           { lore: 'A guardian of arcane knowledge with powerful riddle-curses and lightning breath.', tactics: 'Interrupt spells with stuns. Prioritize killing before it unleashes Storm.' },
-    wyvern:           { lore: 'A winged serpent that dives and retreats. Poison tail strikes at range.', tactics: 'Ranger and Sage shine here. Force it to stay grounded with ensnare.' },
-    djinn:            { lore: 'A betraying elemental of immense power. Binds targets and fires death missiles.', tactics: 'Use fire resistance. Avoid bunching up — Death Missile hits multiple targets.' },
-    dragon:           { lore: 'The apex predator of the dungeon. Breathes fire, claws, and bites with terrible force.', tactics: 'Spread your crew. Use ice and water damage. Have the Sage on constant heal duty.' },
-    gorgon:           { lore: 'A serpentine horror with a petrifying gaze and stone-shattering tail sweep.', tactics: 'Do not rely on tanking — dodge-based classes (Monk, Ranger) fare best.' },
-    imp:              { lore: 'Diminutive chaos demons. Individually weak but dangerous in swarms.', tactics: 'Eagle Eye (Ranger) and AoE spells (Wizard) clear swarms efficiently.' },
-    witch:            { lore: 'A shadowy hex-caster who curses, dispels, and whispers demonic commands.', tactics: 'Purge curses with Sage. High willpower units resist hex effects.' },
-    beholder:         { lore: 'A floating eyeball horror with multiple magical ray attacks, each with a different effect.', tactics: 'Divide attention — keep crew spread to avoid being caught by multiple rays.' },
-    ghoul:            { lore: 'A ravenous undead predator. Tears flesh and can paralyze with its bite.', tactics: 'Poison and acid are effective. Paralysis breaks your action economy — purge fast.' },
-    hagigah:          { lore: 'The demonlord overseer of the outer reaches. Drawn to the tower by insatiable hunger.' },
-    hashmallim:       { lore: "The tower's old custodian, torn in two by infinite contradictions." },
+export const MONSTER_LORE = {
+    goblin: { lore: 'Fast and fragile. Notorious for surprise attacks. Weak to crushing and electricity.', tactics: 'Dispatch quickly — their high dex makes them hard to hit. AoE attacks shine here.' },
+    skeleton: { lore: 'Undead soldier reanimated by dark magic. Can reassemble after being defeated.', tactics: 'Apply fire damage to prevent Reassembly. Focus fire to ensure destruction.' },
+    troll: { lore: 'A hulking regenerating brute. Nearly impossible to keep down without sustained damage.', tactics: 'Stack damage-over-time effects. Prevent healing with bleed or acid.' },
+    ogre: { lore: 'A brutish giant with earth-shaking attacks. Slow but devastating in close quarters.', tactics: 'Keep ranged units mobile. Tank with Soldier or Barbarian.' },
+    vampire: { lore: 'A cunning undead predator. Drains life and transforms into bats to reposition.', tactics: 'Interrupt Bat Fly to prevent retreats. Heal mitigation helps against Soul Suck.' },
+    mummy: { lore: 'Ancient cursed remains wrapped in death-magic. Induces fear and drains energy.', tactics: 'High willpower units resist Induce Fear. Keep back-row safe from Energy Drain.' },
+    wraith: { lore: 'An incorporeal spirit that phases through defenses. Ignores conventional armor.', tactics: 'Use magical attacks. Physical damage is heavily reduced against wraiths.' },
+    sphinx: { lore: 'A guardian of arcane knowledge with powerful riddle-curses and lightning breath.', tactics: 'Interrupt spells with stuns. Prioritize killing before it unleashes Storm.' },
+    wyvern: { lore: 'A winged serpent that dives and retreats. Poison tail strikes at range.', tactics: 'Ranger and Sage shine here. Force it to stay grounded with ensnare.' },
+    djinn: { lore: 'A betraying elemental of immense power. Binds targets and fires death missiles.', tactics: 'Use fire resistance. Avoid bunching up — Death Missile hits multiple targets.' },
+    dragon: { lore: 'The apex predator of the dungeon. Breathes fire, claws, and bites with terrible force.', tactics: 'Spread your crew. Use ice and water damage. Have the Sage on constant heal duty.' },
+    gorgon: { lore: 'A serpentine horror with a petrifying gaze and stone-shattering tail sweep.', tactics: 'Do not rely on tanking — dodge-based classes (Monk, Ranger) fare best.' },
+    imp: { lore: 'Diminutive chaos demons. Individually weak but dangerous in swarms.', tactics: 'Eagle Eye (Ranger) and AoE spells (Wizard) clear swarms efficiently.' },
+    witch: { lore: 'A shadowy hex-caster who curses, dispels, and whispers demonic commands.', tactics: 'Purge curses with Sage. High willpower units resist hex effects.' },
+    beholder: { lore: 'A floating eyeball horror with multiple magical ray attacks, each with a different effect.', tactics: 'Divide attention — keep crew spread to avoid being caught by multiple rays.' },
+    beholder_minion: { lore: 'A creature existing only to serve the great eye.', tactics: 'Focus them down before they can bifurcate into a double.' },
+    ghoul: { lore: 'A ravenous undead predator. Tears flesh and can paralyze with its bite.', tactics: 'Poison and acid are effective. Paralysis breaks your action economy — purge fast.' },
+    hagigah: { lore: 'The demonlord overseer of the outer reaches. Drawn to the tower by insatiable hunger.' },
+    hashmallim: { lore: "The tower's old custodian, torn in two by infinite contradictions." },
 };
 
 // ── Classes info ─────────────────────────────────────────────────────────────
 const CLASS_LORE = [
-    { id: 'soldier',   emoji: '🛡', name: 'Soldier',   role: 'Tank / Leader',       color: '#4a86c8', desc: 'A stalwart front-line warrior. Specializes in protection, morale-boosting battlecries, and sustained melee combat. Their Shield Wall and Defensive Stance make them essential for absorbing heavy hits. As a natural leader, their presence boosts the crew\'s resolve.' },
-    { id: 'barbarian', emoji: '🪓', name: 'Barbarian', role: 'Melee Berserker',       color: '#c94040', desc: 'A ferocious melee powerhouse. Enters a Berserker state for tremendous damage at the cost of defense. Cleave hits multiple targets; Leap Attack closes distance in an instant. High HP pool makes them surprisingly durable.' },
-    { id: 'monk',      emoji: '🥋', name: 'Monk',      role: 'Agile Striker',        color: '#d48a30', desc: 'Channels inner force through lightning-fast strikes. Ethereal Speed enables repositioning; Astral Projection creates a decoy. Force Punch launches enemies back; Flurry chains rapid hits. Excels at disruption and mobility.' },
-    { id: 'ranger',    emoji: '🏹', name: 'Ranger',    role: 'Ranged / Debuffer',    color: '#5aab5a', desc: 'A precise archer who never needs to get close. Notch selects arrow types; Loose fires them with deadly accuracy. Mark amplifies all damage on a target; Ensnare immobilizes. Eagle Eye passively shoots summoned enemies.' },
-    { id: 'wizard',    emoji: '🔮', name: 'Wizard',    role: 'Spellcaster / AoE',   color: '#9b64c9', desc: 'A destructive master of elemental magic. Fireball, Ice Blast, and Lightning Strike cover the fire/ice/lightning damage triangle. Disintegrate deals massive damage; Sleep disables; Annihilation is a devastating room-clearing ultimate.' },
-    { id: 'sage',      emoji: '📖', name: 'Sage',      role: 'Healer / Support',     color: '#48b0b0', desc: 'The crew\'s lifeline. Heal restores HP; Circle of Protection raises defense; Perceive reveals enemy weaknesses. The Sage\'s Owl\'s Insight passive makes them invaluable for strategic knowledge and keeping the crew alive under pressure.' },
-    { id: 'summoner',  emoji: '💀', name: 'Summoner',  role: 'Minion Controller',    color: '#8a5caa', desc: 'Overwhelms the battlefield with an army of summoned undead and demons. Rifts destabilize enemy formations; Skeleton Knights hold the line while the Summoner directs from safety. Duplicate and Triplicate create ally copies mid-fight.' },
-    { id: 'engineer',  emoji: '⚙️', name: 'Engineer',  role: 'Utility / Control',    color: '#7a9ab0', desc: 'A battlefield machinist who controls spacing and tactical pressure. Force Back pushes enemies into unfavorable positions. Combines weapon mastery with mechanical gadgetry for unique hybrid play.' },
+    { id: 'soldier', emoji: '🛡', name: 'Soldier', role: 'Tank / Leader', color: '#4a86c8', desc: 'A stalwart front-line warrior. Specializes in protection, morale-boosting battlecries, and sustained melee combat. Their Shield Wall and Defensive Stance make them essential for absorbing heavy hits. As a natural leader, their presence boosts the crew\'s resolve.' },
+    { id: 'barbarian', emoji: '🪓', name: 'Barbarian', role: 'Melee Berserker', color: '#c94040', desc: 'A ferocious melee powerhouse. Enters a Berserker state for tremendous damage at the cost of defense. Cleave hits multiple targets; Leap Attack closes distance in an instant. High HP pool makes them surprisingly durable.' },
+    { id: 'monk', emoji: '🥋', name: 'Monk', role: 'Agile Striker', color: '#d48a30', desc: 'Channels inner force through lightning-fast strikes. Ethereal Speed enables repositioning; Astral Projection creates a decoy. Force Punch launches enemies back; Flurry chains rapid hits. Excels at disruption and mobility.' },
+    { id: 'ranger', emoji: '🏹', name: 'Ranger', role: 'Ranged / Debuffer', color: '#5aab5a', desc: 'A precise archer who never needs to get close. Notch selects arrow types; Loose fires them with deadly accuracy. Mark amplifies all damage on a target; Ensnare immobilizes. Eagle Eye passively shoots summoned enemies.' },
+    { id: 'wizard', emoji: '🔮', name: 'Wizard', role: 'Spellcaster / AoE', color: '#9b64c9', desc: 'A destructive master of elemental magic. Fireball, Ice Blast, and Lightning Strike cover the fire/ice/lightning damage triangle. Disintegrate deals massive damage; Sleep disables; Annihilation is a devastating room-clearing ultimate.' },
+    { id: 'sage', emoji: '📖', name: 'Sage', role: 'Healer / Support', color: '#48b0b0', desc: 'The crew\'s lifeline. Heal restores HP; Circle of Protection raises defense; Perceive reveals enemy weaknesses. The Sage\'s Owl\'s Insight passive makes them invaluable for strategic knowledge and keeping the crew alive under pressure.' },
+    { id: 'summoner', emoji: '💀', name: 'Summoner', role: 'Minion Controller', color: '#8a5caa', desc: 'Overwhelms the battlefield with an army of summoned undead and demons. Rifts destabilize enemy formations; Skeleton Knights hold the line while the Summoner directs from safety. Duplicate and Triplicate create ally copies mid-fight.' },
+    { id: 'engineer', emoji: '⚙️', name: 'Engineer', role: 'Utility / Control', color: '#7a9ab0', desc: 'A battlefield machinist who controls spacing and tactical pressure. Force Back pushes enemies into unfavorable positions. Combines weapon mastery with mechanical gadgetry for unique hybrid play.' },
 ];
 
 // ── Tab definitions ───────────────────────────────────────────────────────────
 
 const TABS = [
-    { id: 'skills',         label: 'Skills',         emoji: '⚡' },
-    { id: 'monsters',       label: 'Monsters',       emoji: '👹' },
-    { id: 'classes',        label: 'Classes',        emoji: '🧑\u200d🤝\u200d🧑' },
-    { id: 'interactables',  label: 'World',          emoji: '🗺️' },
-    { id: 'pyre_echo',      label: 'Pyre & Echo',    emoji: '🃏' },
+    { id: 'skills', label: 'Skills', emoji: '⚡' },
+    { id: 'monsters', label: 'Monsters', emoji: '👹' },
+    { id: 'classes', label: 'Classes', emoji: '🧑\u200d🤝\u200d🧑' },
+    { id: 'interactables', label: 'World', emoji: '🗺️' },
+    { id: 'pyre_echo', label: 'Pyre & Echo', emoji: '🃏' },
 ];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -305,13 +322,13 @@ function resolveImg(val) {
 }
 
 function classColor(cls) {
-    const map = { ranger:'#5aab5a', sage:'#48b0b0', soldier:'#4a86c8', wizard:'#9b64c9', barbarian:'#c94040', monk:'#d48a30', summoner:'#8a5caa', engineer:'#7a9ab0' };
-    return map[(cls||'').toLowerCase()] || '#888';
+    const map = { ranger: '#5aab5a', sage: '#48b0b0', soldier: '#4a86c8', wizard: '#9b64c9', barbarian: '#c94040', monk: '#d48a30', summoner: '#8a5caa', engineer: '#7a9ab0' };
+    return map[(cls || '').toLowerCase()] || '#888';
 }
 
 function typeColor(t) {
-    const map = { damage:'#c94040', debuff:'#9b64c9', buff:'#4a86c8', heal:'#48b0b0', utility:'#d48a30', passive:'#666', summon:'#8a5caa' };
-    return map[(t||'').toLowerCase()] || '#666';
+    const map = { damage: '#c94040', debuff: '#9b64c9', buff: '#4a86c8', heal: '#48b0b0', utility: '#d48a30', passive: '#666', summon: '#8a5caa' };
+    return map[(t || '').toLowerCase()] || '#666';
 }
 
 function getEffectIcon(type) {
@@ -330,14 +347,47 @@ function getEffectIcon(type) {
 
 // ── CodexModal component ──────────────────────────────────────────────────────
 
-export default function CodexModal({ visible, onClose, monsterManager }) {
-    const [activeTab, setActiveTab] = React.useState('skills');
+export default function CodexModal({ visible, onClose, monsterManager, initialTab, initialSearch, initialEntryId }) {
+    const [activeTab, setActiveTab] = React.useState(initialTab || 'skills');
     const [search, setSearch] = React.useState('');
     const [selectedEntry, setSelectedEntry] = React.useState(null);
     const [skillClassFilter, setSkillClassFilter] = React.useState('all');
+    // Tracks whether the next tab-change is a programmatic navigation (should not reset entry)
+    const suppressNextReset = React.useRef(false);
 
-    // Reset selection when tab changes
+    // When opened with a pre-selected entry, navigate to it
     React.useEffect(() => {
+        if (!visible) return;
+        if (initialTab) {
+            suppressNextReset.current = true;
+            setActiveTab(initialTab);
+        }
+        // Clear search so the entry is visible in the full list
+        setSearch('');
+        if (initialEntryId) {
+            // Interactable entry by id
+            const found = INTERACTABLES.find(i => i.id === initialEntryId);
+            if (found) { setSelectedEntry(found); return; }
+        }
+        if (initialTab === 'monsters' && initialSearch && monsterManager) {
+            // Auto-select the first monster whose type matches the search term
+            const q = initialSearch.trim().toLowerCase();
+            const allMonsters = Object.values(monsterManager.monsters || {}).filter(m => !m.isSummoned);
+            const match = allMonsters.find(m => (m.type || '').toLowerCase() === q)
+                || allMonsters.find(m => (m.type || '').toLowerCase().includes(q));
+            if (match) { setSelectedEntry(match); return; }
+        }
+        setSelectedEntry(null);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [visible, initialTab, initialSearch, initialEntryId]);
+
+
+    // Reset selection when tab changes manually (not when set programmatically)
+    React.useEffect(() => {
+        if (suppressNextReset.current) {
+            suppressNextReset.current = false;
+            return;
+        }
         setSelectedEntry(null);
         setSearch('');
     }, [activeTab]);
@@ -360,13 +410,13 @@ export default function CodexModal({ visible, onClose, monsterManager }) {
 
     // ── Monsters data
     const monsters = monsterManager ? Object.values(monsterManager.monsters || {}).filter(m => !m.isSummoned) : [];
-    const filteredMonsters = monsters.filter(m => !q || (m.type||'').includes(q) || (MONSTER_LORE[m.type] || {}).lore?.toLowerCase().includes(q));
+    const filteredMonsters = monsters.filter(m => !q || (m.type || '').includes(q) || (MONSTER_LORE[m.type] || {}).lore?.toLowerCase().includes(q));
 
     // ── Classes
     const filteredClasses = CLASS_LORE.filter(c => !q || c.name.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q));
 
     // ── Interactables
-    const filteredInteractables = INTERACTABLES.filter(i => !q || i.name.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || (i.tags||[]).some(t => t.includes(q)));
+    const filteredInteractables = INTERACTABLES.filter(i => !q || i.name.toLowerCase().includes(q) || i.desc.toLowerCase().includes(q) || (i.tags || []).some(t => t.includes(q)));
 
     // Class list for filter pills
     const skillClasses = ['all', 'ranger', 'sage', 'soldier', 'wizard', 'barbarian', 'monk', 'summoner', 'engineer'];
@@ -614,7 +664,7 @@ function SkillDetail({ skill }) {
             if (skill.id === 'execute') {
                 return '3 hits of 75% of caster ATK';
             }
-            
+
             let parts = [];
             if (isDamage && pct > 0) {
                 parts.push(`${pct}% of caster ATK`);
@@ -666,15 +716,15 @@ function SkillDetail({ skill }) {
                             return (
                                 <span key={i} className="codex-effect-pill" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px' }}>
                                     {iconSrc && (
-                                        <img 
-                                            src={iconSrc} 
-                                            alt="" 
-                                            style={{ 
-                                                width: '14px', 
-                                                height: '14px', 
+                                        <img
+                                            src={iconSrc}
+                                            alt=""
+                                            style={{
+                                                width: '14px',
+                                                height: '14px',
                                                 borderRadius: '50%',
                                                 objectFit: 'contain'
-                                            }} 
+                                            }}
                                         />
                                     )}
                                     {typeof e === 'object'
@@ -684,11 +734,11 @@ function SkillDetail({ skill }) {
                                             if (e.duration != null) details.push(resolveDurationLabel(e.duration));
                                             const typeStr = String(e.type).split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
                                             return `${typeStr}${details.length > 0 ? ` (${details.join(' · ')})` : ''}`;
-                                          })()
-                                        : (typeof e === 'string' 
-                                            ? e.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') 
+                                        })()
+                                        : (typeof e === 'string'
+                                            ? e.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')
                                             : e
-                                          )
+                                        )
                                     }
                                 </span>
                             );
@@ -719,7 +769,7 @@ function AbilitiesSection({ skillsList }) {
             </div>
             {popupSkill && (
                 <div className="codex-backdrop" style={{ zIndex: 1001 }} onClick={() => setPopupSkill(null)}>
-                    <div className="codex-modal" style={{ maxWidth: '500px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
+                    <div className="codex-modal" style={{ maxWidth: '600px', height: 'auto', maxHeight: '80vh' }} onClick={e => e.stopPropagation()}>
                         <div className="codex-header" style={{ padding: '8px 16px', minHeight: 'auto' }}>
                             <div className="codex-header-left">
                                 <div className="codex-header-title" style={{ fontSize: '1.2rem' }}>Ability Info</div>
@@ -852,38 +902,38 @@ function CodexStat({ label, value, color }) {
 // ── Pyre & Echo Rules component ───────────────────────────────────────────────
 function PyreEchoRules() {
     const ECHO_TABLE = [
-        { monster: 'Goblin',            effect: 'Frenzy — Deal 5 damage. Free to play (0 Energy).',                  rarity: 'Common' },
-        { monster: 'Skeleton',          effect: 'Undying Grasp — Negate all Reaper damage this turn.',               rarity: 'Common' },
-        { monster: 'Ghoul',             effect: 'Ghoul Swarm — Deal 3 damage. Costs only 1 Energy.',                 rarity: 'Common' },
-        { monster: 'Troll',             effect: 'Regenerate — Restore 4 Soul.',                                       rarity: 'Uncommon' },
-        { monster: 'Vampire',           effect: 'Life Drain — Deal 3 damage and gain 3 Soul.',                        rarity: 'Uncommon' },
-        { monster: 'Mummy',             effect: 'Ancient Curse — Reaper loses 2 Energy next turn.',                   rarity: 'Uncommon' },
-        { monster: 'Wraith',            effect: 'Haunt — Deal 4 piercing damage (ignores all defenses).',             rarity: 'Uncommon' },
-        { monster: 'Ogre',              effect: 'Earthshatter — Deal 4 damage, reduce Reaper next attack by 2.',      rarity: 'Uncommon' },
-        { monster: 'Djinn',             effect: 'Wish — Draw 2 cards immediately.',                                   rarity: 'Uncommon' },
-        { monster: 'Gorgon',            effect: 'Stone Glare — Deal 4 damage.',                                       rarity: 'Uncommon' },
-        { monster: 'Witch',             effect: 'Hex Curse — Reaper\'s next card is discarded before play.',          rarity: 'Rare' },
-        { monster: 'Beholder',          effect: 'Petrifying Gaze — Reaper skips their entire next turn.',             rarity: 'Rare' },
-        { monster: 'Sphinx',            effect: 'Riddle — Answer a riddle. Correct: 8 damage. Wrong: 2 damage.',      rarity: 'Rare' },
-        { monster: 'Dragon',            effect: 'Inferno — Deal 10 damage to the Reaper.',                            rarity: 'Rare' },
-        { monster: 'Kabuki Demon',      effect: 'Demon Illusion — Dodge all Reaper damage for 2 turns.',              rarity: 'Rare' },
-        { monster: 'Hagigah',           effect: 'Divine Judgment — Deal 6 damage to the Reaper.',                     rarity: 'Rare' },
-        { monster: 'Hashmallim',        effect: 'Holy Light — Restore 5 Soul.',                                       rarity: 'Rare' },
-        { monster: 'Precipice Guardian',effect: 'Guardian\'s Ward — Block all Reaper damage for 2 turns.',            rarity: 'Rare' },
+        { monster: 'Goblin', effect: 'Frenzy — Deal 5 damage. Free to play (0 Energy).', rarity: 'Common' },
+        { monster: 'Skeleton', effect: 'Undying Grasp — Negate all Reaper damage this turn.', rarity: 'Common' },
+        { monster: 'Ghoul', effect: 'Ghoul Swarm — Deal 3 damage. Costs only 1 Energy.', rarity: 'Common' },
+        { monster: 'Troll', effect: 'Regenerate — Restore 4 Soul.', rarity: 'Uncommon' },
+        { monster: 'Vampire', effect: 'Life Drain — Deal 3 damage and gain 3 Soul.', rarity: 'Uncommon' },
+        { monster: 'Mummy', effect: 'Ancient Curse — Reaper loses 2 Energy next turn.', rarity: 'Uncommon' },
+        { monster: 'Wraith', effect: 'Haunt — Deal 4 piercing damage (ignores all defenses).', rarity: 'Uncommon' },
+        { monster: 'Ogre', effect: 'Earthshatter — Deal 4 damage, reduce Reaper next attack by 2.', rarity: 'Uncommon' },
+        { monster: 'Djinn', effect: 'Wish — Draw 2 cards immediately.', rarity: 'Uncommon' },
+        { monster: 'Gorgon', effect: 'Stone Glare — Deal 4 damage.', rarity: 'Uncommon' },
+        { monster: 'Witch', effect: 'Hex Curse — Reaper\'s next card is discarded before play.', rarity: 'Rare' },
+        { monster: 'Beholder', effect: 'Petrifying Gaze — Reaper skips their entire next turn.', rarity: 'Rare' },
+        { monster: 'Sphinx', effect: 'Riddle — Answer a riddle. Correct: 8 damage. Wrong: 2 damage.', rarity: 'Rare' },
+        { monster: 'Dragon', effect: 'Inferno — Deal 10 damage to the Reaper.', rarity: 'Rare' },
+        { monster: 'Kabuki Demon', effect: 'Demon Illusion — Dodge all Reaper damage for 2 turns.', rarity: 'Rare' },
+        { monster: 'Hagigah', effect: 'Divine Judgment — Deal 6 damage to the Reaper.', rarity: 'Rare' },
+        { monster: 'Hashmallim', effect: 'Holy Light — Restore 5 Soul.', rarity: 'Rare' },
+        { monster: 'Precipice Guardian', effect: 'Guardian\'s Ward — Block all Reaper damage for 2 turns.', rarity: 'Rare' },
     ];
 
     const GLOBAL_SKILL_BONUSES = [
-        { skill: 'strong_resolve',  class: 'Soldier',  bonus: 'Player starting Soul +5' },
-        { skill: 'iron_will',       class: 'Soldier',  bonus: 'Survive a lethal hit at 1 Soul (once per duel)' },
-        { skill: 'focused_rest',    class: 'Monk',     bonus: 'Start each turn with 4 Energy instead of 3' },
-        { skill: 'mend',            class: 'Sage',     bonus: "Sage's Mend ability restores 4 Soul instead of 2" },
-        { skill: 'revive',          class: 'Sage',     bonus: 'Discarded crew champion re-enters deck once per duel' },
-        { skill: 'awake_refreshed', class: 'Various',  bonus: 'Draw +1 card at turn start' },
-        { skill: 'bloodhound',      class: 'Barbarian',bonus: "Reveals the Reaper's next card name before they play" },
-        { skill: 'arcane_sense',    class: 'Wizard',   bonus: '+1 bonus Energy per turn' },
-        { skill: 'soul_tithe',      class: 'Summoner', bonus: 'Each Echo card played restores 1 Soul' },
-        { skill: 'spirit_sight',    class: 'Summoner', bonus: "Spirit insight — passive awareness of Reaper's draw patterns" },
-        { skill: 'keen_eye',        class: 'Ranger',   bonus: '10% passive dodge chance against all Reaper attacks' },
+        { skill: 'strong_resolve', class: 'Soldier', bonus: 'Player starting Soul +5' },
+        { skill: 'iron_will', class: 'Soldier', bonus: 'Survive a lethal hit at 1 Soul (once per duel)' },
+        { skill: 'focused_rest', class: 'Monk', bonus: 'Start each turn with 4 Energy instead of 3' },
+        { skill: 'mend', class: 'Sage', bonus: "Sage's Mend ability restores 4 Soul instead of 2" },
+        { skill: 'revive', class: 'Sage', bonus: 'Discarded crew champion re-enters deck once per duel' },
+        { skill: 'awake_refreshed', class: 'Various', bonus: 'Draw +1 card at turn start' },
+        { skill: 'bloodhound', class: 'Barbarian', bonus: "Reveals the Reaper's next card name before they play" },
+        { skill: 'arcane_sense', class: 'Wizard', bonus: '+1 bonus Energy per turn' },
+        { skill: 'soul_tithe', class: 'Summoner', bonus: 'Each Echo card played restores 1 Soul' },
+        { skill: 'spirit_sight', class: 'Summoner', bonus: "Spirit insight — passive awareness of Reaper's draw patterns" },
+        { skill: 'keen_eye', class: 'Ranger', bonus: '10% passive dodge chance against all Reaper attacks' },
     ];
 
     const rarityColor = r => r === 'Rare' ? '#9b64c9' : r === 'Uncommon' ? '#4a86c8' : '#666';

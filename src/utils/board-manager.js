@@ -1420,6 +1420,7 @@ export function BoardManager(){
         this.currentBoard = board;
         this.tiles = [];
         this.overlayTiles = [];
+        this.trapTileIds = new Set();
         this.playerTile = {
             location: spawnCoords,
             boardIndex: boardIndex
@@ -1473,6 +1474,11 @@ export function BoardManager(){
             if (this.getContainsType(tile.contains) === 'monster') {
                 try { /* debug removed */ } catch (e) {}
             }
+            const hasTrapFlag = !!tile.hasTrap;
+            const trapRevealedFlag = !!tile.trapRevealed;
+            if (hasTrapFlag) {
+                this.trapTileIds.add(tile.id);
+            }
             this.tiles.push({
                 type: 'board-tile',
                 id: tile.id,
@@ -1481,7 +1487,9 @@ export function BoardManager(){
                 contains: tile.contains,
                 image: imageKey,
                 inscriptions: tile.inscriptions || null,
-                borders: null
+                borders: null,
+                hasTrap: hasTrapFlag,
+                trapRevealed: trapRevealedFlag
             })
             this.overlayTiles.push({
                 type: 'board-tile',
@@ -1808,6 +1816,12 @@ export function BoardManager(){
                 // Shrine: trigger messaging and return 'shrine' so DungeonPage can launch the shrine UI
                 try {
                     const shrineClass = subtype || 'unknown';
+                    const crew = typeof this.getCrew === 'function' ? this.getCrew() : [];
+                    const matchingMember = shrineClass ? crew.find(m => (m.type || '').toLowerCase() === shrineClass.toLowerCase()) : null;
+                    if (!matchingMember) {
+                        if (this.messaging) this.messaging(`🏛 You need a ${shrineClass} in your party to commune with this shrine.`);
+                        return 'impassable';
+                    }
                     if (this.messaging) this.messaging(`🏛 An ancestral shrine resonates with the spirit of a ${shrineClass}...`);
                     if (this.triggerShrineEncounter) this.triggerShrineEncounter(destinationTile);
                 } catch (e) {}
@@ -1904,6 +1918,40 @@ export function BoardManager(){
         } catch (e) {}
         // Ensure UI refresh in case handleFogOfWar did not run for any reason
         try { if (this.refreshTiles) this.refreshTiles(); } catch (e) {}
+    }
+    this.disarmTrap = (tileId) => {
+        try {
+            if (this.tiles[tileId]) {
+                this.tiles[tileId].hasTrap = false;
+                this.tiles[tileId].trapRevealed = false;
+            }
+            if (this.trapTileIds) {
+                this.trapTileIds.delete(tileId);
+            }
+            if (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[tileId]) {
+                this.currentBoard.tiles[tileId].hasTrap = false;
+                this.currentBoard.tiles[tileId].trapRevealed = false;
+            }
+            const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+            if (levelEntry) {
+                if (this.currentOrientation === 'F' && levelEntry.front && levelEntry.front.miniboards) {
+                    const b = levelEntry.front.miniboards.find(bi => bi.id === this.currentBoard.id);
+                    if (b && b.tiles && b.tiles[tileId]) {
+                        b.tiles[tileId].hasTrap = false;
+                        b.tiles[tileId].trapRevealed = false;
+                    }
+                } else if (this.currentOrientation === 'B' && levelEntry.back && levelEntry.back.miniboards) {
+                    const b = levelEntry.back.miniboards.find(bi => bi.id === this.currentBoard.id);
+                    if (b && b.tiles && b.tiles[tileId]) {
+                        b.tiles[tileId].hasTrap = false;
+                        b.tiles[tileId].trapRevealed = false;
+                    }
+                }
+            }
+            if (this.updateDungeon) this.updateDungeon(this.dungeon);
+        } catch (e) {
+            console.warn('Error disarming trap', e);
+        }
     }
     this.handleGate = (tile, gateType) => {
         if(!this.activeInteractionTile) this.activeInteractionTile = tile;

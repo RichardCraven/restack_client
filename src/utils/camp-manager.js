@@ -65,7 +65,16 @@ export async function setUpCamp(component, maybeDuration) {
         try { if (component.props.saveUserData) await component.props.saveUserData(); } catch (e) {}
         // camping started
         // lock movement hotkeys while camping
-        try { component.setState({ keysLocked: true }); } catch(e) {}
+        try { 
+            const stateUpdate = { keysLocked: true };
+            if (component.state.poiPanelExpanded) {
+                component._wasPoiPanelExpanded = true;
+                stateUpdate.poiPanelExpanded = false;
+            } else {
+                component._wasPoiPanelExpanded = false;
+            }
+            component.setState(stateUpdate);
+        } catch(e) {}
         if (component.props.boardManager && typeof component.props.boardManager.placePlayer === 'function') {
             try{ component.props.boardManager.placePlayer(component.props.boardManager.playerTile.location); } catch(e){}
         }
@@ -181,6 +190,10 @@ export async function endCamp(component) {
             })();
             // crewManager.crew already holds the new spread objects; no extra spread needed.
             const stateUpdate = { selectedCrewMember: updatedSelected };
+            if (component._wasPoiPanelExpanded) {
+                stateUpdate.poiPanelExpanded = true;
+                component._wasPoiPanelExpanded = false;
+            }
             try { stateUpdate.overlayTiles = component.props.boardManager.overlayTiles; } catch(e) {}
             component.setState(stateUpdate, () => {
                 try { component.forceUpdate(); } catch(e) {}

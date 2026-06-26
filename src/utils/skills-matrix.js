@@ -1472,7 +1472,7 @@ const skillsMatrix = {
         id: 'reassembly',
         tier: 1,
         name: 'Reassembly',
-        desc: 'Collapse and reassemble upon death.',
+        desc: 'Collapse and reassemble upon death (50% chance to trigger).',
         icon: images['reassembly'],
         cooldown: 12,
         duration: 'long',

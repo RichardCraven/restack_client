@@ -1,42 +1,35 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 
 const Typewriter = ({ text, delay }) => {
-  const spanRef = useRef(null);
-
-  useEffect(() => {
-    if (!spanRef.current) return;
-    spanRef.current.textContent = '';
-    
-    let currentIndex = 0;
-    let lastTime = performance.now();
-    let frameId;
-
-    const tick = (now) => {
-      const elapsed = now - lastTime;
-      const charsToType = Math.floor(elapsed / delay);
-
-      if (charsToType > 0) {
-        currentIndex = Math.min(text.length, currentIndex + charsToType);
-        spanRef.current.textContent = text.slice(0, currentIndex);
-        lastTime = now - (elapsed % delay);
-      }
-
-      if (currentIndex < text.length) {
-        frameId = requestAnimationFrame(tick);
-      }
-    };
-
-    frameId = requestAnimationFrame(tick);
-
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [text, delay]);
+  const durationMs = text ? text.length * (delay || 30) : 1000;
+  // Clamp the duration between 1.0s and 3.0s to keep it readable and smooth
+  const duration = Math.min(3000, Math.max(1000, durationMs));
 
   return (
-    <div style={{ position: 'relative', display: 'block', width: '100%', textAlign: 'center' }}>
-      <div style={{ opacity: 0, display: 'block', textAlign: 'center', whiteSpace: 'pre-wrap' }}>{text}</div>
-      <div ref={spanRef} style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, whiteSpace: 'pre-wrap', textAlign: 'center', display: 'block' }} />
+    <div style={{ position: 'relative', display: 'block', width: '100%' }}>
+      <style>{`
+        @keyframes smoothReveal {
+          from {
+            clip-path: inset(0 100% 0 0);
+          }
+          to {
+            clip-path: inset(0 0 0 0);
+          }
+        }
+      `}</style>
+      <div 
+        key={text}
+        style={{
+          display: 'block',
+          width: '100%',
+          textAlign: 'center',
+          whiteSpace: 'pre-wrap',
+          clipPath: 'inset(0 100% 0 0)',
+          animation: `smoothReveal ${duration}ms cubic-bezier(0.4, 0, 0.2, 1) forwards`
+        }}
+      >
+        {text}
+      </div>
     </div>
   );
 };

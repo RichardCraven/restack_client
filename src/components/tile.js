@@ -320,9 +320,55 @@ function Tile(props) {
                      })()}
 
                      {/* Portrait sits above the hp-fill and terrain so the image remains visible */}
-                     {(props.imageOverride || images[props.image]) && (
-                         <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: toCssUrl(props.imageOverride || images[props.image]), backgroundSize: isVendorCell ? '200% 200%' : '100% 100%', backgroundPosition: isVendorCell ? vendorBackgroundPosition : 'inherit', backgroundRepeat: 'no-repeat', zIndex: isVendorCell ? 30 : portraitZIndex}} />
-                     )}
+                      {(props.imageOverride || images[props.image]) && !(props.contains && (props.contains === 'shrine' || props.contains.type === 'shrine')) && !(props.data && props.data.type === 'soul_shard') && (
+                          <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: toCssUrl(props.imageOverride || images[props.image]), backgroundSize: isVendorCell ? '200% 200%' : '100% 100%', backgroundPosition: isVendorCell ? vendorBackgroundPosition : 'inherit', backgroundRepeat: 'no-repeat', zIndex: isVendorCell ? 30 : portraitZIndex}} />
+                      )}
+
+            {/* Soul Shard custom overlay */}
+            { props.data && props.data.type === 'soul_shard' && (() => {
+                const monsterType = props.data.monsterType;
+                const portraitUrl = images[monsterType] || images[`${monsterType}_portrait`] || images[`${monsterType}_portrait2`] || null;
+                return (
+                    <>
+                        {/* 50% opacity monster portrait underlay */}
+                        {portraitUrl && (
+                            <div style={{
+                                position: 'absolute',
+                                top: 0, left: 0, right: 0, bottom: 0,
+                                backgroundImage: toCssUrl(portraitUrl),
+                                backgroundSize: 'cover',
+                                backgroundPosition: 'center',
+                                opacity: 0.5,
+                                zIndex: 1
+                            }} />
+                        )}
+                        {/* 100% opacity soul shards icon on top */}
+                        <div style={{
+                            position: 'absolute',
+                            top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundImage: toCssUrl(images['sould_shards'] || props.data.icon),
+                            backgroundSize: '80% 80%',
+                            backgroundPosition: 'center',
+                            backgroundRepeat: 'no-repeat',
+                            zIndex: 2
+                        }} />
+                        {/* Top-left fraction label (e.g. 2/3) */}
+                        <div style={{
+                            position: 'absolute',
+                            top: '2px',
+                            left: '3px',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            color: '#ffd700',
+                            textShadow: '0px 1px 3px rgba(0,0,0,0.9), 0px 1px 1px black',
+                            zIndex: 4,
+                            pointerEvents: 'none'
+                        }}>
+                            {props.data.count}/3
+                        </div>
+                    </>
+                );
+            })()}
 
            {/* Dead overlay: visible when data.dead === true */}
            { props.data && props.data.dead && (

@@ -24,10 +24,10 @@ const formatCombatText = (value) => String(value || '')
 
 const isUndead = (unit) => {
     if (!unit) return false;
-    const subtype = (unit.subtype || '').toLowerCase();
-    const type = (unit.type || '').toLowerCase();
-    const key = (unit.key || '').toLowerCase();
-    const id = (unit.id || '').toLowerCase();
+    const subtype = String(unit.subtype || '').toLowerCase();
+    const type = String(unit.type || '').toLowerCase();
+    const key = String(unit.key || '').toLowerCase();
+    const id = String(unit.id || '').toLowerCase();
     return subtype === 'undead' ||
            type === 'skeleton' || type === 'zombie' || type === 'wraith' || type === 'vampire' || type === 'ghoul' || type === 'mummy' ||
            key === 'skeleton' || key === 'zombie' || key === 'wraith' || key === 'vampire' || key === 'ghoul' || key === 'mummy' ||
@@ -420,9 +420,12 @@ export function CombatManagerRedux() {
         // Lord Badges & Minion Spawning logic
         if (this.data.monster && !this.data.monster.isShrineGuardian && this.data.monster.tier <= 3) {
             // 15% chance to be a Lord, or if explicitly predefined as Lord (for tests/custom)
+            const roll = Math.random();
             const isLord = (typeof this.data.monster.isLord === 'boolean') 
                 ? this.data.monster.isLord 
-                : (process.env.NODE_ENV !== 'test' && Math.random() < 0.15);
+                : (process.env.NODE_ENV !== 'test' && roll < 0.80);
+
+            console.log(`[CombatManagerRedux] Lord check for "${this.data.monster.name || this.data.monster.type}": predefined isLord = ${typeof this.data.monster.isLord === 'boolean' ? this.data.monster.isLord : 'none'}, rolled = ${roll.toFixed(4)} (threshold < 0.80), result = ${isLord}`);
 
             if (isLord) {
                 this.data.monster.isLord = true;
@@ -445,6 +448,24 @@ export function CombatManagerRedux() {
                 if (typeof this.data.monster.starting_hp === 'number') {
                     this.data.monster.starting_hp *= 2;
                 }
+
+                // 33% boost to Intelligence (floored)
+                const oldInt = (this.data.monster.stats && typeof this.data.monster.stats.int === 'number')
+                    ? this.data.monster.stats.int
+                    : (typeof this.data.monster.int === 'number' ? this.data.monster.int : null);
+
+                if (this.data.monster.stats && typeof this.data.monster.stats.int === 'number') {
+                    this.data.monster.stats.int = Math.floor(this.data.monster.stats.int * 1.33);
+                }
+                if (typeof this.data.monster.int === 'number') {
+                    this.data.monster.int = Math.floor(this.data.monster.int * 1.33);
+                }
+
+                const newInt = (this.data.monster.stats && typeof this.data.monster.stats.int === 'number')
+                    ? this.data.monster.stats.int
+                    : (typeof this.data.monster.int === 'number' ? this.data.monster.int : null);
+
+                console.log(`[CombatManagerRedux] Lord stats boosted for "${this.data.monster.name}": HP doubled, INT boosted from ${oldInt} to ${newInt}`);
 
                 // Spawn an additional minion of the lowest tier
                 if (this.data.minions && this.data.minions.length > 0) {
@@ -1054,7 +1075,8 @@ export function CombatManagerRedux() {
         if (x < 0 || x > MAX_DEPTH || y < 0 || y >= MAX_LANES) return false;
 
         // Block moves that cross an active shield wall
-        if (unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, { x, y })) {
+        const intelTier = this.getUnitIntelligenceTier(unit);
+        if (intelTier !== 'dumb' && unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, { x, y })) {
             return false;
         }
 
@@ -1094,7 +1116,7 @@ export function CombatManagerRedux() {
             ];
             for (let coord of extraCoords) {
                 if (coord.x < 0 || coord.x > MAX_DEPTH || coord.y < 0 || coord.y >= MAX_LANES) return false;
-                if (unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
+                if (intelTier !== 'dumb' && unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
                 if (this.isTileOccupied(coord.x, coord.y, unit.id)) return false;
             }
         } else if (isLarge) {
@@ -1106,7 +1128,7 @@ export function CombatManagerRedux() {
             ];
             for (let coord of extraCoords) {
                 if (coord.x < 0 || coord.x > MAX_DEPTH || coord.y < 0 || coord.y >= MAX_LANES) return false;
-                if (unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
+                if (intelTier !== 'dumb' && unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
                 if (this.isTileOccupied(coord.x, coord.y, unit.id)) return false;
             }
         }
@@ -1421,6 +1443,24 @@ export function CombatManagerRedux() {
     // Acquire an attack target using threat-weighted scoring.
     // Prioritizes: lowest HP% target, then healer/support classes, then closest.
     this.acquireTarget = (caller, preferWeakest = true, excludeTargetIds = []) => {
+        // Manual-input target pin guard:
+        // When the player has manually assigned a specific enemy target, do not
+        // allow the automatic scorer to overwrite it. Clear the pin if the target dies.
+        if (caller && caller.manualTargetId && !caller.isMonster && !caller.isMinion) {
+            const pinnedTarget = this.combatants[caller.manualTargetId];
+            if (pinnedTarget && !pinnedTarget.dead) {
+                // Re-confirm the pin; keep targetId locked.
+                caller.targetId = caller.manualTargetId;
+                if (!caller.pendingAttack) {
+                    const scored = this._scoredAbilityPick(caller, pinnedTarget);
+                    caller.pendingAttack = scored ? scored.resolved : null;
+                }
+                return; // Skip the normal scoring loop
+            }
+            // Pinned target is dead — clear the manual pin
+            caller.manualTargetId = null;
+        }
+
         let bestTarget = null;
         let bestScore = -Infinity;
 
@@ -1472,13 +1512,16 @@ export function CombatManagerRedux() {
                 + Math.abs(caller.coordinates.y - c.coordinates.y);
             const hpPct = c.starting_hp > 0 ? (c.hp / c.starting_hp) : 1;
 
+            const intelTier = this.getUnitIntelligenceTier(caller);
             // Score: closer is better, lower HP is better, healers are more tempting
             let score = 0;
             score -= dist * 2;                          // prefer close targets
-            if (preferWeakest) score += (1 - hpPct) * 10; // prefer wounded targets
-            if (!callerIsEnemy && HEALER_TYPES.has(c.type)) score += 5;
-            if (!callerIsEnemy && c.isBones) score += 18; // aggressive but not full tunnel-vision
-            if (callerIsEnemy && c.isConcentrating) score += 50; // prioritize concentrating unit
+            if (intelTier !== 'dumb') {
+                if (preferWeakest) score += (1 - hpPct) * 10; // prefer wounded targets
+                if (!callerIsEnemy && HEALER_TYPES.has(c.type)) score += 5;
+                if (!callerIsEnemy && c.isBones) score += 18; // aggressive but not full tunnel-vision
+                if (callerIsEnemy && c.isConcentrating) score += 50; // prioritize concentrating unit
+            }
 
             if (score > bestScore) {
                 bestScore = score;
@@ -1567,6 +1610,7 @@ export function CombatManagerRedux() {
             return;
         }
         target.dead = true;
+        this.rebuildActiveShieldWalls();
 
         const isSphinx = target && (target.type === 'sphinx' || target.key === 'sphinx' || (target.id && target.id.toString().includes('sphinx')));
         if (isSphinx) {
@@ -1845,6 +1889,7 @@ export function CombatManagerRedux() {
     // ── Round Turn Processing ─────────────────────────────────────────────────
     // Stagger AI turns by initiative (speed/dexterity); tick down buff durations.
     this.processRoundTurns = () => {
+        this.rebuildActiveShieldWalls();
 
         const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && c.hp > 0 && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
         // Sort by speed/dexterity descending (higher dex acts first)
@@ -2583,6 +2628,40 @@ export function CombatManagerRedux() {
     // Routes each unit through their class-specific decision logic.
     this.executeUnitAI = (unit) => {
         if (!unit || unit.dead) return;
+        this.rebuildActiveShieldWalls();
+
+        // ── Intelligent Ranged AI Strategy ──
+        if ((unit.isMonster || unit.isMinion) && this.getUnitIntelligenceTier(unit) === 'intelligent') {
+            const hasRanged = (() => {
+                const t = (unit.type || unit.key || '').toLowerCase();
+                if (['witch', 'sphinx', 'summoner', 'beholder_minion'].includes(t)) return true;
+                const attacks = unit.attacks || [];
+                const skills = unit.skills || [];
+                return [...attacks, ...skills].some(a => {
+                    if (typeof a === 'object' && a) return a.range === 'far' || a.range === 'medium' || a.range > 2;
+                    return false;
+                });
+            })();
+            if (hasRanged) {
+                const activeSoldier = Object.values(this.combatants).find(c => c && !c.dead && c.shieldWallActive);
+                if (activeSoldier) {
+                    unit.targetId = activeSoldier.id;
+                    // Back up if too close to the shield wall
+                    const distToSoldier = Math.abs(unit.coordinates.x - activeSoldier.coordinates.x);
+                    if (distToSoldier <= 2 && unit.movesTakenThisRound === 0) {
+                        const backlineX = unit.isMonster ? MAX_DEPTH : 0;
+                        const stepX = Math.sign(backlineX - unit.coordinates.x);
+                        const newX = unit.coordinates.x + stepX;
+                        if (stepX !== 0 && this.canFitAt(unit, newX, unit.coordinates.y)) {
+                            this.updateUnitCoordinates(unit, newX, unit.coordinates.y);
+                            unit.movesTakenThisRound += 1;
+                            this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)} strategically backs up to target the Shield Wall.`);
+                        }
+                    }
+                }
+            }
+        }
 
         // Fear movement override
         if (unit.feared) {
@@ -2597,6 +2676,78 @@ export function CombatManagerRedux() {
         if (unitType === 'dragon_egg' || unitType === 'trials_icon' || unit.isTrialIcon || unitType === 'darkness_sphere' || unitType === 'spider_minion' || unitType === 'spiders_spawner') {
             return;
         }
+
+        // ── Manual Input override ──────────────────────────────────────────────
+        // PC units only (not monsters / minions). Fires before class-AI so movement
+        // and targeting are fully controlled by the player's drag orders.
+        const hasManualDest   = unit.manualDestination && !unit.isMonster && !unit.isMinion;
+        const hasManualTarget = unit.manualTargetId    && !unit.isMonster && !unit.isMinion;
+
+        if (hasManualDest || hasManualTarget) {
+            // ── 1. Lock the target when a manual target is assigned ──────────
+            if (hasManualTarget) {
+                const manTarget = this.combatants[unit.manualTargetId];
+                // If the pinned target has died, clear the manual order
+                if (!manTarget || manTarget.dead) {
+                    unit.manualTargetId = null;
+                } else {
+                    // Override targetId every tick so acquireTarget in class AI cannot
+                    // overwrite it later in this execution frame
+                    unit.targetId = unit.manualTargetId;
+                    unit.pendingAttack = unit.pendingAttack || this._scoredAbilityPick(unit, manTarget)?.resolved || null;
+                }
+            }
+
+            // ── 2. Move toward manual destination if assigned ────────────
+            if (hasManualDest) {
+                const dest = unit.manualDestination;
+                const atDest = unit.coordinates.x === dest.x && unit.coordinates.y === dest.y;
+                if (atDest) {
+                    // Arrived — clear destination order
+                    unit.manualDestination = null;
+                } else {
+                    // Step toward the destination tile
+                    this.moveCloserToCoord(unit, dest.x, dest.y);
+                }
+            }
+
+            // ── 3. Attack logic while moving ────────────────────────
+            // Determine the active combat target (manual pin or current targetId).
+            const attackTargetId = unit.manualTargetId || unit.targetId;
+            const attackTarget   = attackTargetId ? this.combatants[attackTargetId] : null;
+
+            if (attackTarget && !attackTarget.dead) {
+                // When both a destination AND a target are assigned, only attack that
+                // specific enemy and nobody else.
+                if (hasManualDest && hasManualTarget) {
+                    // Focused mode: attack the pinned enemy only if in range
+                    const scored = this._scoredAbilityPick(unit, attackTarget);
+                    const rangeType = (scored && scored.resolved.range) || 'close';
+                    if (this.targetInRange(unit, attackTarget, rangeType)) {
+                        if (scored) this.useAbility(unit, scored.resolved, attackTarget);
+                        else this._basicAttack(unit, attackTarget);
+                    }
+                    return; // do NOT fall through to class AI
+                }
+
+                // Destination only (no pinned target): can still attack opportunistically.
+                // Let the class AI handle attack decisions but with its normal target pool.
+                // Fall through to class AI below.
+                if (hasManualDest && !hasManualTarget) {
+                    // Class AI will run normally but movement was already handled above.
+                    // Override movesTakenThisRound to prevent a second move inside class AI.
+                    // (moveCloserToCoord already incremented it, so this is a no-op guard.)
+                    // Fall through →
+                }
+
+                // Target only (no destination): class AI handles movement with the
+                // pinned targetId already forced above. Fall through →
+            }
+
+            // Fall through to class AI only when no focused (dest+target) mode
+            if (hasManualDest && hasManualTarget) return;
+        }
+        // ── End Manual Input override ─────────────────────────────────────────────
 
         switch (unitType) {
             case 'monk': return this._aiMonk(unit);
@@ -3043,6 +3194,7 @@ export function CombatManagerRedux() {
                 unit.shieldWallTotalDurationMs = 0;
                 unit.shieldWallEndTimeMs = 0;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Shield Wall collapses.`);
+                this.rebuildActiveShieldWalls();
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
             } else {
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} maintains Shield Wall.`);
@@ -3069,6 +3221,7 @@ export function CombatManagerRedux() {
                 unit.shieldWallTotalDurationMs = durMs;
                 unit.shieldWallEndTimeMs = Date.now() + durMs;
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} erects Shield Wall!`);
+                this.rebuildActiveShieldWalls();
                 this._setCooldown(unit, 'shield_wall', pick.cooldown || 15);
                 unit.actionsTakenThisRound += 1;
                 if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
@@ -4883,10 +5036,23 @@ export function CombatManagerRedux() {
             return minDist;
         };
 
+        const intelTier = this.getUnitIntelligenceTier(unit);
         this.acquireTarget(unit, true, unit._excludedTargetIds || []);
-        const targetVal = this.combatants[unit.targetId];
-        if (!targetVal) return;
-        let target = targetVal;
+        let target = this.combatants[unit.targetId];
+        if (!target) return;
+
+        // Intelligent Melee AI Immediate Retargeting
+        if ((unit.isMonster || unit.isMinion) && intelTier === 'intelligent' && unit.movesTakenThisRound === 0) {
+            const step = this.getPathfindNextStep(unit, target.coordinates.x, target.coordinates.y, target);
+            if (!step) {
+                unit._excludedTargetIds = unit._excludedTargetIds || [];
+                if (!unit._excludedTargetIds.includes(target.id)) {
+                    unit._excludedTargetIds.push(target.id);
+                }
+                target = this.acquireTarget(unit, true, unit._excludedTargetIds);
+                if (!target) return;
+            }
+        }
 
         if (unit._lastTargetId !== target.id) {
             unit._lastTargetId = target.id;
@@ -4940,7 +5106,7 @@ export function CombatManagerRedux() {
                 unit._minTargetDistance = newDist;
                 unit._failedPathfindCount = 0;
                 unit._excludedTargetIds = [];
-            } else if (!unit.ensnared && !unit.shieldWallActive) {
+            } else if (!unit.ensnared && !unit.shieldWallActive && intelTier !== 'dumb') {
                 unit._failedPathfindCount = (unit._failedPathfindCount || 0) + 1;
                 if (unit._failedPathfindCount > 2) {
                     this.appendCombatLog(`${this.getCombatantLogName(unit)} is blocked and searches for a new target.`);
@@ -9119,6 +9285,28 @@ export function CombatManagerRedux() {
 
         const moved = this.getPathfindNextStep(unit, target.coordinates.x, target.coordinates.y, target);
         if (moved) {
+            const intelTier = this.getUnitIntelligenceTier(unit);
+            if (intelTier === 'dumb' && crossesShieldWall(unit.coordinates, moved)) {
+                if (Math.random() < 0.5) {
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} mindlessly charges the Shield Wall and gets blocked!`);
+                    return;
+                } else {
+                    const neighbors = [
+                        { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                        { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                        { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                        { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                    ].filter(n => this.canFitAt(unit, n.x, n.y) && !crossesShieldWall(unit.coordinates, n));
+                    if (neighbors.length > 0) {
+                        const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        this.updateUnitCoordinates(unit, randomNeighbor.x, randomNeighbor.y);
+                        unit.movesTakenThisRound += 1;
+                        this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} gets blocked by the Shield Wall and wanders away.`);
+                    }
+                    return;
+                }
+            }
             this.updateUnitCoordinates(unit, moved.x, moved.y);
             unit.movesTakenThisRound += 1;
             this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
@@ -9143,6 +9331,28 @@ export function CombatManagerRedux() {
 
         const moved = this.getPathfindNextStep(unit, targetX, targetY);
         if (moved) {
+            const intelTier = this.getUnitIntelligenceTier(unit);
+            if (intelTier === 'dumb' && crossesShieldWall(unit.coordinates, moved)) {
+                if (Math.random() < 0.5) {
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} mindlessly charges the Shield Wall and gets blocked!`);
+                    return;
+                } else {
+                    const neighbors = [
+                        { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                        { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                        { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                        { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                    ].filter(n => this.canFitAt(unit, n.x, n.y) && !crossesShieldWall(unit.coordinates, n));
+                    if (neighbors.length > 0) {
+                        const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+                        this.updateUnitCoordinates(unit, randomNeighbor.x, randomNeighbor.y);
+                        unit.movesTakenThisRound += 1;
+                        this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} gets blocked by the Shield Wall and wanders away.`);
+                    }
+                    return;
+                }
+            }
             this.updateUnitCoordinates(unit, moved.x, moved.y);
             unit.movesTakenThisRound += 1;
             this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
@@ -9566,7 +9776,43 @@ export function CombatManagerRedux() {
     this.initialize = () => {
         this.data = null;
         this.combatOver = false;
-        activeShieldWalls.splice(0, activeShieldWalls.length);
+        this.rebuildActiveShieldWalls();
+    };
+    this.rebuildActiveShieldWalls = () => {
+        try {
+            activeShieldWalls.splice(0, activeShieldWalls.length);
+            if (!this.combatants) return;
+            Object.values(this.combatants).forEach(c => {
+                if (c && !c.dead && c.hp > 0 && c.shieldWallActive && c.coordinates) {
+                    const isFacingRight = c.facing !== 'left';
+                    const wallX = isFacingRight ? c.coordinates.x + 1 : c.coordinates.x - 1;
+                    const centerY = c.coordinates.y;
+                    const lanesAffected = [];
+                    for (let dy = -2; dy <= 2; dy++) {
+                        const lane = centerY + dy;
+                        if (lane >= 0 && lane < 5) {
+                            lanesAffected.push(lane);
+                        }
+                    }
+                    activeShieldWalls.push({
+                        x: wallX,
+                        lanesAffected,
+                        isFacingRight
+                    });
+                }
+            });
+        } catch (e) {
+            console.warn('Error rebuilding active shield walls', e);
+        }
+    };
+    this.getUnitIntelligenceTier = (unit) => {
+        if (!unit) return 'capable';
+        const intVal = (unit.stats && typeof unit.stats.int === 'number')
+            ? unit.stats.int
+            : (typeof unit.int === 'number' ? unit.int : 5);
+        if (intVal < 5) return 'dumb';
+        if (intVal < 10) return 'capable';
+        return 'intelligent';
     };
     this.shutdown = () => {
         if (this.roundTimerInterval) {
@@ -9648,8 +9894,84 @@ export function CombatManagerRedux() {
         fighter.targetId = finalTargetId;
         if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
     };
-    this.setFighterDestination = (fighterId, coords) => { };
-    this.chooseAttackType = (fighter, target) => { };
+    this.setFighterDestination = (fighterId, coords) => {
+        const fighter = this.combatants[fighterId];
+        if (!fighter) return;
+        if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') return;
+        // Clamp to valid board bounds
+        const clampedX = Math.max(0, Math.min((this._numBoardColumns || 8) - 1, coords.x));
+        const clampedY = Math.max(0, Math.min((this._maxRows || 6) - 1, coords.y));
+        fighter.manualDestination = { x: clampedX, y: clampedY };
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
+    this.moveFighterOneSpace = (direction) => {
+        if (!this.selectedFighter) return;
+        const fighter = this.combatants[this.selectedFighter.id];
+        if (!fighter) return;
+
+        let currentX = (fighter.manualDestination && typeof fighter.manualDestination.x === 'number')
+            ? fighter.manualDestination.x
+            : fighter.coordinates.x;
+        let currentY = (fighter.manualDestination && typeof fighter.manualDestination.y === 'number')
+            ? fighter.manualDestination.y
+            : fighter.coordinates.y;
+
+        let newX = currentX;
+        let newY = currentY;
+
+        switch (direction) {
+            case 'up':
+                newY--;
+                break;
+            case 'down':
+                newY++;
+                break;
+            case 'left':
+                newX--;
+                break;
+            case 'right':
+                newX++;
+                break;
+            default:
+                break;
+        }
+
+        this.setFighterDestination(fighter.id, { x: newX, y: newY });
+    };
+
+    /**
+     * Set a manual target enemy for a PC fighter.
+     * The fighter will prioritise attacking this specific enemy (and move toward
+     * it if needed), ignoring all others UNLESS a separate manualDestination is
+     * also set, in which case focused mode applies (destination + pinned target).
+     */
+    this.setManualTarget = (fighterId, enemyId) => {
+        const fighter = this.combatants[fighterId];
+        if (!fighter) return;
+        if (!enemyId) {
+            // Clear the manual target
+            fighter.manualTargetId = null;
+            return;
+        }
+        const enemy = this.combatants[enemyId];
+        if (!enemy || enemy.dead) return;
+        // Resolve VCT targets to their parent monster
+        let finalEnemyId = enemyId;
+        if (enemy.isVCT && enemy.parentMonsterId && this.combatants[enemy.parentMonsterId]) {
+            finalEnemyId = enemy.parentMonsterId;
+        }
+        fighter.manualTargetId = finalEnemyId;
+        fighter.targetId = finalEnemyId;
+        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+    };
+
+    this.chooseAttackType = (fighter, target) => {
+        if (!fighter || !target) return null;
+        const scored = this._scoredAbilityPick(fighter, target);
+        return scored ? scored.resolved : null;
+    };
+
     this.startManualCommandCooldown = (fighterId, durationMs = null) => { };
 
     this.getLiveFighters = () => {

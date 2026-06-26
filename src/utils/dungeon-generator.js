@@ -477,6 +477,7 @@ function generateRandomBoard(opts = {}) {
         placeFood = true,
         gateTier = 0,         // 0=none, 1=minor, 2=major, 3=treasury
         gateCount = 0,        // how many gate+key pairs
+        trapCount = randInt(1, 3),
     } = opts;
 
     // 1. Initialize all tiles as void
@@ -608,6 +609,19 @@ function generateRandomBoard(opts = {}) {
         if (miscIdx < emptyForMisc.length && isEmpty(emptyForMisc[miscIdx])) {
             setFood(emptyForMisc[miscIdx]);
             miscIdx++;
+        }
+    }
+
+    // 10.5. Scatter traps
+    const emptyForTraps = getEmptyInterior(tiles);
+    shuffle(emptyForTraps);
+    let trapsPlaced = 0;
+    for (let i = 0; i < emptyForTraps.length && trapsPlaced < trapCount; i++) {
+        const tile = emptyForTraps[i];
+        if (isEmpty(tile)) {
+            tile.hasTrap = true;
+            tile.trapRevealed = false;
+            trapsPlaced++;
         }
     }
 

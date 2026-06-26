@@ -13,8 +13,13 @@
 }
 
 @keyframes codexFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .codex-modal {
@@ -36,8 +41,15 @@
 }
 
 @keyframes codexSlideIn {
-  from { transform: translateY(18px) scale(0.97); opacity: 0; }
-  to   { transform: translateY(0) scale(1); opacity: 1; }
+  from {
+    transform: translateY(18px) scale(0.97);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 // ── Header ────────────────────────────────────────────────────────────────────
@@ -160,7 +172,9 @@
   box-sizing: border-box;
   transition: border-color 0.15s;
 
-  &::placeholder { color: #444; }
+  &::placeholder {
+    color: #444;
+  }
 
   &:focus {
     border-color: rgba(200, 155, 80, 0.4);
@@ -216,6 +230,7 @@
     width: 4px;
     background: transparent;
   }
+
   &::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.1);
     border-radius: 2px;
@@ -307,6 +322,7 @@
     width: 4px;
     background: transparent;
   }
+
   &::-webkit-scrollbar-thumb {
     background: rgba(255, 255, 255, 0.08);
     border-radius: 2px;
@@ -327,8 +343,8 @@
 }
 
 .codex-detail-icon {
-  width: 54px;
-  height: 54px;
+  width: 83px;
+  height: 83px;
   object-fit: contain;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
@@ -378,8 +394,8 @@
 // ── Stat grid ─────────────────────────────────────────────────────────────────
 
 .codex-detail-stats {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: 6px 16px;
   padding: 10px 12px;
   background: rgba(255, 255, 255, 0.03);
@@ -390,7 +406,10 @@
 .codex-stat-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  flex: 1 1 calc(50% - 16px);
+  min-width: 180px;
+  gap: 8px;
 }
 
 .codex-stat-label {
@@ -398,12 +417,15 @@
   color: #555;
   letter-spacing: 0.5px;
   text-transform: uppercase;
+  flex-shrink: 0;
 }
 
 .codex-stat-value {
   font-size: 12px;
   font-weight: 700;
   color: #b0a090;
+  text-align: right;
+  word-wrap: break-word;
 }
 
 // ── Effects / tags ────────────────────────────────────────────────────────────
@@ -623,7 +645,8 @@
 
 .pe-power-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, rgba(212, 138, 48, 0.85), rgba(232, 196, 138, 0.95)); /* premium gold gradient */
+  background: linear-gradient(90deg, rgba(212, 138, 48, 0.85), rgba(232, 196, 138, 0.95));
+  /* premium gold gradient */
   border-right: 1px solid rgba(200, 155, 80, 0.4);
   box-sizing: border-box;
   box-shadow: 0 0 8px rgba(212, 138, 48, 0.3);
