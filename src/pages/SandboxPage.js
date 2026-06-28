@@ -9,6 +9,7 @@ import {
   ranger_ensnare,
   ranger_net_throw,
   ranger_execute,
+  ranger_burst_shot,
   ranger_ice_arrow,
   ranger_force_arrow,
   ranger_poison_arrow,
@@ -475,7 +476,8 @@ const fightersData = [
       { id: 'notch', name: 'Notch', desc: 'Select arrow type to load.', icon: ranger_notch, type: 'notch' },
       { id: 'loose', name: 'Loose', desc: 'Shoot the selected notched arrow.', icon: ranger_loose, type: 'loose' },
       { id: 'mark', name: 'Mark', desc: 'Place a target mark on the enemy. Lasts until hit by an arrow or expires.', icon: ranger_mark, type: 'mark' },
-      { id: 'execute', name: 'Execute', desc: 'Shoot three arrows in rapid succession.', icon: ranger_execute, type: 'execute' },
+      { id: 'execute', name: 'Execute', desc: 'fires a single devastating arrow for 300% attack', icon: ranger_execute, type: 'execute' },
+      { id: 'burst_shot', name: 'Burst Shot', desc: 'Shoot three arrows in rapid succession.', icon: ranger_burst_shot, type: 'burst_shot' },
       { id: 'ensnare', name: 'Ensnare', desc: 'Entangle the target, paralyzing them for a short duration.', icon: ranger_ensnare, type: 'ensnare' }
     ]
   },
@@ -1884,7 +1886,6 @@ const SandboxPage = () => {
 
   // Helper for transitions
   const getFighterTransitionStyle = () => {
-    if (!isAnimating) return 'none';
     if (animationPhase === 'teleport_fade') return 'opacity 0.15s ease-in-out, transform 0.15s ease-in-out';
     if (animationPhase === 'lunge') return 'transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
     if (animationPhase === 'step_adjacent') return 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
@@ -4069,8 +4070,8 @@ const SandboxPage = () => {
       }, 500);
     }
 
-    // --- RANGER LOOSE (FIRES ARROW) ---
-    else if (ability.id === 'loose') {
+    // --- RANGER LOOSE / EXECUTE (FIRES ARROW) ---
+    else if (ability.id === 'loose' || ability.id === 'execute') {
       setAnimating(true);
       const arrowType = notchedArrow || 'ice';
       let pIcon = ranger_ice_arrow;
@@ -4106,18 +4107,19 @@ const SandboxPage = () => {
         setTargetShake(true);
         setTargetFlash(true);
 
+        const isExecute = ability.id === 'execute';
         let hitType = 'arrow_hit';
-        let dmg = '-16';
+        let dmg = isExecute ? '-48' : '-16';
         let color = '#ff4d4d';
 
         if (arrowType === 'ice') {
           hitType = 'ice_burst';
-          dmg = '-18';
+          dmg = isExecute ? '-54' : '-18';
           color = '#00bfff';
           applyFreeze(2000);
         } else if (arrowType === 'force') {
           hitType = 'fire_exp';
-          dmg = '-22';
+          dmg = isExecute ? '-66' : '-22';
           color = '#ff9f1c';
 
           const dx = targetPos.col - fighterPos.col;
@@ -4142,12 +4144,12 @@ const SandboxPage = () => {
           }
         } else if (arrowType === 'poison') {
           hitType = 'poison_burst';
-          dmg = '-14';
+          dmg = isExecute ? '-42' : '-14';
           color = '#38b000';
           applyPoison(8000, 1500, 4);
         } else if (arrowType === 'celestial') {
           hitType = 'fire_exp';
-          dmg = '-28';
+          dmg = isExecute ? '-84' : '-28';
           color = '#ffdd57';
         }
 
@@ -4232,8 +4234,8 @@ const SandboxPage = () => {
       }, 430);
     }
 
-    // --- RANGER EXECUTE (3 SEQUENTIAL ARROWS) ---
-    else if (ability.id === 'execute') {
+    // --- RANGER BURST SHOT / BURST ATTACK (3 SEQUENTIAL ARROWS) ---
+    else if (ability.id === 'burst_shot' || ability.id === 'burst_attack') {
       setAnimating(true);
       const arrowType = notchedArrow || 'ice';
       let pIcon = ranger_ice_arrow;

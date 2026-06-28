@@ -1235,9 +1235,15 @@ export function CombatManagerRedux() {
         let targetWP = 5;
         let mentalityResist = 0;
 
-        const isBetrayal = (caller.activeAbility && (caller.activeAbility.id === 'betrayal' || caller.activeAbility.name === 'Betrayal'));
+        const isMentalityCheck = (caller.activeAbility && (
+            caller.activeAbility.mentalityCheck ||
+            caller.activeAbility.id === 'betrayal' ||
+            caller.activeAbility.name === 'Betrayal' ||
+            caller.activeAbility.id === 'displacement_ray' ||
+            caller.activeAbility.name === 'Displacement Ray'
+        ));
 
-        if (isBetrayal) {
+        if (isMentalityCheck) {
             // Contested wits/willpower roll
             casterWits = (caller.stats && (caller.stats.wits || caller.stats.int)) || 8;
             targetWP = (target.stats && (target.stats.willpower || target.stats.wits || target.stats.int)) || 5;
@@ -1292,6 +1298,13 @@ export function CombatManagerRedux() {
                 }
                 missChance = Math.max(0, Math.min(missChance, 95));
             }
+            // Beholder invisibility: 40% flat dodge chance
+            if (target.beholderInvisible && typeof target.beholderDodgeBonus === 'number') {
+                if (Math.random() < target.beholderDodgeBonus) {
+                    return false; // dodged due to invisibility
+                }
+            }
+
             isHit = roll >= missChance;
         }
 
@@ -1299,6 +1312,7 @@ export function CombatManagerRedux() {
 
         return isHit;
     };
+
 
     this.damageCheck = (caller, target, rawDamage, isMagical = false) => {
         if (!target || typeof rawDamage !== 'number' || rawDamage <= 0) return rawDamage || 0;
@@ -1562,6 +1576,12 @@ export function CombatManagerRedux() {
         let candidateTargets = Object.values(this.combatants).filter(c => {
             if (!c || c.dead || c.isVCT || typeof c.inTrial === 'number') return false;
             if (excludeTargetIds && excludeTargetIds.includes(c.id)) return false;
+
+            // Invisibility check: cannot target invisible units unless caller has Eagle Eye
+            if (c.beholderInvisible && !(Array.isArray(caller.passives) && caller.passives.includes('eagle_eye'))) {
+                return false;
+            }
+
             if (checkHashmallimDominatedTarget(c)) return true;
             const callerIsEnemy = !!caller.isMonster;
             const cIsEnemy = !!c.isMonster;
@@ -2445,6 +2465,16 @@ export function CombatManagerRedux() {
                 this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Hex has expired.`);
             }
         }
+        if (unit.beholderInvisible && typeof unit.beholderInvisibleRounds === 'number') {
+            unit.beholderInvisibleRounds--;
+            if (unit.beholderInvisibleRounds <= 0) {
+                unit.beholderInvisible = false;
+                unit.beholderInvisibleRounds = 0;
+                unit.beholderInvisibleTotalRounds = 0;
+                unit.beholderDodgeBonus = 0;
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} is no longer invisible.`);
+            }
+        }
         if (unit.silenced && typeof unit.silenceRounds === 'number') {
             unit.silenceRounds--;
             if (unit.silenceRounds <= 0) {
@@ -2842,6 +2872,7 @@ export function CombatManagerRedux() {
             case 'ogre': return this._aiOgre(unit);
             case 'dragon': return this._aiDragon(unit);
             case 'beholder_minion': return this._aiBeholderMinion(unit);
+            case 'beholder': return this._aiBeholder(unit);
             case 'goat_demon': return this._aiGoatDemon(unit);
             case 'witch': return this._aiWitch(unit);
             case 'blalok': return this._aiBlalok(unit);
@@ -2852,9 +2883,14 @@ export function CombatManagerRedux() {
 
     // ── Utility: resolve ability key from specials array ──────────────────────
     this._initializeInitialCooldowns = (combatant) => {
-        if (!combatant || !Array.isArray(combatant.specials)) return;
+        if (!combatant) return;
+        const abilities = [
+            ...(Array.isArray(combatant.specials) ? combatant.specials : []),
+            ...(Array.isArray(combatant.skills) ? combatant.skills : [])
+        ];
+        if (abilities.length === 0) return;
         combatant.cooldowns = combatant.cooldowns || {};
-        combatant.specials.forEach(s => {
+        abilities.forEach(s => {
             const key = this._resolveAbilityKey(s);
             if (!key) return;
             const resolved = this.resolveSpecial(combatant, key);
@@ -3210,6 +3246,9 @@ export function CombatManagerRedux() {
         // Fallback: If not in range, move closer and attack if possible
         if (!inRange) {
             this.moveCloser(unit, target);
+            if (unit.etherealSpeedActive && !this.targetInRange(unit, target, 'close')) {
+                this.moveCloser(unit, target);
+            }
             const nowInRange = this.targetInRange(unit, target, 'close');
             if (nowInRange) {
                 if (scored) this.useAbility(unit, scored.resolved, target);
@@ -5724,6 +5763,149 @@ export function CombatManagerRedux() {
         }
     };
 
+    // BEHOLDER: eldritch horror with chainbolt, mind_swap, displacement_ray, invisibility, voidbite, greater_magic_missile
+    this._aiBeholder = (unit) => {
+        this.acquireTarget(unit, true);
+        const target = this.combatants[unit.targetId];
+        if (!target) return;
+
+        const pcUnitsOnBoard = Object.values(this.combatants).filter(c =>
+            c && !c.dead && !c.isMonster && !c.isVCT
+        );
+
+        // Resolve all specials
+        const chainboltSpec        = this.resolveSpecial(unit, 'chainbolt');
+        const mindSwapSpec         = this.resolveSpecial(unit, 'mind_swap');
+        const displacementRaySpec  = this.resolveSpecial(unit, 'displacement_ray');
+        const invisibilitySpec     = this.resolveSpecial(unit, 'invisibility');
+        const voidbiteSpec         = this.resolveSpecial(unit, 'voidbite');
+        const gmmSpec              = this.resolveSpecial(unit, 'greater_magic_missile');
+
+        const chainboltReady       = chainboltSpec && this._abilityReady(unit, 'chainbolt');
+        const mindSwapReady        = mindSwapSpec  && this._abilityReady(unit, 'mind_swap');
+        const displacementRayReady = displacementRaySpec && this._abilityReady(unit, 'displacement_ray');
+        const invisibilityReady    = invisibilitySpec && this._abilityReady(unit, 'invisibility');
+        const voidbiteReady        = voidbiteSpec  && this._abilityReady(unit, 'voidbite');
+        const gmmReady             = gmmSpec       && this._abilityReady(unit, 'greater_magic_missile');
+
+        const isInvisible = unit.beholderInvisible;
+
+        // Caster Movement Utility
+        const moveBackline = (u, t) => {
+            const currentX = u.coordinates.x;
+            const currentY = u.coordinates.y;
+            const possibleMoves = [
+                { x: currentX + 1, y: currentY }, // Retract to backline
+                { x: currentX, y: currentY + 1 }, // Move lanes
+                { x: currentX, y: currentY - 1 }
+            ];
+
+            let bestMove = null;
+            let maxScore = -9999;
+
+            possibleMoves.forEach(m => {
+                if (this.canFitAt && this.canFitAt(u, m.x, m.y)) {
+                    // Distance to target (prefer further)
+                    const distToTarget = Math.abs(m.x - t.coordinates.x) + Math.abs(m.y - t.coordinates.y);
+                    // Proximity to right edge (higher X is better backline position)
+                    const backlineScore = m.x * 2.5; 
+                    const score = distToTarget + backlineScore;
+                    if (score > maxScore) {
+                        maxScore = score;
+                        bestMove = m;
+                    }
+                }
+            });
+
+            if (bestMove && (bestMove.x > currentX || Math.abs(bestMove.x - t.coordinates.x) + Math.abs(bestMove.y - t.coordinates.y) > Math.abs(currentX - t.coordinates.x) + Math.abs(currentY - t.coordinates.y))) {
+                this.updateUnitCoordinates(u, bestMove.x, bestMove.y);
+                u.movesTakenThisRound += 1;
+                this.applyEnduranceCost(u, this.MOVE_ENDURANCE_COST, 'move');
+                this.appendCombatLog(`${this.getCombatantLogName(u)} retreats towards the backline.`);
+                return true;
+            }
+            return false;
+        };
+
+        // 1. Displacement Ray — push adjacent threats away immediately if ready
+        if (displacementRayReady) {
+            const adjacentThreat = pcUnitsOnBoard.find(c => this.targetInRange(unit, c, 'close'));
+            if (adjacentThreat) {
+                this.useAbility(unit, displacementRaySpec, adjacentThreat);
+                return;
+            }
+        }
+
+        // 2. Voidbite — high priority when adjacent
+        if (voidbiteReady && this.targetInRange(unit, target, 'close')) {
+            this.useAbility(unit, voidbiteSpec, target);
+            return;
+        }
+
+        // 3. Invisibility — use when below 60% HP and not already invisible
+        if (invisibilityReady && !isInvisible && unit.hp < (unit.starting_hp || unit.hp) * 0.6) {
+            this.useAbility(unit, invisibilitySpec, unit);
+            return;
+        }
+
+        // 4. Chainbolt — best when multiple PCs are present
+        if (chainboltReady && pcUnitsOnBoard.length >= 2 && this.targetInRange(unit, target, 'far')) {
+            this.useAbility(unit, chainboltSpec, target);
+            return;
+        }
+
+        // 5. Displacement Ray — push close-range threats away
+        if (displacementRayReady && this.targetInRange(unit, target, 'far')) {
+            const closeThreat = pcUnitsOnBoard.find(c => {
+                const dx = Math.abs(c.coordinates.x - unit.coordinates.x);
+                const dy = Math.abs(c.coordinates.y - unit.coordinates.y);
+                return dx + dy <= 2;
+            });
+            if (closeThreat) {
+                this.useAbility(unit, displacementRaySpec, closeThreat);
+                return;
+            }
+        }
+
+        // 6. Mind Swap — use when 2+ PCs present (repositions them strategically)
+        if (mindSwapReady && pcUnitsOnBoard.length >= 2 && this.targetInRange(unit, target, 'far') && Math.random() < 0.5) {
+            this.useAbility(unit, mindSwapSpec, target);
+            return;
+        }
+
+        // 7. Greater Magic Missile at range
+        if (gmmReady && this.targetInRange(unit, target, 'far') && Math.random() < 0.6) {
+            this.useAbility(unit, gmmSpec, target);
+            return;
+        }
+
+        // 8. Chainbolt with single PC
+        if (chainboltReady && pcUnitsOnBoard.length >= 1 && this.targetInRange(unit, target, 'far')) {
+            this.useAbility(unit, chainboltSpec, target);
+            return;
+        }
+
+        // 9. Spell Caster movement and basic attack behavior
+        const dist = Math.abs(target.coordinates.x - unit.coordinates.x) + Math.abs(target.coordinates.y - unit.coordinates.y);
+        if (dist <= 2) {
+            // Target is too close! Try to retreat to the backline
+            const retreated = moveBackline(unit, target);
+            if (!retreated) {
+                // If we can't retreat and target is in range, attack them
+                if (this.targetInRange(unit, target, 'close')) {
+                    this._basicAttack(unit, target);
+                }
+            }
+        } else {
+            // Target is far away, we are a caster, so stay on the backline!
+            // If we are not on the backline (X < maxDepth - 2), slowly move towards it
+            const backlineX = (this.maxDepth || 10) - 2;
+            if (unit.coordinates.x < backlineX) {
+                moveBackline(unit, target);
+            }
+        }
+    };
+
     // ── Cooldown Helper ───────────────────────────────────────────────────────
     this._getEquippedAmulet = (unit, amuletIcon) => {
         if (!unit || !unit.inventory) return null;
@@ -8060,7 +8242,7 @@ export function CombatManagerRedux() {
                 this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType, null, preRolledHits, sphereCoords, true);
             }
             
-            if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
+            if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot' || abilityId === 'burst_shot' || abilityId === 'burst_attack') {
                 unit.arrowNotched = false;
                 unit.notchedArrowType = null;
             }
@@ -8069,7 +8251,8 @@ export function CombatManagerRedux() {
         }
 
         // Sandbox-style Redux animation hook (pure CSS/state)
-        if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+        // Exclude abilities that manage their own animations inside their custom blocks further down
+        if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function' && !['mind_swap', 'displacement_ray', 'chainbolt'].includes(abilityId)) {
             const isTargetLarge = !target.isShrineGuardian && (target.isLarge
                 || target.size === 2
                 || (target.isMonster === true && (target.isMinion !== true || target.tier === 3 || target.tier === 4))
@@ -8119,7 +8302,7 @@ export function CombatManagerRedux() {
             this.animManagerRedux.triggerAbility(sourceCoord, targetCoord, abilityId, isTargetLarge, targetTiles, unit.id, activeArrowType, null, preRolledHits, sphereCoords);
         }
 
-        if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot') {
+        if (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'deadeye_shot' || abilityId === 'burst_shot' || abilityId === 'burst_attack') {
             unit.arrowNotched = false;
             unit.notchedArrowType = null;
         }
@@ -8286,7 +8469,257 @@ export function CombatManagerRedux() {
             return;
         }
 
+
+        // ── Beholder: Chainbolt ─────────────────────────────────────────────
+        if (abilityId === 'chainbolt') {
+            const atkDmg = (unit.stats && unit.stats.atk) ? unit.stats.atk : 10;
+            const rawDmg = Math.round(atkDmg * ((ability.atkPercentage || 100) / 100));
+            // Collect all live PC units on board
+            const pcTargets = Object.values(this.combatants).filter(c =>
+                c && !c.dead && !c.isMonster && !c.isVCT
+            );
+            
+            const hits = [];
+            const chainCoords = []; // for animation: collect positions
+            pcTargets.forEach(c => {
+                const hit = this.hitCheck(unit, c);
+                if (hit) {
+                    hits.push(c);
+                    chainCoords.push(c.coordinates);
+                }
+            });
+
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} fires Chainbolt — chained through ${hits.length} enemies!`);
+
+            const totalRoundMs = 1400; // approximate round time (sped up slightly)
+            const linkDuration = chainCoords.length > 0 ? Math.floor(totalRoundMs / chainCoords.length) : 450;
+
+            // Trigger animations and delayed hit resolution
+            hits.forEach((c, idx) => {
+                const coord = chainCoords[idx];
+                const srcCoord = unit.coordinates;
+
+                // 1. Play animation for this link
+                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                    setTimeout(() => {
+                        this.animManagerRedux.triggerAbility(
+                            idx === 0 ? srcCoord : chainCoords[idx - 1],
+                            coord,
+                            'chainbolt',
+                            false, null, unit.id, null, linkDuration
+                        );
+                    }, idx * linkDuration);
+                }
+
+                // 2. Apply damage when the beam reaches the target (at the end of the link duration)
+                setTimeout(() => {
+                    if (c.dead || c.hp <= 0) return; // target already dead
+                    const finalDmg = this.damageCheck(unit, c, rawDmg, true);
+                    c.hp = Math.max(0, c.hp - finalDmg);
+                    if (this.checkShrinerConcentrationDamage) {
+                        this.checkShrinerConcentrationDamage(unit, c, finalDmg);
+                    }
+                    this.wakeSleepingTarget(c, ability.name || 'Chainbolt');
+                    c.damageIndicators = c.damageIndicators || [];
+                    c.damageIndicators.push({
+                        id: Date.now() + Math.random() + idx,
+                        value: `-${finalDmg}`,
+                        source: 'Chainbolt',
+                        type: 'damage'
+                    });
+                    if (c.hp <= 0) {
+                        this.targetKilled(c);
+                    }
+                    if (typeof this.updateData === 'function') {
+                        this.updateData(clone(this.combatants));
+                    }
+                }, (idx + 1) * linkDuration);
+            });
+
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        // ── Beholder: Mind Swap ─────────────────────────────────────────────
+        if (abilityId === 'mind_swap') {
+            const pcUnits = Object.values(this.combatants).filter(c =>
+                c && !c.dead && !c.isMonster && !c.isVCT
+            );
+            if (pcUnits.length < 2) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} tries Mind Swap but not enough targets.`);
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                return;
+            }
+            // Pick first target (the active target)
+            const swapTarget1 = target;
+            // Find the farthest PC unit from swapTarget1
+            let maxDist = -1;
+            let swapTarget2 = null;
+            pcUnits.forEach(c => {
+                if (c.id === swapTarget1.id) return;
+                const dx = Math.abs(c.coordinates.x - swapTarget1.coordinates.x);
+                const dy = Math.abs(c.coordinates.y - swapTarget1.coordinates.y);
+                const d = dx + dy;
+                if (d > maxDist) {
+                    maxDist = d;
+                    swapTarget2 = c;
+                }
+            });
+            if (!swapTarget2) {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} couldn't find a second swap target.`);
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                return;
+            }
+            // Freeze the targets for 1 round (takes 1 round of time)
+            const now = Date.now();
+            swapTarget1.stunned = true;
+            swapTarget1.stunnedRounds = 1;
+            swapTarget1.stunnedTotalRounds = 1;
+            swapTarget1.stunnedStackDuration = 1;
+            swapTarget1.stunnedEndTimeMs = now + getStatusDurationMs(swapTarget1, 1);
+
+            swapTarget2.stunned = true;
+            swapTarget2.stunnedRounds = 1;
+            swapTarget2.stunnedTotalRounds = 1;
+            swapTarget2.stunnedStackDuration = 1;
+            swapTarget2.stunnedEndTimeMs = now + getStatusDurationMs(swapTarget2, 1);
+
+            this._applyDebuff(swapTarget1, null, 'Stunned', 1);
+            this._applyDebuff(swapTarget2, null, 'Stunned', 1);
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} uses Mind Swap! ${this.getCombatantLogName(swapTarget1)} and ${this.getCombatantLogName(swapTarget2)} are frozen in place!`);
+            
+            // Animation: purple beam from caster to target1, then target1 to target2
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                // First beam takes 350ms to reach target 1 and dissipate
+                this.animManagerRedux.triggerAbility(unit.coordinates, swapTarget1.coordinates, 'mind_swap', false, null, unit.id, null, 350);
+                setTimeout(() => {
+                    if (swapTarget1 && swapTarget2 && !swapTarget1.dead && !swapTarget2.dead) {
+                        this.animManagerRedux.triggerAbility(
+                            swapTarget1.coordinates, 
+                            swapTarget2.coordinates, 
+                            'mind_swap_chain', 
+                            false, null, unit.id, null, 800
+                        );
+                    }
+                }, 350); // Start second beam the instant the first beam finishes dissipating
+                
+                // Actual coordinate swap happens after the second beam lands (at 1000ms)
+                setTimeout(() => {
+                    if (swapTarget1 && swapTarget2 && !swapTarget1.dead && !swapTarget2.dead) {
+                        const currentCoord1 = { ...swapTarget1.coordinates };
+                        const currentCoord2 = { ...swapTarget2.coordinates };
+                        this.updateUnitCoordinates(swapTarget1, currentCoord2.x, currentCoord2.y);
+                        this.updateUnitCoordinates(swapTarget2, currentCoord1.x, currentCoord1.y);
+                        this.appendCombatLog(`${this.getCombatantLogName(swapTarget1)} and ${this.getCombatantLogName(swapTarget2)} swap positions!`);
+                        if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                    }
+                }, 1000);
+            } else {
+                const currentCoord1 = { ...swapTarget1.coordinates };
+                const currentCoord2 = { ...swapTarget2.coordinates };
+                this.updateUnitCoordinates(swapTarget1, currentCoord2.x, currentCoord2.y);
+                this.updateUnitCoordinates(swapTarget2, currentCoord1.x, currentCoord1.y);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        // ── Beholder: Displacement Ray ──────────────────────────────────────
+        if (abilityId === 'displacement_ray') {
+            const atkDmg = (unit.stats && unit.stats.atk) ? unit.stats.atk : 10;
+            const rawDmg = Math.round(atkDmg * ((ability.atkPercentage || 80) / 100));
+            const hit = this.hitCheck(unit, target);
+            if (hit) {
+                const finalDmg = this.damageCheck(unit, target, rawDmg, true);
+                target.hp = Math.max(0, target.hp - finalDmg);
+                this.checkShrinerConcentrationDamage && this.checkShrinerConcentrationDamage(unit, target, finalDmg);
+                this.wakeSleepingTarget(target, 'Displacement Ray');
+                target.damageIndicators = target.damageIndicators || [];
+                target.damageIndicators.push({ id: Date.now() + Math.random(), value: `-${finalDmg}`, source: 'Displacement Ray', type: 'damage' });
+                // Push target to a random unoccupied corner
+                const corners = [
+                    { x: 0, y: 0 },
+                    { x: (this.maxDepth || 10) - 1, y: 0 },
+                    { x: 0, y: (this.maxLanes || 4) - 1 },
+                    { x: (this.maxDepth || 10) - 1, y: (this.maxLanes || 4) - 1 }
+                ];
+                // Shuffle corners
+                corners.sort(() => Math.random() - 0.5);
+                let selectedCorner = null;
+                for (const corner of corners) {
+                    if (this.canFitAt && this.canFitAt(target, corner.x, corner.y)) {
+                        selectedCorner = corner;
+                        break;
+                    }
+                }
+
+                if (selectedCorner) {
+                    const targetOrigCoord = { ...target.coordinates };
+                    if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                        const rayDuration = 500; // 500ms per link
+                        // First part of the ray from Beholder to target
+                        this.animManagerRedux.triggerAbility(unit.coordinates, targetOrigCoord, 'displacement_ray', false, null, unit.id, null, rayDuration);
+                        // Second part of the ray from target to corner
+                        setTimeout(() => {
+                            this.animManagerRedux.triggerAbility(targetOrigCoord, selectedCorner, 'displacement_ray', false, null, unit.id, null, rayDuration);
+                        }, rayDuration);
+                        // Finally teleport them
+                        setTimeout(() => {
+                            this.updateUnitCoordinates(target, selectedCorner.x, selectedCorner.y);
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)} teleports ${this.getCombatantLogName(target)} to the corner!`);
+                            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                        }, rayDuration * 2);
+                    } else {
+                        this.updateUnitCoordinates(target, selectedCorner.x, selectedCorner.y);
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} teleports ${this.getCombatantLogName(target)} to the corner!`);
+                    }
+                } else {
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} fires a Displacement Ray at ${this.getCombatantLogName(target)} for ${finalDmg} damage!`);
+                }
+                if (target.hp <= 0) this.targetKilled(target);
+            } else {
+                this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Displacement Ray missed ${this.getCombatantLogName(target)}.`);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
+        // ── Beholder: Invisibility ─────────────────────────────────────────
+        if (abilityId === 'invisibility') {
+            const durRounds = getDurationRounds(ability.duration || 'medium');
+            unit.beholderInvisible = true;
+            unit.beholderInvisibleRounds = durRounds;
+            unit.beholderInvisibleTotalRounds = durRounds;
+            unit.beholderDodgeBonus = 0.4; // 40% dodge chance while invisible
+            this._applyBuff(unit, { increase_stats: { stats: [] } }, 'Invisible', durRounds);
+            unit.damageIndicators = unit.damageIndicators || [];
+            unit.damageIndicators.push({ id: Date.now() + Math.random(), value: 'INVISIBLE!', source: 'Invisibility', type: 'buff' });
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} vanishes from sight! (Invisible for ${durRounds} rounds, 40% dodge)`);
+
+            // Clear target for all units currently targeting the Beholder (unless Eagle Eye)
+            Object.values(this.combatants).forEach(c => {
+                if (c && c.targetId === unit.id && !c.dead && !c.isVCT) {
+                    const hasEagleEye = Array.isArray(c.passives) && c.passives.includes('eagle_eye');
+                    if (!hasEagleEye) {
+                        c.targetId = null;
+                        c.manualTargetId = null; // Clear manual pin too
+                        c.pendingAttack = null;
+                        this.appendCombatLog(`${this.getCombatantLogName(c)} loses track of the invisible Beholder and drops target!`);
+                        this.acquireTarget(c, true);
+                    }
+                }
+            });
+
+            // Animation: shimmer fade on caster tile
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'invisibility', false, null, unit.id);
+            }
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+            return;
+        }
+
         // Single-target damage (default path)
+
         const isDamageType = ability.type === 'damage' || (ability.type && ability.type.includes('damage'));
         const hasFlatDamageProp = (typeof ability.flatDamage === 'number');
         const hasLegacyDamageProp = (typeof ability.damage === 'number');
@@ -8317,8 +8750,8 @@ export function CombatManagerRedux() {
             rawDamage = Math.round(rawDamage * (1 + unitInt * 0.05));
         }
         const dmgMult = target.weaknessRevealed ? 1.25 : 1.0;
-        const arrowType = (abilityId === 'loose' || abilityId === 'execute') ? (activeArrowType || 'force') : null;
-        const hitCount = (abilityId === 'execute') ? 3 : (isMagicMissile ? (abilityId === 'greater_magic_missile' ? 5 : (abilityId === 'minor_magic_missile' ? 1 : 3)) : 1);
+        const arrowType = (abilityId === 'loose' || abilityId === 'execute' || abilityId === 'burst_shot' || abilityId === 'burst_attack') ? (activeArrowType || 'force') : null;
+        const hitCount = (abilityId === 'burst_shot' || abilityId === 'burst_attack') ? 3 : (isMagicMissile ? (abilityId === 'greater_magic_missile' ? 5 : (abilityId === 'minor_magic_missile' ? 1 : 3)) : 1);
         let hitsSucceeded = 0;
         let anyHitConnected = false;
         const mmResults = isMagicMissile ? [] : null;
@@ -8346,8 +8779,10 @@ export function CombatManagerRedux() {
             if (hit) {
                 anyHitConnected = true;
                 let currentRawDmg = rawDamage;
-                if (abilityId === 'execute') {
+                if (abilityId === 'burst_shot' || abilityId === 'burst_attack') {
                     currentRawDmg = Math.round(rawDamage * 0.75);
+                } else if (abilityId === 'greater_magic_missile' && h === 4) {
+                    currentRawDmg = Math.round(rawDamage * 0.5);
                 }
 
                 let finalDmg = Math.round(this.damageCheck(unit, target, currentRawDmg, isMagicalAbility) * dmgMult);
@@ -8427,7 +8862,25 @@ export function CombatManagerRedux() {
                         this.appendCombatLog(`${this.getCombatantLogName(unit)} heals for ${healAmt} from Vampiric Bite.`);
                     }
 
-                    if (abilityId === 'energy_drain' || (ability && ability.effect && ability.effect.type === 'drain')) {
+                    if (abilityId === 'voidbite') {
+                        const staminaDmg = Math.round(finalDmg * 0.30);
+                        target.endurance = Math.max(0, (target.endurance || 0) - staminaDmg);
+                        if (staminaDmg > 0) {
+                            target.damageIndicators = target.damageIndicators || [];
+                            target.damageIndicators.push({
+                                id: Date.now() + Math.random() + 80,
+                                value: `-${staminaDmg} Stamina`,
+                                source: 'Voidbite',
+                                type: 'debuff'
+                            });
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)}'s Voidbite saps ${staminaDmg} Stamina from ${this.getCombatantLogName(target)}!`);
+                        }
+                        if (target.endurance <= 0 && !target.exhausted) {
+                            this.applyEnduranceCost(target, 0, 'Voidbite');
+                        }
+                    }
+
+                    if (abilityId === 'energy_drain' || (ability && ability.effect && ability.effect.type === 'drain' && abilityId !== 'voidbite')) {
                         const staminaDmg = Math.round(finalDmg * 0.5);
                         target.endurance = Math.max(0, (target.endurance || 0) - staminaDmg);
                         if (staminaDmg > 0) {
@@ -8951,9 +9404,9 @@ export function CombatManagerRedux() {
                     }
                 }, 750);
             }
-        } else if (abilityId === 'loose' || abilityId === 'deadeye_shot') {
+        } else if (abilityId === 'loose' || abilityId === 'deadeye_shot' || abilityId === 'execute') {
             setTimeout(() => performHit(0), 700);
-        } else if (abilityId === 'execute') {
+        } else if (abilityId === 'burst_shot' || abilityId === 'burst_attack') {
             setTimeout(() => performHit(0), 700);
             setTimeout(() => performHit(1), 950);
             setTimeout(() => performHit(2), 1200);

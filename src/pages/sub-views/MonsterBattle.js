@@ -3462,10 +3462,17 @@ class MonsterBattle extends React.Component {
                             </div>
 
                             {/* RIGHT COLUMN: event log */}
-                            <div className="queue-col redux-log-col">
+                            <div className={`queue-col redux-log-col ${this.state.eventLogPoppedOut ? 'popped-out' : ''}`}>
                                 <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
                                     <span>Event Log</span>
                                     <div className="log-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <button
+                                            onClick={() => this.setState(prev => ({ eventLogPoppedOut: !prev.eventLogPoppedOut }))}
+                                            style={{ padding: '2px 6px', fontSize: '10px', lineHeight: '1', cursor: 'pointer', background: '#333', color: '#fff', border: '1px solid #555', borderRadius: '3px' }}
+                                            title={this.state.eventLogPoppedOut ? 'Dock' : 'Pop out'}
+                                        >
+                                            {this.state.eventLogPoppedOut ? '▼' : '▲'}
+                                        </button>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#aaa', cursor: 'pointer', userSelect: 'none' }}>
                                             <input
                                                 type="checkbox"

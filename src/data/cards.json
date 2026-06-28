@@ -204,7 +204,7 @@
     "energyCost": 1,
     "effect": { "type": "damage", "amount": 4 },
     "text": "The Reaper deals 4 damage.",
-    "art": "reaper_card_back"
+    "art": "reaper_reap"
   },
   {
     "id": "reaper_shroud",
@@ -213,7 +213,7 @@
     "energyCost": 1,
     "effect": { "type": "shield", "amount": 3 },
     "text": "The Reaper blocks 3 incoming damage this turn.",
-    "art": "reaper_card_back"
+    "art": "reaper_shroud"
   },
   {
     "id": "reaper_wither",
@@ -222,7 +222,7 @@
     "energyCost": 1,
     "effect": { "type": "drain_energy", "amount": 1 },
     "text": "You lose 1 Energy on your next turn.",
-    "art": "reaper_card_back"
+    "art": "reaper_wither"
   },
   {
     "id": "reaper_spectral_army",
@@ -231,7 +231,7 @@
     "energyCost": 2,
     "effect": { "type": "damage_per_discard", "amountPerCard": 2 },
     "text": "Deals 2 damage for each card in the Reaper's discard pile.",
-    "art": "reaper_card_back"
+    "art": "reaper_spectral_army"
   },
   {
     "id": "reaper_soul_harvest",
@@ -240,7 +240,7 @@
     "energyCost": 2,
     "effect": { "type": "heal", "amount": 5 },
     "text": "The Reaper steals life essence, restoring 5 Soul.",
-    "art": "reaper_card_back"
+    "art": "reaper_soul_harvest"
   },
   {
     "id": "reaper_curse",
@@ -249,7 +249,7 @@
     "energyCost": 2,
     "effect": { "type": "skip_player_card", "amount": 1 },
     "text": "One random card in your hand is locked for this turn.",
-    "art": "reaper_card_back"
+    "art": "reaper_curse"
   },
   {
     "id": "reaper_torment",
@@ -258,7 +258,7 @@
     "energyCost": 3,
     "effect": { "type": "damage", "amount": 7 },
     "text": "Searing torment. Deals 7 damage.",
-    "art": "reaper_card_back"
+    "art": "reaper_torment"
   },
   {
     "id": "reaper_death_stare",
@@ -267,6 +267,373 @@
     "energyCost": 1,
     "effect": { "type": "damage", "amount": 2 },
     "text": "A cold gaze. Deals 2 damage.",
-    "art": "reaper_card_back"
+    "art": "reaper_death_stare"
+  },
+  {
+    "id": "reaper_scythe_strike",
+    "type": "reaper_card",
+    "name": "Scythe Strike",
+    "energyCost": 2,
+    "effect": { "type": "scythe_strike", "damage": 3 },
+    "text": "The Reaper's scythe cleaves — kills the weakest field champion and deals 3 damage.",
+    "art": "reaper_scythe_strike"
+  },
+  {
+    "id": "reaper_dark_ritual",
+    "type": "reaper_card",
+    "name": "Dark Ritual",
+    "energyCost": 1,
+    "effect": { "type": "dark_ritual", "atkBonus": 1 },
+    "text": "The Reaper grows stronger. +1 permanent ATK to all future damage.",
+    "art": "reaper_dark_ritual"
+  },
+  {
+    "id": "reaper_gravedigger",
+    "type": "reaper_card",
+    "name": "Gravedigger",
+    "energyCost": 2,
+    "effect": { "type": "gravedigger", "healPerFallen": 3 },
+    "text": "The Reaper feasts on fallen champions. Restore 3 Soul per dead champion.",
+    "art": "reaper_gravedigger"
+  },
+  {
+    "id": "reaper_spectral_surge",
+    "type": "reaper_card",
+    "name": "Spectral Surge",
+    "energyCost": 1,
+    "effect": { "type": "spectral_surge" },
+    "text": "Dark power surges. The Reaper's next damage card deals double damage.",
+    "art": "reaper_spectral_surge"
+  },
+  {
+    "id": "reaper_corpse_wall",
+    "type": "reaper_card",
+    "name": "Corpse Wall",
+    "energyCost": 1,
+    "effect": { "type": "reaper_threat", "damage": 5, "name": "Corpse Wall" },
+    "text": "A wall of the dead rises. Deals 5 damage at the start of your next turn.",
+    "art": "reaper_corpse_wall"
+  },
+  {
+    "id": "arcane_soul_bolt",
+    "type": "arcane",
+    "copies": 3,
+    "name": "Soul Bolt",
+    "energyCost": 1,
+    "effect": { "type": "damage", "amount": 3 },
+    "rarity": "common",
+    "text": "Hurl a bolt of soul energy. Deal 3 damage to the Reaper.",
+    "art": "arcane_soul_bolt"
+  },
+  {
+    "id": "arcane_bone_armor",
+    "type": "arcane",
+    "copies": 2,
+    "name": "Bone Armor",
+    "energyCost": 1,
+    "effect": { "type": "bone_armor", "block": 5 },
+    "rarity": "common",
+    "text": "Conjure bone plating. Absorb up to 5 damage from the Reaper's next attack.",
+    "art": "arcane_bone_armor"
+  },
+  {
+    "id": "arcane_sprint",
+    "type": "arcane",
+    "copies": 2,
+    "name": "Arcane Sprint",
+    "energyCost": 0,
+    "effect": { "type": "sprint", "energyRefund": 1, "draw": 1 },
+    "rarity": "common",
+    "text": "Surge forward. Gain 1 Energy and draw 1 card.",
+    "art": "arcane_sprint"
+  },
+  {
+    "id": "arcane_spectral_strike",
+    "type": "arcane",
+    "copies": 2,
+    "name": "Spectral Strike",
+    "energyCost": 2,
+    "effect": { "type": "damage", "amount": 5 },
+    "rarity": "uncommon",
+    "text": "A ghostly blade tears through the Reaper. Deal 5 damage.",
+    "art": "arcane_spectral_strike"
+  },
+  {
+    "id": "arcane_chain_lightning",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Chain Lightning",
+    "energyCost": 2,
+    "effect": { "type": "chain_damage", "hits": [4, 2, 1] },
+    "rarity": "uncommon",
+    "text": "Lightning arcs relentlessly. Deal 4, then 2, then 1 damage.",
+    "art": "arcane_chain_lightning"
+  },
+  {
+    "id": "arcane_runic_barrage",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Runic Barrage",
+    "energyCost": 2,
+    "effect": { "type": "field_damage", "amountPerChampion": 3 },
+    "rarity": "uncommon",
+    "text": "Your champions channel runic power. Deal 3 damage per champion on the field.",
+    "art": "arcane_runic_barrage"
+  },
+  {
+    "id": "arcane_battlecry",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Battlecry",
+    "energyCost": 1,
+    "effect": { "type": "field_amplify", "atkBonus": 2 },
+    "rarity": "uncommon",
+    "text": "Inspire your warriors. Each champion on the field deals +2 ATK this turn.",
+    "art": "arcane_battlecry"
+  },
+  {
+    "id": "arcane_iron_skin",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Iron Skin",
+    "energyCost": 1,
+    "effect": { "type": "champion_armor", "armor": 2, "turns": 2 },
+    "rarity": "uncommon",
+    "text": "Harden your defenses. Block 2 damage from each Reaper attack for 2 turns.",
+    "art": "arcane_iron_skin"
+  },
+  {
+    "id": "arcane_phase_shift",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Phase Shift",
+    "energyCost": 1,
+    "effect": { "type": "phase_shift" },
+    "rarity": "uncommon",
+    "text": "Step between planes. Dodge all Reaper damage this turn.",
+    "art": "arcane_phase_shift"
+  },
+  {
+    "id": "arcane_rallying_cry",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Rallying Cry",
+    "energyCost": 1,
+    "effect": { "type": "rallying_cry", "healPerChampion": 2 },
+    "rarity": "uncommon",
+    "text": "Rally your warriors. Restore 2 Soul per champion on the field.",
+    "art": "arcane_rallying_cry"
+  },
+  {
+    "id": "arcane_soul_siphon",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Soul Siphon",
+    "energyCost": 2,
+    "effect": { "type": "lifesteal", "damage": 4, "heal": 2 },
+    "rarity": "uncommon",
+    "text": "Drain the Reaper's essence. Deal 4 damage and restore 2 Soul.",
+    "art": "arcane_soul_siphon"
+  },
+  {
+    "id": "arcane_mana_surge",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Mana Surge",
+    "energyCost": 0,
+    "effect": { "type": "mana_surge", "bonus": 2 },
+    "rarity": "uncommon",
+    "text": "A surge of arcane power. Gain 2 bonus Energy this turn only.",
+    "art": "arcane_mana_surge"
+  },
+  {
+    "id": "arcane_last_rites",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Last Rites",
+    "energyCost": 1,
+    "effect": { "type": "last_rites", "dmgPerFallen": 3 },
+    "rarity": "uncommon",
+    "text": "Honor the fallen. Deal 3 damage per champion that has died this duel.",
+    "art": "arcane_last_rites"
+  },
+  {
+    "id": "arcane_ember_blast",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Ember Blast",
+    "energyCost": 1,
+    "effect": { "type": "burn", "damage": 2, "dmgPerTurn": 2, "turns": 2 },
+    "rarity": "uncommon",
+    "text": "Ignite the Reaper's essence. Deal 2 damage now, then 2 more each turn for 2 turns.",
+    "art": "arcane_ember_blast"
+  },
+  {
+    "id": "arcane_blood_pact",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Blood Pact",
+    "energyCost": 1,
+    "effect": { "type": "blood_pact", "soulCost": 3, "damage": 7 },
+    "rarity": "rare",
+    "text": "Sacrifice 3 Soul for raw power. Deal 7 damage to the Reaper.",
+    "art": "arcane_blood_pact"
+  },
+  {
+    "id": "arcane_void_trap",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Void Trap",
+    "energyCost": 2,
+    "effect": { "type": "void_trap" },
+    "rarity": "rare",
+    "text": "Set a void trap. The next Reaper attack is reflected — you take 50%, they take 50%.",
+    "art": "arcane_void_trap"
+  },
+  {
+    "id": "arcane_war_drums",
+    "type": "arcane",
+    "copies": 1,
+    "name": "War Drums",
+    "energyCost": 2,
+    "effect": { "type": "war_drums", "atkBonus": 1, "turns": 3 },
+    "rarity": "rare",
+    "text": "Beat the drums of war. All field champions deal +1 ATK for 3 turns.",
+    "art": "arcane_war_drums"
+  },
+  {
+    "id": "arcane_hex_ward",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Hex Ward",
+    "energyCost": 1,
+    "effect": { "type": "hex_ward" },
+    "rarity": "rare",
+    "text": "Ward against dark magic. Destroy all Reaper threats and nullify the next debuff.",
+    "art": "arcane_hex_ward"
+  },
+  {
+    "id": "arcane_death_mark",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Death Mark",
+    "energyCost": 1,
+    "effect": { "type": "death_mark" },
+    "rarity": "rare",
+    "text": "Mark the Reaper for death. Your next damage source (card or field attack) deals double.",
+    "art": "arcane_death_mark"
+  },
+  {
+    "id": "arcane_temporal_rift",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Temporal Rift",
+    "energyCost": 2,
+    "effect": { "type": "temporal_rift", "draw": 2 },
+    "rarity": "rare",
+    "text": "Tear open time. Draw 2 cards and shuffle your discard pile back into your deck.",
+    "art": "arcane_temporal_rift"
+  },
+  {
+    "id": "arcane_banish",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Banish",
+    "energyCost": 2,
+    "effect": { "type": "banish_unit" },
+    "rarity": "uncommon",
+    "text": "Banish the weakest Reaper field unit. If no units, deal 4 damage to the Reaper.",
+    "art": "arcane_banish"
+  },
+  {
+    "id": "arcane_smite",
+    "type": "arcane",
+    "copies": 2,
+    "name": "Smite",
+    "energyCost": 1,
+    "effect": { "type": "smite_unit", "damage": 4 },
+    "rarity": "common",
+    "text": "Deal 4 damage to the most dangerous Reaper field unit. If none, deal 2 to Reaper.",
+    "art": "arcane_smite"
+  },
+  {
+    "id": "arcane_holy_nova",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Holy Nova",
+    "energyCost": 3,
+    "effect": { "type": "nova_clear", "unitDamage": 3, "reaperDamage": 2 },
+    "rarity": "rare",
+    "text": "Holy light erupts. Deal 3 damage to ALL Reaper field units and 2 to the Reaper.",
+    "art": "arcane_holy_nova"
+  },
+  {
+    "id": "arcane_summon_recruit",
+    "type": "arcane",
+    "copies": 2,
+    "name": "Summon Recruit",
+    "energyCost": 1,
+    "effect": { "type": "summon_player_unit", "unit": { "name": "Recruit", "atk": 1, "hp": 4, "maxHp": 4, "art": "recruit" } },
+    "rarity": "common",
+    "text": "Summon a Recruit (1 ATK, 4 HP) to your army to attack the Reaper and block incoming minion attacks.",
+    "art": "arcane_sprint"
+  },
+  {
+    "id": "arcane_summon_skeleton",
+    "type": "arcane",
+    "copies": 2,
+    "name": "Summon Skeleton",
+    "energyCost": 1,
+    "effect": { "type": "summon_player_unit", "unit": { "name": "Skeleton Warrior", "atk": 2, "hp": 3, "maxHp": 3, "art": "skeleton" } },
+    "rarity": "common",
+    "text": "Summon a Skeleton Warrior (2 ATK, 3 HP) to your army to attack the Reaper and block incoming minion attacks.",
+    "art": "arcane_soul_bolt"
+  },
+  {
+    "id": "arcane_summon_spirit",
+    "type": "arcane",
+    "copies": 1,
+    "name": "Summon Echo Spirit",
+    "energyCost": 2,
+    "effect": { "type": "summon_player_unit", "unit": { "name": "Echo Spirit", "atk": 1, "hp": 6, "maxHp": 6, "art": "spirit" } },
+    "rarity": "uncommon",
+    "text": "Summon an Echo Spirit (1 ATK, 6 HP) to your army to attack the Reaper and block incoming minion attacks.",
+    "art": "arcane_spectral_strike"
+  },
+  {
+    "id": "reaper_death_knight",
+    "type": "reaper_card",
+    "name": "Summon Death Knight",
+    "energyCost": 2,
+    "effect": { "type": "summon_unit", "unit": { "name": "Death Knight", "atk": 4, "maxHp": 12, "art": "skeleton" } },
+    "text": "Summon a Death Knight (4 ATK, 12 HP) to the Reaper's field. Attacks each Reaper turn.",
+    "art": "reaper_death_knight"
+  },
+  {
+    "id": "reaper_bone_archer",
+    "type": "reaper_card",
+    "name": "Summon Bone Archer",
+    "energyCost": 1,
+    "effect": { "type": "summon_unit", "unit": { "name": "Bone Archer", "atk": 2, "maxHp": 7, "art": "skeleton" } },
+    "text": "Summon a Bone Archer (2 ATK, 7 HP) to the Reaper's field.",
+    "art": "reaper_bone_archer"
+  },
+  {
+    "id": "reaper_grave_knight",
+    "type": "reaper_card",
+    "name": "Summon Grave Knight",
+    "energyCost": 2,
+    "effect": { "type": "summon_unit", "unit": { "name": "Grave Knight", "atk": 3, "maxHp": 10, "art": "skeleton" } },
+    "text": "Summon a Grave Knight (3 ATK, 10 HP) to the Reaper's field.",
+    "art": "reaper_grave_knight"
+  },
+  {
+    "id": "reaper_rally_undead",
+    "type": "reaper_card",
+    "name": "Rally Undead",
+    "energyCost": 1,
+    "effect": { "type": "rally_undead", "atkBonus": 2 },
+    "text": "The undead surge forward. All Reaper field units gain +2 ATK this turn.",
+    "art": "reaper_rally_undead"
   }
 ]

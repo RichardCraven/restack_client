@@ -91,6 +91,49 @@ import element_fire from '../assets/graphics/card_duel/element_fire.png'
 import element_water from '../assets/graphics/card_duel/element_water.png'
 import element_earth from '../assets/graphics/card_duel/element_earth.png'
 
+import arcane_soul_bolt from '../assets/graphics/card_duel/arcane/soul_bolt.jpg'
+import arcane_bone_armor from '../assets/graphics/card_duel/arcane/bone_armor.jpg'
+import arcane_sprint from '../assets/graphics/card_duel/arcane/arcane_sprint.jpg'
+import arcane_spectral_strike from '../assets/graphics/card_duel/arcane/spectral_strike.jpg'
+import arcane_chain_lightning from '../assets/graphics/card_duel/arcane/chain_lightning.jpg'
+import arcane_runic_barrage from '../assets/graphics/card_duel/arcane/runic_barrage.jpg'
+import arcane_battlecry from '../assets/graphics/card_duel/arcane/battlecry.jpg'
+import arcane_iron_skin from '../assets/graphics/card_duel/arcane/iron_skin.jpg'
+import arcane_ember_blast from '../assets/graphics/card_duel/arcane/ember_blast.jpg'
+import arcane_blood_pact from '../assets/graphics/card_duel/arcane/blood_pact.jpg'
+import arcane_void_trap from '../assets/graphics/card_duel/arcane/void_trap.jpg'
+import arcane_death_mark from '../assets/graphics/card_duel/arcane/death_mark.jpg'
+
+import arcane_phase_shift from '../assets/graphics/card_duel/arcane/phase_shift.jpg'
+import arcane_rallying_cry from '../assets/graphics/card_duel/arcane/rallying_cry.jpg'
+import arcane_soul_siphon from '../assets/graphics/card_duel/arcane/soul_siphon.jpg'
+import arcane_mana_surge from '../assets/graphics/card_duel/arcane/mana_surge.jpg'
+import arcane_last_rites from '../assets/graphics/card_duel/arcane/last_rites.jpg'
+import arcane_war_drums from '../assets/graphics/card_duel/arcane/war_drums.jpg'
+import arcane_hex_ward from '../assets/graphics/card_duel/arcane/hex_ward.jpg'
+import arcane_temporal_rift from '../assets/graphics/card_duel/arcane/temporal_rift.jpg'
+import arcane_banish from '../assets/graphics/card_duel/arcane/banish.jpg'
+import arcane_smite from '../assets/graphics/card_duel/arcane/smite.jpg'
+import arcane_holy_nova from '../assets/graphics/card_duel/arcane/holy_nova.jpg'
+
+import reaper_reap from '../assets/graphics/card_duel/reaper/reaper_reap.jpg'
+import reaper_shroud from '../assets/graphics/card_duel/reaper/reaper_shroud.jpg'
+import reaper_wither from '../assets/graphics/card_duel/reaper/reaper_wither.jpg'
+import reaper_spectral_army from '../assets/graphics/card_duel/reaper/reaper_spectral_army.jpg'
+import reaper_soul_harvest from '../assets/graphics/card_duel/reaper/reaper_soul_harvest.jpg'
+import reaper_curse from '../assets/graphics/card_duel/reaper/reaper_curse.jpg'
+import reaper_torment from '../assets/graphics/card_duel/reaper/reaper_torment.jpg'
+import reaper_death_stare from '../assets/graphics/card_duel/reaper/reaper_death_stare.jpg'
+import reaper_scythe_strike from '../assets/graphics/card_duel/reaper/reaper_scythe_strike.jpg'
+import reaper_dark_ritual from '../assets/graphics/card_duel/reaper/reaper_dark_ritual.jpg'
+import reaper_gravedigger from '../assets/graphics/card_duel/reaper/reaper_gravedigger.jpg'
+import reaper_spectral_surge from '../assets/graphics/card_duel/reaper/reaper_spectral_surge.jpg'
+import reaper_corpse_wall from '../assets/graphics/card_duel/reaper/reaper_corpse_wall.jpg'
+import reaper_death_knight from '../assets/graphics/card_duel/reaper/reaper_death_knight.jpg'
+import reaper_bone_archer from '../assets/graphics/card_duel/reaper/reaper_bone_archer.jpg'
+import reaper_grave_knight from '../assets/graphics/card_duel/reaper/reaper_grave_knight.jpg'
+import reaper_rally_undead from '../assets/graphics/card_duel/reaper/reaper_rally_undead.jpg'
+
 // ------------------------------------------------------------------------------------------------
 
 // items
@@ -647,6 +690,13 @@ import vampiric_bite from '../assets/icons/combat-icons/specials/monsters/vampir
 import heartbeat from '../assets/icons/combat-icons/specials/monsters/vampire/heartbeat.png';
 import reassembly from '../assets/icons/combat-icons/specials/monsters/skeleton/reassmbly.png';
 import bifurcate from '../assets/icons/combat-icons/specials/monsters/beholder minion/bifurcate.png';
+
+// Beholder skills
+import beholder_chainbolt from '../assets/icons/combat-icons/specials/monsters/beholder/chainbolt.png';
+import beholder_mindswap from '../assets/icons/combat-icons/specials/monsters/beholder/mindswap.png';
+import beholder_displacement_ray from '../assets/icons/combat-icons/specials/monsters/beholder/displacement_ray.png';
+import beholder_invisibility from '../assets/icons/combat-icons/specials/monsters/beholder/invisibility.png';
+import beholder_voidbite from '../assets/icons/combat-icons/specials/monsters/beholder/voidbite.png';
 import bones from '../assets/icons/combat-icons/specials/monsters/skeleton/bones.png';
 import betrayal from '../assets/icons/combat-icons/specials/monsters/djinn/betrayal.png';
 import betrayal_hit from '../assets/icons/combat-icons/specials/monsters/djinn/betrayal_hit.png';
@@ -739,6 +789,7 @@ import ranger_loose from '../assets/icons/combat-icons/specials/ranger/loose.png
 import ranger_notch from '../assets/icons/combat-icons/specials/ranger/notch.png'
 import ranger_mark from '../assets/icons/combat-icons/specials/ranger/mark.png'
 import ranger_execute from '../assets/icons/combat-icons/specials/ranger/execute.png'
+import ranger_burst_shot from '../assets/icons/combat-icons/specials/ranger/burst_shot.png'
 import ranger_ensnare from '../assets/icons/combat-icons/specials/ranger/ensnare.png'
 import ranger_net_throw from '../assets/icons/combat-icons/specials/ranger/net-throw.png'
 import eagle_eye from '../assets/icons/combat-icons/specials/ranger/eagle_eye.png'
@@ -1695,6 +1746,49 @@ export {
     element_water,
     element_earth,
 
+    arcane_soul_bolt,
+    arcane_bone_armor,
+    arcane_sprint,
+    arcane_spectral_strike,
+    arcane_chain_lightning,
+    arcane_runic_barrage,
+    arcane_battlecry,
+    arcane_iron_skin,
+    arcane_ember_blast,
+    arcane_blood_pact,
+    arcane_void_trap,
+    arcane_death_mark,
+
+    arcane_phase_shift,
+    arcane_rallying_cry,
+    arcane_soul_siphon,
+    arcane_mana_surge,
+    arcane_last_rites,
+    arcane_war_drums,
+    arcane_hex_ward,
+    arcane_temporal_rift,
+    arcane_banish,
+    arcane_smite,
+    arcane_holy_nova,
+
+    reaper_reap,
+    reaper_shroud,
+    reaper_wither,
+    reaper_spectral_army,
+    reaper_soul_harvest,
+    reaper_curse,
+    reaper_torment,
+    reaper_death_stare,
+    reaper_scythe_strike,
+    reaper_dark_ritual,
+    reaper_gravedigger,
+    reaper_spectral_surge,
+    reaper_corpse_wall,
+    reaper_death_knight,
+    reaper_bone_archer,
+    reaper_grave_knight,
+    reaper_rally_undead,
+
     glyph,
     glyph_inverted,
     info,
@@ -1733,6 +1827,7 @@ export {
     ranger_notch,
     ranger_mark,
     ranger_execute,
+    ranger_burst_shot,
     ranger_ensnare,
     ranger_net_throw,
     eagle_eye,
@@ -1892,6 +1987,13 @@ export {
     reassembly,
     bifurcate,
     bones,
+
+    // Beholder skills
+    beholder_chainbolt,
+    beholder_mindswap,
+    beholder_displacement_ray,
+    beholder_invisibility,
+    beholder_voidbite,
 
     betrayal,
     betrayal_hit,

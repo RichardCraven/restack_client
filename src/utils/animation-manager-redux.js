@@ -248,7 +248,7 @@ export class AnimationManagerRedux {
         this._imbuedStrike(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'fist_of_honor':
-        this._fistOfHonor(sourceCoords, targetCoords);
+        this._fistOfHonor(sourceCoords, targetCoords, sourceUnitId);
         break;
       case 'shield_slam':
       case 'shield_bash':
@@ -294,9 +294,11 @@ export class AnimationManagerRedux {
       case 'deadeye_shot':
       case 'spear_throw':
       case 'loose':
+      case 'execute':
         this._projectileThrow(sourceCoords, targetCoords, name, arrowType, spherePx, sourceUnitId);
         break;
-      case 'execute':
+      case 'burst_shot':
+      case 'burst_attack':
         this._executeMultiShots(sourceCoords, targetCoords, name, arrowType, spherePx);
         break;
       case 'circle_of_protection':
@@ -370,6 +372,22 @@ export class AnimationManagerRedux {
       case 'madness_success':
         this._madnessSuccess(targetCoords, sourceUnitId, isTargetLarge, targetOccupiedCoords);
         break;
+      case 'chainbolt':
+        this._chainbolt(sourceCoords, targetCoords, sourceUnitId, customDuration);
+        break;
+      case 'mind_swap':
+      case 'mind_swap_chain':
+        this._mindSwapBeam(sourceCoords, targetCoords, name, customDuration);
+        break;
+      case 'displacement_ray':
+        this._displacementRay(sourceCoords, targetCoords, customDuration);
+        break;
+      case 'invisibility':
+        this._beholderInvisibility(sourceCoords, sourceUnitId);
+        break;
+      case 'voidbite':
+        this._voidbite(sourceCoords, targetCoords, sourceUnitId);
+        break;
       default:
         // Generic melee hit for unknown abilities
         this._genericHit(sourceCoords, targetCoords);
@@ -384,6 +402,8 @@ export class AnimationManagerRedux {
       'spear_throw',
       'loose',
       'execute',
+      'burst_shot',
+      'burst_attack',
       'energy_drain',
       'fireball',
       'magic_missile',
@@ -925,7 +945,7 @@ export class AnimationManagerRedux {
     });
   }
 
-  _fistOfHonor(src, tgt) {
+  _fistOfHonor(src, tgt, sourceUnitId = null) {
     let targetCoords = tgt;
     if (this._isTargetLarge && Array.isArray(this._currentTargetOccupiedCoords) && this._currentTargetOccupiedCoords.length > 0) {
       let minDist = Infinity;
@@ -955,6 +975,7 @@ export class AnimationManagerRedux {
       baseAngle,
       icon: soldier_fist_of_honor,
       duration: 800,
+      sourceUnitId,
     });
   }
 
@@ -1795,5 +1816,134 @@ export class AnimationManagerRedux {
       icon: fear,
       duration: 1000
     });
+  }
+
+  // ─── Beholder skill animations ───────────────────────────────────────────────
+
+  _chainbolt(src, tgt, sourceUnitId, customDuration) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    const duration = customDuration || 500;
+
+    // White energy beam
+    this._emit({
+      type: 'chainbolt_beam',
+      srcPx,
+      tgtPx,
+      angle,
+      length,
+      sourceUnitId,
+      duration: duration,
+    });
+    setTimeout(() => {
+      this._emit({
+        type: 'chainbolt_hit',
+        tgtPx,
+        duration: Math.min(500, duration),
+      });
+    }, duration * 0.9);
+  }
+
+  _mindSwapBeam(src, tgt, variant = 'mind_swap', customDuration) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    const duration = customDuration || 3000;
+    // Purple psychic beam
+    this._emit({
+      type: 'mind_swap_beam',
+      srcPx,
+      tgtPx,
+      angle,
+      length,
+      variant,
+      duration: duration,
+    });
+    setTimeout(() => {
+      this._emit({
+        type: 'mind_swap_hit',
+        tgtPx,
+        variant,
+        duration: Math.min(1000, duration * 0.33),
+      });
+    }, duration * 0.9);
+  }
+
+  _displacementRay(src, tgt, customDuration) {
+    const srcPx = this._px(src);
+    const tgtPx = this._getImpactTargetPx(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const length = Math.sqrt(dx * dx + dy * dy);
+    
+    const duration = customDuration || 600;
+    // Orange destabilisation ray
+    this._emit({
+      type: 'displacement_ray_beam',
+      srcPx,
+      tgtPx,
+      angle,
+      length,
+      duration: duration,
+    });
+    setTimeout(() => {
+      this._emit({
+        type: 'displacement_ray_hit',
+        tgtPx,
+        duration: Math.min(500, duration * 0.8),
+      });
+    }, duration * 0.9);
+  }
+
+  _beholderInvisibility(src, sourceUnitId) {
+    const srcPx = this._px(src);
+    // Shimmering fade-out on the beholder tile
+    this._emit({
+      type: 'beholder_invisibility_shimmer',
+      srcPx,
+      sourceUnitId,
+      duration: 1200,
+    });
+  }
+
+  _voidbite(src, tgt, sourceUnitId) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    // We want the divide between target and most adjacent tile towards Beholder.
+    const pxDx = srcPx.x - tgtPx.x;
+    const pxDy = srcPx.y - tgtPx.y;
+    const dist = Math.sqrt(pxDx * pxDx + pxDy * pxDy);
+    
+    // Move half a TILE_SIZE (50px) towards Beholder from target
+    const offsetDist = 50; 
+    const midPx = dist > 0 ? {
+      x: tgtPx.x + (pxDx / dist) * offsetDist,
+      y: tgtPx.y + (pxDy / dist) * offsetDist,
+    } : tgtPx;
+    this._emit({
+      type: 'voidbite_chomp',
+      srcPx,
+      tgtPx,
+      midPx,
+      sourceUnitId,
+      duration: 700,
+    });
+    setTimeout(() => {
+      this._emit({
+        type: 'voidbite_hit',
+        tgtPx: midPx,
+        duration: 400,
+      });
+    }, 500);
   }
 }

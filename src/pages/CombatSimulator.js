@@ -209,6 +209,7 @@ class CrewManagerPage extends React.Component {
             selectedMonsterKey: 'mummy',
             selectedMinionKeys: ['skeleton', 'skeleton', 'skeleton', null],
             selectedEnemyForInfo: null,
+            lord: false,
         }
     }
     timer = null;
@@ -279,8 +280,16 @@ class CrewManagerPage extends React.Component {
         // Restore default enemy selection from meta if saved
         const savedDefaults = getMeta()?.simulatorDefaults;
         const enemyState = savedDefaults
-            ? { selectedMonsterKey: savedDefaults.selectedMonsterKey ?? 'mummy', selectedMinionKeys: savedDefaults.selectedMinionKeys ?? ['skeleton', 'skeleton', 'skeleton', null] }
-            : { selectedMonsterKey: 'mummy', selectedMinionKeys: ['skeleton', 'skeleton', 'skeleton', null] };
+            ? { 
+                selectedMonsterKey: savedDefaults.selectedMonsterKey ?? 'mummy', 
+                selectedMinionKeys: savedDefaults.selectedMinionKeys ?? ['skeleton', 'skeleton', 'skeleton', null],
+                lord: savedDefaults.lord ?? false
+              }
+            : { 
+                selectedMonsterKey: 'mummy', 
+                selectedMinionKeys: ['skeleton', 'skeleton', 'skeleton', null],
+                lord: false
+              };
 
         // Restore saved crew roster if present; otherwise fall back to the hardcoded defaults above
         if (savedDefaults?.selectedCrewTypes && Array.isArray(savedDefaults.selectedCrewTypes)) {
@@ -402,6 +411,9 @@ class CrewManagerPage extends React.Component {
         let monsterName = this.pickRandom(monster.monster_names) || (monster.type ? monster.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
         monster.name = monsterName
         monster.inventory = [];
+        if (this.state.lord) {
+            monster.isLord = true;
+        }
 
         let minions = [];
         useMinionKeys.forEach((key, i) => {
@@ -448,6 +460,7 @@ class CrewManagerPage extends React.Component {
             selectedCrewTypes: this.state.selectedCrew.filter(Boolean).map(m => m.type),
             fighterLevels: this.state.fighterLevels,
             fighterSkillTiers: this.state.fighterSkillTiers,
+            lord: this.state.lord,
         };
         storeMeta(meta);
         this.setState({ defaultEnemySaved: true });
@@ -700,6 +713,9 @@ class CrewManagerPage extends React.Component {
         let monsterName = this.pickRandom(monster.monster_names) || (monster.type ? monster.type.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Unknown');
         monster.name = monsterName
         monster.inventory = [];
+        if (this.state.lord) {
+            monster.isLord = true;
+        }
 
         let minions = [];
         useMinionKeys.forEach((key, i) => {
@@ -1057,6 +1073,15 @@ class CrewManagerPage extends React.Component {
                                                 }
                                                 return '\u00a0';
                                             })()}
+                                        </div>
+                                        <div className="lord-checkbox-container" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '6px', color: '#ccc', fontSize: '12px', justifyContent: 'center' }}>
+                                            <input
+                                                id="lord-cb"
+                                                type="checkbox"
+                                                checked={this.state.lord || false}
+                                                onChange={e => this.setState({ lord: e.target.checked })}
+                                            />
+                                            <label htmlFor="lord-cb" style={{ cursor: 'pointer', userSelect: 'none' }}>lord</label>
                                         </div>
                                     </div>
 

@@ -1098,6 +1098,10 @@ export default function CombatGrid(props) {
             if (anim.type !== 'stomp_cast') return false;
             return anim.sourceUnitId === fighter.id;
         });
+        const activeFistOfHonorAnim = activeAnimations.find((anim) => {
+            if (anim.type !== 'fist_of_honor_effect') return false;
+            return anim.sourceUnitId === fighter.id;
+        });
 
         const activeReturnTrialAnim = activeAnimations.find(a => 
             a.type === 'return_from_trial' && 
@@ -1147,6 +1151,7 @@ export default function CombatGrid(props) {
         ].filter(Boolean).join(' ');
 
         const isBatFlying = activeAnimations.some(a => a.type === 'bat_fly_anim' && a.sourceUnitId === fighter.id);
+        const isEthereal = !!(liveFighter?.etherealSpeedActive || details?.etherealSpeedActive || fighter.etherealSpeedActive);
 
         return (
             <div
@@ -1164,7 +1169,7 @@ export default function CombatGrid(props) {
                         ? 'none'
                         : riftPushbackAnim
                             ? `transform ${riftPushbackAnim.duration}ms ease-out`
-                            : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                            : `transform ${isEthereal ? 500 : 1000}ms cubic-bezier(0.25, 1, 0.5, 1)`,
                     opacity: isBatFlying ? 0 : 1,
                     ...computeHitVars(details || fighter, getHitAnimation),
                 }}
@@ -1192,16 +1197,20 @@ export default function CombatGrid(props) {
                             ? `barbarianLeapTravel ${activeLeapAnim.duration / 1000}s linear both` 
                             : (activeShieldSlamAnim 
                                 ? `${activeShieldSlamAnim.type === 'head_butt_lunge' ? 'headbuttLunge' : 'shieldSlamLunge'} ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
-                                : (activeStompCast
-                                    ? `stompScale ${activeStompCast.duration / 1000}s ease-in-out both`
-                                    : undefined)),
+                                : (activeFistOfHonorAnim
+                                    ? `fistOfHonorLunge ${activeFistOfHonorAnim.duration / 1000}s ease-in-out both`
+                                    : (activeStompCast
+                                        ? `stompScale ${activeStompCast.duration / 1000}s ease-in-out both`
+                                        : undefined))),
                         '--leap-dx': activeLeapAnim ? `${activeLeapAnim.dx}px` : '0px',
                         '--leap-dy': activeLeapAnim ? `${activeLeapAnim.dy}px` : '0px',
                         '--slam-dx': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.x - activeShieldSlamAnim.srcPx.x}px` : '0px',
                         '--slam-dy': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.y - activeShieldSlamAnim.srcPx.y}px` : '0px',
+                        '--fist-dx': activeFistOfHonorAnim ? `${activeFistOfHonorAnim.tgtPx.x - activeFistOfHonorAnim.srcPx.x}px` : '0px',
+                        '--fist-dy': activeFistOfHonorAnim ? `${activeFistOfHonorAnim.tgtPx.y - activeFistOfHonorAnim.srcPx.y}px` : '0px',
                         transformOrigin: '50% 50%',
-                        willChange: (activeLeapAnim || activeShieldSlamAnim || activeStompCast) ? 'transform' : 'auto',
-                        zIndex: (activeLeapAnim || activeShieldSlamAnim || activeStompCast) ? 4500 : undefined,
+                        willChange: (activeLeapAnim || activeShieldSlamAnim || activeFistOfHonorAnim || activeStompCast) ? 'transform' : 'auto',
+                        zIndex: (activeLeapAnim || activeShieldSlamAnim || activeFistOfHonorAnim || activeStompCast) ? 4500 : undefined,
                         opacity: isBatFlying ? 0 : 1,
                         transition: 'opacity 0.25s ease-in-out'
                     }}
@@ -1811,6 +1820,10 @@ export default function CombatGrid(props) {
             if (anim.type !== 'stomp_cast') return false;
             return anim.sourceUnitId === unit.id;
         });
+        const activeFistOfHonorAnim = activeAnimations.find((anim) => {
+            if (anim.type !== 'fist_of_honor_effect') return false;
+            return anim.sourceUnitId === unit.id;
+        });
         const liveMonster = getLiveCombatant(unit.id) || unit;
         const monsterSleepDebuff = Array.isArray(liveMonster.activeDebuffs)
             && liveMonster.activeDebuffs.some(d => d && d.name && ['sleep', 'sleep_spell'].includes(d.name.toLowerCase()) && (d.roundsLeft || 0) > 0);
@@ -1857,6 +1870,7 @@ export default function CombatGrid(props) {
             liveMonster.activeDebuffs?.some(d => d && d.name === 'shadow_curse') ? 'shadow-cursed' : '',
             unit.fadingIn ? 'minion-fade-in' : '',
             unit.image === 'witch_transformed' ? 'witch-demon-portrait' : '',
+            liveMonster?.beholderInvisible ? 'beholder-invisible' : '',
         ].filter(Boolean).join(' ');
 
         let hashmallimFilter = '';
@@ -1886,6 +1900,8 @@ export default function CombatGrid(props) {
             }
         }
 
+        const isEthereal = !!(liveMonster?.etherealSpeedActive || unit.etherealSpeedActive);
+
         return (
             <div
                 key={unit.id}
@@ -1902,7 +1918,7 @@ export default function CombatGrid(props) {
                         ? 'none'
                         : riftPushbackAnim
                             ? `transform ${riftPushbackAnim.duration}ms ease-out`
-                            : 'transform 1000ms cubic-bezier(0.25, 1, 0.5, 1)',
+                            : `transform ${isEthereal ? 500 : 1000}ms cubic-bezier(0.25, 1, 0.5, 1)`,
                     opacity: typeof unit.opacity === 'number' ? unit.opacity : (isBatFlying ? 0 : 1),
                     ...computeHitVars(unit, getHitAnimation),
                 }}
@@ -1923,13 +1939,17 @@ export default function CombatGrid(props) {
                         opacity: typeof unit.opacity === 'number' ? unit.opacity : (isBatFlying ? 0 : 1),
                         animation: activeShieldSlamAnim 
                             ? `${activeShieldSlamAnim.type === 'head_butt_lunge' ? 'headbuttLunge' : 'shieldSlamLunge'} ${activeShieldSlamAnim.duration / 1000}s ease-in-out both` 
-                            : (activeStompCast
-                                ? `stompScale ${activeStompCast.duration / 1000}s ease-in-out both`
-                                : undefined),
+                            : (activeFistOfHonorAnim
+                                ? `fistOfHonorLunge ${activeFistOfHonorAnim.duration / 1000}s ease-in-out both`
+                                : (activeStompCast
+                                    ? `stompScale ${activeStompCast.duration / 1000}s ease-in-out both`
+                                    : undefined)),
                         '--slam-dx': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.x - activeShieldSlamAnim.srcPx.x}px` : '0px',
                         '--slam-dy': activeShieldSlamAnim ? `${activeShieldSlamAnim.tgtPx.y - activeShieldSlamAnim.srcPx.y}px` : '0px',
-                        willChange: (activeShieldSlamAnim || activeStompCast) ? 'transform' : 'auto',
-                        zIndex: (activeShieldSlamAnim || activeStompCast) ? 4500 : undefined,
+                        '--fist-dx': activeFistOfHonorAnim ? `${activeFistOfHonorAnim.tgtPx.x - activeFistOfHonorAnim.srcPx.x}px` : '0px',
+                        '--fist-dy': activeFistOfHonorAnim ? `${activeFistOfHonorAnim.tgtPx.y - activeFistOfHonorAnim.srcPx.y}px` : '0px',
+                        willChange: (activeShieldSlamAnim || activeFistOfHonorAnim || activeStompCast) ? 'transform' : 'auto',
+                        zIndex: (activeShieldSlamAnim || activeFistOfHonorAnim || activeStompCast) ? 4500 : undefined,
                         transition: typeof unit.opacityTransition === 'string' ? unit.opacityTransition : 'opacity 0.25s ease-in-out'
                     }}
                 >
@@ -4868,9 +4888,266 @@ export default function CombatGrid(props) {
                         backgroundRepeat: 'no-repeat',
                         backgroundPosition: 'center',
                         transform: `translate(-50%, -50%) rotate(${rotation})`,
-                        animation: isSpinning ? 'spinAxis 0.7s linear infinite' : 'none'
+                        animation: isSpinning ? 'spinAxis 0.5s linear infinite' : 'none'
                     }} />
                 </div>
+            );
+        }
+
+
+        // ── Beholder: Chainbolt beam ────────────────────────────────────────
+        if (anim.type === 'chainbolt_beam' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: `${len}px`,
+                    height: '14px',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${angle}deg) translateY(-50%)`,
+                    zIndex: 4800,
+                    pointerEvents: 'none',
+                }}>
+                    {/* Outer Glow */}
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, width: '100%', height: '100%',
+                        background: 'linear-gradient(to right, rgba(255,255,255,0.05), #e0f0ff, #ffffff, #e0f0ff, rgba(255,255,255,0.05))',
+                        boxShadow: '0 0 12px #ffffff, 0 0 24px #aaddff, 0 0 35px #3399ff',
+                        borderRadius: '6px',
+                        opacity: 0.45,
+                        animation: `beamTravel ${anim.duration || 500}ms linear forwards, beamFlicker 0.12s infinite alternate`,
+                    }} />
+                    {/* Inner Core */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '5px', left: 0, width: '100%', height: '4px',
+                        background: '#ffffff',
+                        boxShadow: '0 0 6px #ffffff, 0 0 12px #ffffff',
+                        borderRadius: '2px',
+                        animation: `beamTravel ${anim.duration || 500}ms linear forwards, beamFlicker 0.08s infinite alternate`,
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'chainbolt_hit' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '50px',
+                    height: '50px',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #ffffff 0%, #aaddff 50%, transparent 100%)',
+                    boxShadow: '0 0 20px #ffffff, 0 0 35px #aaddff',
+                    pointerEvents: 'none',
+                    zIndex: 4900,
+                    animation: 'explode 0.45s ease-out forwards',
+                }} />
+            );
+        }
+
+        // ── Beholder: Mind Swap beam ────────────────────────────────────────
+        if (anim.type === 'mind_swap_beam' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            const isChain = anim.variant === 'mind_swap_chain';
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: `${len}px`,
+                    height: isChain ? '10px' : '16px',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${angle}deg) translateY(-50%)`,
+                    zIndex: 4800,
+                    pointerEvents: 'none',
+                    opacity: isChain ? 0.75 : 1.0,
+                    '--mind-swap-duration': `${anim.duration || 1500}ms`
+                }}>
+                    {/* Outer Glow */}
+                    <div key="glow" className={isChain ? "mind-swap-chain-beam-glow" : "mind-swap-beam-glow"} />
+                    {/* Inner Core */}
+                    <div key="core" className={isChain ? "mind-swap-chain-beam-core" : "mind-swap-beam-core"} style={{
+                        height: isChain ? '4px' : '6px'
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'mind_swap_hit' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '70px',
+                    height: '70px',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #cc80ff 0%, #9b30ff 40%, transparent 100%)',
+                    boxShadow: '0 0 25px #9b30ff, 0 0 40px #6600cc',
+                    pointerEvents: 'none',
+                    zIndex: 4900,
+                    animation: 'explode 1.0s ease-out forwards',
+                }} />
+            );
+        }
+
+        // ── Beholder: Displacement Ray ──────────────────────────────────────
+        if (anim.type === 'displacement_ray_beam' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: `${len}px`,
+                    height: '14px',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${angle}deg) translateY(-50%)`,
+                    zIndex: 4800,
+                    pointerEvents: 'none',
+                }}>
+                    {/* Outer Glow */}
+                    <div style={{
+                        position: 'absolute',
+                        top: 0, left: 0, width: '100%', height: '100%',
+                        background: 'linear-gradient(to right, rgba(255,120,0,0.05), #ff8800, #ffcc44, #ff8800, rgba(255,120,0,0.05))',
+                        boxShadow: '0 0 12px #ff8800, 0 0 24px #cc5500, 0 0 35px #ff3300',
+                        borderRadius: '6px',
+                        opacity: 0.5,
+                        animation: `beamTravel ${anim.duration || 600}ms linear forwards, beamFlicker 0.1s infinite alternate`,
+                    }} />
+                    {/* Inner Core */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '5px', left: 0, width: '100%', height: '4px',
+                        background: '#ffffff',
+                        boxShadow: '0 0 6px #ffffff, 0 0 12px #ffcc44',
+                        borderRadius: '2px',
+                        animation: `beamTravel ${anim.duration || 600}ms linear forwards, beamFlicker 0.08s infinite alternate`,
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'displacement_ray_hit' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '80px',
+                    height: '80px',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, #ffcc44 0%, #ff8800 50%, transparent 100%)',
+                    boxShadow: '0 0 25px #ff8800, 0 0 40px #cc5500',
+                    pointerEvents: 'none',
+                    zIndex: 4900,
+                    animation: 'explode 0.5s ease-out forwards',
+                }} />
+            );
+        }
+
+        // ── Beholder: Invisibility shimmer ─────────────────────────────────
+        if (anim.type === 'beholder_invisibility_shimmer' && anim.srcPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '100px',
+                    height: '100px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 4950,
+                    borderRadius: '8px',
+                    background: 'radial-gradient(circle, rgba(150,255,255,0.25) 0%, rgba(100,180,255,0.15) 50%, transparent 100%)',
+                    boxShadow: '0 0 30px rgba(150,255,255,0.5), inset 0 0 20px rgba(255,255,255,0.1)',
+                    animation: 'beholderFadeIn 1.2s ease-out forwards',
+                    border: '1px solid rgba(180,255,255,0.3)',
+                }} />
+            );
+        }
+
+        // ── Beholder: Voidbite ──────────────────────────────────────────────
+        if (anim.type === 'voidbite_chomp' && (anim.midPx || anim.tgtPx)) {
+            const pos = anim.midPx || anim.tgtPx;
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${pos.x}px`,
+                    top: `${pos.y}px`,
+                    width: '90px',
+                    height: '90px',
+                    transform: 'translate(-50%, -50%)',
+                    pointerEvents: 'none',
+                    zIndex: 5000,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    {/* Dark void top jaw */}
+                    <div style={{
+                        position: 'absolute',
+                        width: '80px',
+                        height: '40px',
+                        top: '5px',
+                        background: 'radial-gradient(ellipse at center bottom, rgba(80,0,120,0.9) 0%, rgba(20,0,40,0.95) 70%, transparent 100%)',
+                        borderRadius: '50% 50% 0 0',
+                        boxShadow: '0 0 18px rgba(120,0,200,0.8)',
+                        animation: 'biteCloseTop 0.7s ease-in-out forwards',
+                        pointerEvents: 'none',
+                    }} />
+                    {/* Dark void bottom jaw */}
+                    <div style={{
+                        position: 'absolute',
+                        width: '80px',
+                        height: '40px',
+                        bottom: '5px',
+                        background: 'radial-gradient(ellipse at center top, rgba(80,0,120,0.9) 0%, rgba(20,0,40,0.95) 70%, transparent 100%)',
+                        borderRadius: '0 0 50% 50%',
+                        boxShadow: '0 0 18px rgba(120,0,200,0.8)',
+                        animation: 'biteCloseBottom 0.7s ease-in-out forwards',
+                        pointerEvents: 'none',
+                    }} />
+                </div>
+            );
+        }
+
+        if (anim.type === 'voidbite_hit' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '60px',
+                    height: '60px',
+                    transform: 'translate(-50%, -50%)',
+                    borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(140,0,220,0.8) 0%, rgba(40,0,80,0.6) 60%, transparent 100%)',
+                    boxShadow: '0 0 20px rgba(120,0,200,0.9), 0 0 35px rgba(60,0,100,0.6)',
+                    pointerEvents: 'none',
+                    zIndex: 4900,
+                    animation: 'explode 0.4s ease-out forwards',
+                }} />
             );
         }
 

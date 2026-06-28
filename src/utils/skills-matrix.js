@@ -130,8 +130,36 @@ const skillsMatrix = {
         id: 'execute',
         tier: 3,
         name: 'Execute',
-        desc: 'Shoot three arrows in rapid succession.',
+        desc: 'fires a single devastating arrow for 300% attack',
         icon: images['ranger_execute'],
+        cooldown: 10,
+        duration: 'instant',
+        range: 'far',
+        atkPercentage: 300,
+        type: 'damage'
+    },
+    burst_shot: {
+        class: 'ranger',
+        treePath: 'combat_a',
+        id: 'burst_shot',
+        tier: 3,
+        name: 'Burst Shot',
+        desc: 'Shoot three arrows in rapid succession.',
+        icon: images['ranger_burst_shot'],
+        cooldown: 10,
+        duration: 'instant',
+        range: 'far',
+        atkPercentage: 100,
+        type: 'damage'
+    },
+    burst_attack: {
+        class: 'ranger',
+        treePath: 'combat_a',
+        id: 'burst_attack',
+        tier: 3,
+        name: 'Burst Attack',
+        desc: 'Shoot three arrows in rapid succession.',
+        icon: images['ranger_burst_shot'],
         cooldown: 10,
         duration: 'instant',
         range: 'far',
@@ -2084,7 +2112,69 @@ const skillsMatrix = {
         duration: 'instant',
         range: 'self',
         type: 'utility'
+    },
+
+    // ── Beholder skills ─────────────────────────────────────────────────────
+    chainbolt: {
+        id: 'chainbolt',
+        name: 'Chainbolt',
+        desc: 'Fires a white energy beam that chains through every PC unit on the board. Each link deals 125% ATK damage.',
+        icon: images['beholder_chainbolt'],
+        cooldown: 6,
+        initialCooldown: 2,
+        duration: 'instant',
+        range: 'far',
+        atkPercentage: 125,
+        type: 'damage'
+    },
+    mind_swap: {
+        id: 'mind_swap',
+        name: 'Mind Swap',
+        desc: 'Fires a purple psychic beam at one PC unit; the beam then jumps to the farthest PC unit on the board. The two targets swap positions.',
+        icon: images['beholder_mindswap'],
+        cooldown: 10,
+        initialCooldown: 1,
+        duration: 'instant',
+        range: 'far',
+        type: 'utility'
+    },
+    displacement_ray: {
+        id: 'displacement_ray',
+        name: 'Displacement Ray',
+        desc: 'Fires a destabilising ray that deals 80% ATK damage and pushes the target 2 tiles away from the Beholder.',
+        icon: images['beholder_displacement_ray'],
+        cooldown: 5,
+        initialCooldown: 1,
+        duration: 'instant',
+        range: 'far',
+        atkPercentage: 80,
+        type: 'damage',
+        mentalityCheck: true
+    },
+    invisibility: {
+        id: 'invisibility',
+        name: 'Invisibility',
+        desc: 'The Beholder fades from sight, becoming invisible and gaining a 40% chance to dodge attacks for a medium duration.',
+        icon: images['beholder_invisibility'],
+        cooldown: 12,
+        initialCooldown: 3,
+        duration: 'medium',
+        range: 'self',
+        type: 'buff'
+    },
+    voidbite: {
+        id: 'voidbite',
+        name: 'Voidbite',
+        desc: 'A savage maw strike at close range dealing 150% ATK damage and draining 30% of dealt damage as stamina from the target.',
+        icon: images['beholder_voidbite'],
+        cooldown: 4,
+        duration: 'instant',
+        range: 'close',
+        atkPercentage: 150,
+        type: 'damage',
+        effect: { type: 'drain', duration: 'instant' }
     }
 };
 
 export default skillsMatrix;
+
