@@ -70,8 +70,11 @@ export function CrewManager(){
 
             // Migration/backfill: older saved Barbarian records may predate whirlwind.
             // Ensure it exists so combat receives both berserker and whirlwind.
-            if ((member.type || member.image) === 'barbarian' && !hasSpecial(member.skills, 'barbarian_whirlwind') && !hasSpecial(member.skills, 'whirlwind')) {
-                member.skills.push('barbarian_whirlwind');
+            if ((member.type || member.image) === 'barbarian') {
+                member.skills = member.skills.filter(s => s !== 'whirlwind');
+                if (!hasSpecial(member.skills, 'barbarian_whirlwind')) {
+                    member.skills.push('barbarian_whirlwind');
+                }
             }
 
             // Wizard auto-learns the unlock global spell
@@ -585,6 +588,20 @@ export function CrewManager(){
                     name: tacticDef.name,
                     iconUrl: images['battle_tactics'] || '',
                     combatsRemaining: tacticDef.combatDuration,
+                    available: false,
+                    startDate,
+                    endDate,
+                    notified: false,
+                });
+            }
+            break;
+            case 'sharpen_blades': {
+                const prepTime = 2 * 60 * 60 * 1000; // 2 hours
+                endDate = new Date(Date.now() + prepTime);
+                member.specialActions.push({
+                    type: 'sharpen_blades',
+                    name: 'Sharpening Blades',
+                    iconUrl: images['shortsword'] || '',
                     available: false,
                     startDate,
                     endDate,

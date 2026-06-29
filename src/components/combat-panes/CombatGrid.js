@@ -452,6 +452,34 @@ export const getActiveEffects = (combatant, combatManager) => {
         }
     }
 
+    // Invigorate effect icon
+    const invigorateBuff = getBuff('invigorate');
+    if (invigorateBuff) {
+        const sameTeamSage = combatManager && combatManager.combatants && Object.values(combatManager.combatants).find(c => {
+            if (!c || c.dead || c.isVCT) return false;
+            const sameTeam = (liveUnit.isMonster || liveUnit.isMinion)
+                ? (c.isMonster || c.isMinion)
+                : (!c.isMonster && !c.isMinion);
+            return sameTeam && c.type === 'sage';
+        });
+        if (sameTeamSage) {
+            const dx = liveUnit.coordinates.x - sameTeamSage.coordinates.x;
+            const dy = liveUnit.coordinates.y - sameTeamSage.coordinates.y;
+            const d = Math.sqrt(dx * dx + dy * dy);
+            if (d <= 2.25) {
+                list.push({
+                    key: 'invigorate',
+                    icon: images.invigorate,
+                    border: '#32cd32',
+                    roundsLeft: invigorateBuff.roundsLeft || 0,
+                    totalDuration: invigorateBuff.totalRounds || invigorateBuff.roundsLeft || 3,
+                    endTimeMs: invigorateBuff.endTimeMs,
+                    totalDurationMs: invigorateBuff.totalDurationMs
+                });
+            }
+        }
+    }
+
     // Circle of Deflection effect icon
     const codBuff = getBuff('circle_of_deflection');
     if (codBuff) {
@@ -5005,6 +5033,66 @@ export default function CombatGrid(props) {
             );
         }
 
+        // ── Sage/Wizard: Healing Beam ──────────────────────────────────────
+        if (anim.type === 'healing_beam' && anim.srcPx && anim.tgtPx) {
+            const dx = anim.tgtPx.x - anim.srcPx.x;
+            const dy = anim.tgtPx.y - anim.srcPx.y;
+            const len = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: `${len}px`,
+                    height: '20px',
+                    transformOrigin: '0 50%',
+                    transform: `rotate(${angle}deg) translateY(-50%)`,
+                    zIndex: 4800,
+                    pointerEvents: 'none',
+                }}>
+                    {/* Glowing outer green channel beam */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '4px',
+                        left: 0,
+                        width: '100%',
+                        height: '12px',
+                        background: 'linear-gradient(90deg, rgba(46,204,113,0.1), rgba(46,204,113,0.85) 50%, rgba(46,204,113,0.1))',
+                        boxShadow: '0 0 15px rgba(46,204,113,0.7), 0 0 30px rgba(46,204,113,0.4)',
+                        borderRadius: '6px',
+                        animation: 'healBeamPulse 0.4s ease-in-out infinite alternate',
+                    }} />
+                    {/* Core bright beam line */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '8px',
+                        left: 0,
+                        width: '100%',
+                        height: '4px',
+                        background: 'linear-gradient(90deg, rgba(255,255,255,0.2), rgba(255,255,255,0.95) 50%, rgba(255,255,255,0.2))',
+                        boxShadow: '0 0 8px rgba(255,255,255,0.9)',
+                        borderRadius: '2px',
+                    }} />
+                    {/* Elaborate travelling light sparks */}
+                    {[0, 1, 2, 3].map(i => (
+                        <div key={i} style={{
+                            position: 'absolute',
+                            top: '5px',
+                            width: '10px',
+                            height: '10px',
+                            borderRadius: '50%',
+                            backgroundColor: '#ffffff',
+                            boxShadow: '0 0 10px #2ecc71, 0 0 20px #2ecc71, 0 0 30px #2ecc71',
+                            animation: 'healSparkTravel 1.0s linear infinite',
+                            animationDelay: `${i * 0.25}s`,
+                            pointerEvents: 'none',
+                        }} />
+                    ))}
+                </div>
+            );
+        }
+
         // ── Beholder: Displacement Ray ──────────────────────────────────────
         if (anim.type === 'displacement_ray_beam' && anim.srcPx && anim.tgtPx) {
             const dx = anim.tgtPx.x - anim.srcPx.x;
@@ -5216,6 +5304,70 @@ export default function CombatGrid(props) {
             );
         }
 
+        if (anim.type === 'invigorate' && anim.srcPx) {
+            const sageUnit = Object.values(combatManager?.combatants || {}).find(c => {
+                if (!c || c.dead || c.isVCT) return false;
+                const normalizeName = (value) => String(value || '').trim().toLowerCase().replace(/\s+/g, '_');
+                return c.type === 'sage' && Array.isArray(c.activeBuffs) && c.activeBuffs.some(b => b && normalizeName(b.name) === 'invigorate');
+            });
+            if (!sageUnit) return null;
+
+            const currentPx = {
+                x: sageUnit.coordinates.x * 100 + 50,
+                y: sageUnit.coordinates.y * 100 + 50
+            };
+
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${currentPx.x}px`,
+                    top: `${currentPx.y}px`,
+                    width: '400px',
+                    height: '400px',
+                    transform: 'translate(-50%, -50%)',
+                    zIndex: 2000,
+                    pointerEvents: 'none',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                  <div style={{
+                    width: '100%',
+                    height: '100%',
+                    borderRadius: '50%',
+                    border: '5px solid rgba(50, 205, 50, 0.75)',
+                    boxShadow: '0 0 35px rgba(50, 205, 50, 0.45), inset 0 0 35px rgba(50, 205, 50, 0.15)',
+                    position: 'relative',
+                    animation: 'spin-slow 20s linear infinite',
+                  }}>
+                    {['\u16A0', '\u16A2', '\u16A6', '\u16A8', '\u16B1', '\u16B2', '\u16B7', '\u16B9', '\u16BA', '\u16C1', '\u16C3', '\u16C8'].map((rune, i) => {
+                      const angle = (i / 12) * 360;
+                      const radius = 42;
+                      const rad = (angle - 90) * (Math.PI / 180);
+                      return (
+                        <span
+                          key={i}
+                          style={{
+                            position: 'absolute',
+                            left: `${50 + radius * Math.cos(rad)}%`,
+                            top: `${50 + radius * Math.sin(rad)}%`,
+                            transform: `translate(-50%, -50%) rotate(${angle}deg)`,
+                            color: 'rgba(50, 205, 50, 0.85)',
+                            fontSize: '22px',
+                            fontWeight: 'bold',
+                            textShadow: '0 0 10px rgba(50, 205, 50, 0.65)',
+                            pointerEvents: 'none',
+                            userSelect: 'none'
+                          }}
+                        >
+                          {rune}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+            );
+        }
 
         if (anim.type === 'circle_of_deflection' && anim.srcPx) {
             const sageUnit = Object.values(combatManager?.combatants || {}).find(c => {

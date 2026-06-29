@@ -1,5 +1,7 @@
 import { getMeta, storeMeta } from './session-handler';
 import { MonsterManager } from './monster-manager';
+import { REAGENT_KEYS } from './reagents';
+import { BREW_INGREDIENT_KEYS } from './brew-ingredients';
 
 // Gate configuration: maps closed gate types to their requirements and opened versions
 const GATE_CONFIG = {
@@ -771,10 +773,17 @@ export function BoardManager(){
             };
         }
 
-        if (roll < 0.90) {
+        if (roll < 0.85) {
             return {
                 kind: 'item',
                 itemKey: this.getRandomTierOneShardKey()
+            };
+        }
+
+        if (roll < 0.95) {
+            return {
+                kind: 'item',
+                itemKey: this.pickRandom([...BREW_INGREDIENT_KEYS, ...REAGENT_KEYS])
             };
         }
 
@@ -801,10 +810,17 @@ export function BoardManager(){
             };
         }
 
-        if (roll < 0.90) {
+        if (roll < 0.85) {
             return {
                 kind: 'item',
                 itemKey: this.getRandomTierTwoJewelKey()
+            };
+        }
+
+        if (roll < 0.95) {
+            return {
+                kind: 'item',
+                itemKey: this.pickRandom([...BREW_INGREDIENT_KEYS, ...REAGENT_KEYS])
             };
         }
 
@@ -844,6 +860,13 @@ export function BoardManager(){
             rewards.push({
                 kind: 'item',
                 itemKey: this.getRandomRuneKey()
+            });
+        }
+
+        if (Math.random() < 0.25) {
+            rewards.push({
+                kind: 'item',
+                itemKey: this.pickRandom([...BREW_INGREDIENT_KEYS, ...REAGENT_KEYS])
             });
         }
 
@@ -1379,6 +1402,81 @@ export function BoardManager(){
         // Normalize the board tiles in-place (backwards-compatibility)
         try { this.normalizeBoardTiles(board); } catch (e) {}
 
+        // Ensure board has traps rolled
+        if (board && !board.trapsRolled) {
+            const trapChance = 65; // 65% chance to spawn traps on a board
+            const roll = Math.floor(Math.random() * 100);
+            console.log(`[Trap Spawn Roll] Checking trap spawn for Board ${boardIndex} (ID: ${board.id}). Roll: ${roll}, Threshold: < ${trapChance}`);
+            
+            if (roll < trapChance) {
+                // Succeeded! Determine trap count (2 to 4 traps)
+                const trapCount = Math.floor(Math.random() * 3) + 2;
+                
+                // Find all interior empty tiles
+                const emptyTiles = board.tiles.filter(t => {
+                    const type = t.contains ? (typeof t.contains === 'string' ? t.contains : t.contains.type) : null;
+                    const isEmpty = !type || type === 'empty_space' || type === 'obscured_space';
+                    const isSpawn = t.id === spawnTileIndex;
+                    let row = Math.floor(t.id / 15);
+                    let col = t.id % 15;
+                    const isInterior = row > 0 && row < 14 && col > 0 && col < 14;
+                    return isEmpty && !isSpawn && isInterior;
+                });
+                
+                // Shuffle empty tiles
+                const shuffled = [...emptyTiles].sort(() => Math.random() - 0.5);
+                const placedCount = Math.min(trapCount, shuffled.length);
+                
+                // Clear any existing trap flags first
+                board.tiles.forEach(t => {
+                    t.hasTrap = false;
+                    t.trapRevealed = false;
+                });
+                
+                // Place traps
+                for (let i = 0; i < placedCount; i++) {
+                    shuffled[i].hasTrap = true;
+                    shuffled[i].trapRevealed = false;
+                }
+                
+                console.log(`[Trap Spawn Roll] SUCCESS: Rolled ${roll} < ${trapChance}%. Spawned ${placedCount} traps on Board ${boardIndex}.`);
+            } else {
+                // Failed! Ensure no traps are active
+                board.tiles.forEach(t => {
+                    t.hasTrap = false;
+                    t.trapRevealed = false;
+                });
+                console.log(`[Trap Spawn Roll] FAILURE: Rolled ${roll} >= ${trapChance}%. No traps spawned on Board ${boardIndex}.`);
+            }
+            
+            board.trapsRolled = true;
+            
+            // Persist back to the dungeon levels array
+            try {
+                if (this.dungeon && this.dungeon.levels) {
+                    const levelEntry = this.dungeon.levels.find(e => e.id === this.currentLevel.id);
+                    if (levelEntry) {
+                        const targetPlane = this.currentOrientation === 'F' ? levelEntry.front : levelEntry.back;
+                        if (targetPlane && targetPlane.miniboards) {
+                            const b = targetPlane.miniboards.find(bi => bi.id === board.id);
+                            if (b) {
+                                b.tiles = board.tiles;
+                                b.trapsRolled = true;
+                            }
+                        }
+                    }
+                    if (this.updateDungeon) {
+                        this.updateDungeon(this.dungeon);
+                    }
+                }
+            } catch (e) {
+                console.warn('[Trap Spawn] Failed to persist rolled traps', e);
+            }
+        } else if (board) {
+            const count = board.tiles.filter(t => t.hasTrap).length;
+            console.log(`[Trap Load] Board ${boardIndex} (ID: ${board.id}) has already rolled traps. Active trap count: ${count}`);
+        }
+
         // Cleanup malformed monster tile shapes that may have been saved in
         // older formats. Ensure every monster tile has the canonical object
         // shape: { type: 'monster', subtype: '<monster_key>' }.
@@ -1767,7 +1865,7 @@ export function BoardManager(){
                 let treasureItems;
                 switch (treasureFactor){
                     case 4:
-                        treasureItems = ['sayan_amulet', 'twilight_mask', 'major_key', 'nukta_charm', 'scepter', 'grand_health_potion']
+                        treasureItems = ['sayan_amulet', 'twilight_mask', 'major_key', 'nukta_charm', 'scepter', 'grand_health_potion', ...BREW_INGREDIENT_KEYS, ...REAGENT_KEYS]
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {
@@ -1777,7 +1875,7 @@ export function BoardManager(){
                         }, destinationTile)
                     break;
                     case 3:
-                        treasureItems = ['glyndas_wand', 'knight_helm', 'hamsa_charm', 'grand_health_potion']
+                        treasureItems = ['glyndas_wand', 'knight_helm', 'hamsa_charm', 'grand_health_potion', ...BREW_INGREDIENT_KEYS, ...REAGENT_KEYS]
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {
@@ -1787,7 +1885,7 @@ export function BoardManager(){
                         }, destinationTile)
                     break;
                     case 2:
-                        treasureItems = ['minor_key', 'cretan_helm', 'major_health_potion']
+                        treasureItems = ['minor_key', 'cretan_helm', 'major_health_potion', ...BREW_INGREDIENT_KEYS, ...REAGENT_KEYS]
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {
@@ -1797,7 +1895,7 @@ export function BoardManager(){
                         }, destinationTile)
                     break;
                     case 1:
-                        treasureItems = ['infantry_shield', 'crimson_mask', 'seraphic_mask', 'basic_helm', 'axe', 'minor_health_potion']
+                        treasureItems = ['infantry_shield', 'crimson_mask', 'seraphic_mask', 'basic_helm', 'axe', 'minor_health_potion', ...REAGENT_KEYS]
                         this.addTreasureToInventory({
                             item: this.pickRandom(treasureItems),
                             currency: {

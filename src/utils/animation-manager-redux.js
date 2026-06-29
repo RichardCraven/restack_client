@@ -304,6 +304,12 @@ export class AnimationManagerRedux {
       case 'circle_of_protection':
         this._circleOfProtection(sourceCoords, targetCoords);
         break;
+      case 'circle_of_deflection':
+        this._circleOfDeflection(sourceCoords, targetCoords);
+        break;
+      case 'invigorate':
+        this._invigorateCircle(sourceCoords, targetCoords);
+        break;
       case 'shadow_armor_dispel':
         this._shadowArmorDispel(sourceCoords, isTargetLarge, targetOccupiedCoords);
         break;
@@ -1073,13 +1079,33 @@ export class AnimationManagerRedux {
   }
 
   _heal(src, tgt) {
+    const srcPx = this._px(src);
     const tgtPx = this._px(tgt);
+    const dx = tgtPx.x - srcPx.x;
+    const dy = tgtPx.y - srcPx.y;
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const duration = 1000;
+
+    // Emit the glowing particle beam connecting healer to healed unit
     this._emit({
-      type: 'heal_glow',
-      srcPx: this._px(src),
+      type: 'healing_beam',
+      srcPx,
       tgtPx,
-      duration: 800,
+      angle,
+      length,
+      duration: duration,
     });
+
+    // Impact pop target heal glow at 400ms delay
+    setTimeout(() => {
+      this._emit({
+        type: 'heal_glow',
+        srcPx,
+        tgtPx,
+        duration: 800,
+      });
+    }, 400);
   }
 
   _directDispel(src, tgt) {
@@ -1096,6 +1122,24 @@ export class AnimationManagerRedux {
     const srcPx = this._px(src);
     this._emit({
       type: 'circle_of_protection',
+      srcPx,
+      duration: 8000,
+    });
+  }
+
+  _circleOfDeflection(src, tgt) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'circle_of_deflection',
+      srcPx,
+      duration: 8000,
+    });
+  }
+
+  _invigorateCircle(src, tgt) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'invigorate',
       srcPx,
       duration: 8000,
     });

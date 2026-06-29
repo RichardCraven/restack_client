@@ -300,6 +300,21 @@ const skillsMatrix = {
             }
         }
     },
+    invigorate: {
+        class: 'sage',
+        treePath: 'combat_a',
+        id: 'invigorate',
+        tier: 2,
+        name: 'Invigorate',
+        desc: 'Create a sanctuary that restores 20% Stamina to all allies within a 2.25-tile radius each round. Lasts 3 rounds.',
+        icon: images['invigorate'],
+        cooldown: 10,
+        initialCooldown: 2,
+        duration: 'short',
+        range: 'self',
+        type: 'buff',
+        effect: ['buff_self']
+    },
     perceive: {
         class: 'sage',
         treePath: 'combat_b',
@@ -915,20 +930,7 @@ const skillsMatrix = {
         atkPercentage: 100,
         type: 'damage'
     },
-    whirlwind: {
-        class: 'barbarian',
-        treePath: 'combat_b',
-        id: 'whirlwind',
-        tier: 2,
-        name: 'Whirlwind',
-        desc: 'Attack all adjacent units with a spinning vortex.',
-        icon: images['monk_whirlwind'],
-        cooldown: 6,
-        duration: 'instant',
-        range: 'close',
-        atkPercentage: 100,
-        type: 'damage'
-    },
+
 
     // === MONK ===
     swift_step: {

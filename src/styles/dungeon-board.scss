@@ -1779,7 +1779,7 @@
     width: 100vw;
     position: absolute;
     background-color: black;
-    opacity: 0.5;
+    opacity: 0.25;
     z-index: 1;
     pointer-events: none;
 }
@@ -3196,5 +3196,38 @@
     .poi-portrait-img {
         object-fit: contain;
         background: radial-gradient(circle at 50% 50%, rgba(40, 130, 255, 0.12) 0%, rgba(0,0,0,0) 70%);
+    }
+}
+
+/* Ensure compound brew button styling is applied globally/unnested */
+.compound-brew-btn {
+    width: 100%;
+    padding: 7px 0;
+    margin-top: 2px;
+    background: rgba(255, 180, 60, 0.12) !important;
+    border: 1px solid rgba(255, 180, 60, 0.35) !important;
+    border-radius: 4px !important;
+    color: rgba(255, 220, 160, 0.9) !important;
+    font-size: 10px !important;
+    font-weight: 600 !important;
+    cursor: pointer !important;
+    letter-spacing: 0.04em !important;
+    transition: background 0.15s, border-color 0.15s !important;
+    outline: none !important;
+
+    &:hover:not(:disabled) {
+        background: rgba(255, 180, 60, 0.28) !important;
+        border-color: rgba(255, 200, 80, 0.8) !important;
+    }
+    &.ready {
+        border-color: rgba(255, 200, 80, 0.8) !important;
+        color: rgba(255, 240, 180, 1) !important;
+    }
+    &.disabled, &:disabled {
+        opacity: 0.35 !important;
+        cursor: not-allowed !important;
+        background: rgba(255, 180, 60, 0.06) !important;
+        border-color: rgba(255, 180, 60, 0.15) !important;
+        color: rgba(255, 220, 160, 0.4) !important;
     }
 }

@@ -796,6 +796,7 @@ import eagle_eye from '../assets/icons/combat-icons/specials/ranger/eagle_eye.pn
 import healing_hands from '../assets/icons/combat-icons/specials/sage/healing_hands.png'
 import circle_of_protection from '../assets/icons/combat-icons/specials/sage/circle_of_protection.png'
 import circle_of_deflection from '../assets/icons/combat-icons/specials/sage/circle_of_deflection.png'
+import invigorate from '../assets/icons/combat-icons/specials/sage/invigorate.png'
 import direct_dispel from '../assets/icons/combat-icons/specials/sage/direct_dispel.png'
 import shielded from '../assets/icons/combat-icons/specials/sage/shielded.png'
 import shielded_partial from '../assets/icons/combat-icons/specials/sage/shielded_partial.png'
@@ -1836,6 +1837,7 @@ export {
     weakness_doubled,
     circle_of_protection,
     circle_of_deflection,
+    invigorate,
     direct_dispel,
     shielded,
     shielded_partial,

@@ -10,6 +10,7 @@ import DUST_TYPES from '../../utils/dusts';
 import LevelUpScreen from '../../components/LevelUpScreen';
 import skillsMatrix from '../../utils/skills-matrix';
 import { Redirect } from "react-router-dom";
+import { shardDropChance } from '../../utils/card-manager';
 import { storeMeta, getMeta, getUserId } from '../../utils/session-handler';
 import {
     updateUserRequest
@@ -1216,7 +1217,30 @@ class MonsterBattle extends React.Component {
                             }
                         }
                     })
-                    this.props.inventoryManager.addItemsByName(itemsGained)
+                }
+
+                // ── Soul Shard drop ──────────────────────────────────────────────
+                try {
+                    const defeatedMonster = this.props.monster;
+                    if (defeatedMonster && defeatedMonster.type) {
+                        const dropChance = shardDropChance(defeatedMonster);
+                        if (Math.random() < dropChance) {
+                            const mType = defeatedMonster.type;
+                            if (!itemsGained) itemsGained = [];
+                            itemsGained.push(`${mType}_soul_shard`);
+
+                            // Save to metadata immediately
+                            const meta = getMeta() || {};
+                            if (!meta.soulShards) meta.soulShards = {};
+                            meta.soulShards[mType] = (meta.soulShards[mType] || 0) + 1;
+                            storeMeta(meta);
+                        }
+                    }
+                } catch (e) { console.warn('shard drop failed', e); }
+
+                if (itemsGained && itemsGained.length > 0) {
+                    const normalItems = itemsGained.filter(itemKey => !itemKey.endsWith('_soul_shard'));
+                    this.props.inventoryManager.addItemsByName(normalItems);
                 }
                 experienceGained = this.props.monster.level * 10;
                 try {
@@ -2549,7 +2573,11 @@ class MonsterBattle extends React.Component {
                                                 <div className="items-list">
                                                     {this.state.itemsGained && this.state.itemsGained.length > 0 &&
                                                         this.state.itemsGained.map((itemKey, idx) => {
-                                                            const itemDef = this.props.inventoryManager.allItems[itemKey];
+                                                            const isSoulShard = itemKey.endsWith('_soul_shard');
+                                                            const itemDef = isSoulShard ? {
+                                                                name: itemKey.replaceAll('_', ' '),
+                                                                icon: 'sould_shards'
+                                                            } : this.props.inventoryManager.allItems[itemKey];
                                                             const iconSrc = itemDef?.icon ? images[itemDef.icon] : null;
                                                             const displayName = itemDef?.name || itemKey.replaceAll('_', ' ');
                                                             return (
@@ -2627,7 +2655,7 @@ class MonsterBattle extends React.Component {
                                                                             Lvl {this.state.levelTransitions[crewMember.id].from} → {this.state.levelTransitions[crewMember.id].to}
                                                                         </span>
                                                                     ) : (
-                                                                        <span className="crew-level-badge">Lvl {crewMember.stats?.level || 1}</span>
+                                                                        <span className="crew-level-badge">Lvl {cmMember ? cmMember.level : (crewMember.level || crewMember.stats?.level || 1)}</span>
                                                                     )}
                                                                 </div>
 
@@ -3157,7 +3185,9 @@ class MonsterBattle extends React.Component {
                                                 third_eye: 'Third Eye',
                                                 shield_wall: 'Shield Wall',
                                                 rift_portal: 'Rift Open',
-                                                spiderweb: 'Spiderweb'
+                                                spiderweb: 'Spiderweb',
+                                                circle_of_deflection: 'Circle of Deflection',
+                                                invigorate: 'Invigorate'
                                             };
 
                                             const EFFECT_EXPLANATIONS = {
@@ -3178,7 +3208,9 @@ class MonsterBattle extends React.Component {
                                                 third_eye: 'Third Eye. Increases accuracy and critical strike chance.',
                                                 shield_wall: 'Shield Wall. Protects adjacent allies and increases DEF.',
                                                 rift_portal: 'Rift Open. Portal is open and channeling energy.',
-                                                spiderweb: 'Trapped in a sticky spiderweb. Cannot move. Contact with spider minions will cause double damage and detonate in a purple blast.'
+                                                spiderweb: 'Trapped in a sticky spiderweb. Cannot move. Contact with spider minions will cause double damage and detonate in a purple blast.',
+                                                circle_of_deflection: 'A teal runic barrier that gives allies inside a 50% chance to reflect ranged attacks back at the attacker.',
+                                                invigorate: 'Create a sanctuary that restores 20% Stamina to all allies within a 2.25-tile radius each round. Lasts 3 rounds.'
                                             };
 
                                             const mappedEffects = activeEffects.map(eff => {

@@ -1,3 +1,6 @@
+import BREW_INGREDIENTS from './brew-ingredients';
+import { REAGENTS } from './reagents';
+
 function copy(item) {
     // Guard against undefined/null inputs — JSON.stringify(undefined) -> undefined
     // which makes JSON.parse throw. Return null for missing items so callers
@@ -2760,6 +2763,12 @@ export function InventoryManager() {
         }
         for (let key in this.runes) {
             this.allItems[key] = this.runes[key]
+        }
+        for (let key in BREW_INGREDIENTS) {
+            this.allItems[key] = BREW_INGREDIENTS[key];
+        }
+        for (let key in REAGENTS) {
+            this.allItems[key] = REAGENTS[key];
         }
         this.iconToKey = {};
         for (let key in this.weapons) {

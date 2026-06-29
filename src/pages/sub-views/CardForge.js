@@ -12,7 +12,7 @@ import * as images from '../../utils/images';
  *   onClose        — fn to close overlay
  *   onSave         — fn(updatedMeta) called after forging/saving selection
  */
-export default function CardForge({ crew, meta, onClose, onSave }) {
+export default function CardForge({ crew, meta, onClose, onSave, highlightMonsterType }) {
     const soulShards   = (meta && meta.soulShards)  || {};
     const forgedEchos  = (meta && meta.echoCards)   || [];
 
@@ -28,6 +28,13 @@ export default function CardForge({ crew, meta, onClose, onSave }) {
     };
 
     const forgeables = getForgeableEchos(shardsState);
+    if (highlightMonsterType) {
+        forgeables.sort((a, b) => {
+            if (a.monsterType === highlightMonsterType) return -1;
+            if (b.monsterType === highlightMonsterType) return 1;
+            return 0;
+        });
+    }
 
     const handleForge = (entry) => {
         if (!entry.canForge) return;
@@ -117,10 +124,11 @@ export default function CardForge({ crew, meta, onClose, onSave }) {
                                 const portrait      = images[portraitKey] || null;
                                 const have          = shardsState[entry.monsterType] || 0;
                                 const pct           = Math.min(1, have / 3);
+                                const isHighlighted = highlightMonsterType && entry.monsterType === highlightMonsterType;
                                 return (
                                     <div
                                         key={entry.card.id}
-                                        className={`pf-forge-card ${alreadyForged ? 'pf-forge-card--done' : entry.canForge ? 'pf-forge-card--ready' : ''}`}
+                                        className={`pf-forge-card ${alreadyForged ? 'pf-forge-card--done' : entry.canForge ? 'pf-forge-card--ready' : ''} ${isHighlighted ? 'pf-forge-card--highlighted' : ''}`}
                                     >
                                         <div
                                             className="pf-forge-portrait"
@@ -345,6 +353,16 @@ const FORGE_CSS = `
 .pf-forge-btn--ready:hover { background: linear-gradient(135deg, #9a6ae0, #5a30a0); }
 .pf-forge-btn--locked { background: rgba(255,255,255,0.06); color: #666; cursor: not-allowed; }
 .pf-forge-btn--done   { background: rgba(90,176,112,0.2); color: #5ab070; cursor: default; }
+
+.pf-forge-card--highlighted {
+  border-color: #ffd700 !important;
+  box-shadow: 0 0 24px rgba(255, 215, 0, 0.45) !important;
+  animation: pf-pulse 1.5s infinite alternate;
+}
+@keyframes pf-pulse {
+  0% { transform: scale(1); }
+  100% { transform: scale(1.02); }
+}
 
 /* DECK body */
 .pf-deck-body { flex: 1; overflow-y: auto; padding: 18px 22px; display: flex; flex-direction: column; gap: 20px; }

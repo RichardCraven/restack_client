@@ -11,6 +11,7 @@ import '../styles/level-up-screen.scss';
 import { CombatManagerRedux } from '../utils/combat-manager-redux';
 import CardDuel from './sub-views/CardDuel';
 import CardForge from './sub-views/CardForge';
+import TowerSiege from './sub-views/TowerSiege';
 import { shardDropChance } from '../utils/card-manager';
 // import ExpositionPane from './sub-views/ExpositionPane';
 import {
@@ -1906,6 +1907,7 @@ class DungeonPage extends React.Component {
             keysLocked: false,
             portalTransitionClass: '',
             inMonsterBattle: false,
+            inTowerSiege: false,
             monster: null,
             crewSize: 0,
             paused: false,
@@ -1945,6 +1947,7 @@ class DungeonPage extends React.Component {
             , showCardDuelModal: false
             , cardDuelTileId: null
             , showCardForge: false
+            , forgeHighlightMonsterType: null
             , toastMessage: null
             , mapZoomedLevelId: null
             , mapUnzoomingLevelId: null
@@ -2389,6 +2392,20 @@ class DungeonPage extends React.Component {
         });
     }
 
+    // ── Tower Siege ──────────────────────────────────────────────────────────────
+    triggerTowerSiege = () => {
+        console.log('[TowerSiege] Initiating siege event...');
+        if (!this.reduxCombatManager) {
+            this.reduxCombatManager = new CombatManagerRedux();
+        }
+        this.setState({ inTowerSiege: true });
+    }
+
+    onSiegeComplete = () => {
+        this.reduxCombatManager = null;
+        this.setState({ inTowerSiege: false });
+    }
+
     handleDebugLevelUpComplete = () => {
         const queue = this.state.debugLevelUpQueue || [];
         queue.forEach(entry => {
@@ -2753,6 +2770,13 @@ class DungeonPage extends React.Component {
         try {
             window.levelUp = this.triggerDebugLevelUp;
             window.lvlUp = this.triggerDebugLevelUp;
+
+            // Tower Siege debug command — type 'siege' in the browser console
+            window.siege = () => this.triggerTowerSiege();
+            Object.defineProperty(window, 'tower_siege', {
+                get: () => { this.triggerTowerSiege(); return 'Initiating Tower Siege...'; },
+                configurable: true
+            });
             
             Object.defineProperty(window, 'level_up', {
                 get: () => { this.triggerDebugLevelUp(); return 'Leveling up selected crew member...'; },
@@ -4425,6 +4449,18 @@ class DungeonPage extends React.Component {
                             ? `Rituals cleared for: ${affectedNames.join(', ')}`
                             : 'No rituals found to clear';
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, msg], devConsoleInput: '' }));
+                    } catch (err) {
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
+                    }
+                    try { if (this.devConsoleInputRef.current) this.devConsoleInputRef.current.focus(); } catch (err) {}
+                    e.preventDefault();
+                    return;
+                }
+                // siege — start Tower Siege event with default armies
+                if (cmd === 'siege' || cmd === 'tower siege') {
+                    try {
+                        this.triggerTowerSiege();
+                        this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, 'Initiating Tower Siege...'], devConsoleInput: '' }));
                     } catch (err) {
                         this.setState(prev => ({ devConsoleOutput: [...prev.devConsoleOutput, `> ${raw}`, `Error: ${err && err.message ? err.message : err}`], devConsoleInput: '' }));
                     }
@@ -6133,7 +6169,17 @@ class DungeonPage extends React.Component {
     handleItemClick = (item, index) => {
         // New equip logic: place item into an appropriate equip slot on the selected crew member
         if(!item || index === undefined || index === null) return;
-        if(item.type === 'soul_shard') return;
+        if(item.type === 'soul_shard') {
+            if(item.count >= 3) {
+                this.setState({
+                    showCardForge: true,
+                    forgeHighlightMonsterType: item.monsterType,
+                    showInventoryPopup: false,
+                    isInventoryExpanded: false
+                });
+            }
+            return;
+        }
         const selected = this.state.selectedCrewMember;
         if(!selected || selected.id === undefined || selected.id === null){
             // nothing to equip to
@@ -9644,9 +9690,9 @@ class DungeonPage extends React.Component {
                             <div className="camp-bottom-tile-icon" style={{backgroundImage:`url(${images.pyre_echo_card || images.grimoire})`, backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center', width:54, height:54}}></div>
                             <div className="camp-bottom-tile-label">Pyre &amp; Echo</div>
                         </div>
-                        <div className="camp-bottom-tile">
+                        <div className="camp-bottom-tile" style={{cursor:'pointer'}} onClick={() => this.setState({ showSiegeArmy: true })}>
                             <div className="camp-bottom-tile-icon" style={{backgroundImage:`url(${images.eclipse})`, backgroundSize:'contain', backgroundRepeat:'no-repeat', backgroundPosition:'center', width:54, height:54}}></div>
-                            <div className="camp-bottom-tile-label">Shards</div>
+                            <div className="camp-bottom-tile-label">Siege Army</div>
                         </div>
                     </div>
                 </CModalBody>
@@ -11226,7 +11272,9 @@ class DungeonPage extends React.Component {
                                     top: this.calcPlayerIndicatorTop()
                                 }}></div>}
 
-                                {/* per-tile backside badge removed in favor of a single centralized indicator */}
+                                {this.props.boardManager && this.props.boardManager.currentOrientation === 'B' && this.state.minimap[i].active && (
+                                    <div className="backside-badge" title="Backside of map">B</div>
+                                )}
 
                                 {/* // enemies // */}
                                 {(() => {
@@ -11296,7 +11344,11 @@ class DungeonPage extends React.Component {
                             </div>
                         })}
                     </div>
-
+                    {this.props.boardManager && this.props.boardManager.currentOrientation === 'B' && (
+                        <div className="backside-indicator">
+                            <span style={{ color: '#f9b115', marginRight: '6px' }}>☯</span> backside orientation
+                        </div>
+                    )}
                 </div>
                 <div className="crew-container">
                     {/* <div className="title">Crew</div> */}
@@ -11979,6 +12031,16 @@ class DungeonPage extends React.Component {
                 saveUserData={this.props.saveUserData}
             ></MonsterBattle>}
 
+            {/* Tower Siege — full-screen large-scale battle event */}
+            {this.state.inTowerSiege && (
+                <TowerSiege
+                    combatManager={this.reduxCombatManager}
+                    crew={this.props.crewManager.crew}
+                    monsterManager={this.props.monsterManager}
+                    onSiegeComplete={this.onSiegeComplete}
+                />
+            )}
+
             {/* Shrine Screen — full-screen cinematic shrine encounter */}
             {this.state.inShrineScreen && this.state.shrineData && (
                 <ShrineScreen
@@ -12623,10 +12685,12 @@ class DungeonPage extends React.Component {
                 <CardForge
                     crew={this.props.crewManager ? this.props.crewManager.crew : []}
                     meta={getMeta()}
-                    onClose={() => this.setState({ showCardForge: false })}
+                    highlightMonsterType={this.state.forgeHighlightMonsterType}
+                    onClose={() => this.setState({ showCardForge: false, forgeHighlightMonsterType: null })}
                     onSave={(updatedMeta) => {
                         try { storeMeta(updatedMeta); } catch(e) {}
                         try { if (this.props.saveUserData) this.props.saveUserData(); } catch(e) {}
+                        this.forceUpdate();
                     }}
                 />
             )}

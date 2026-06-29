@@ -212,8 +212,14 @@ export function CombatManagerRedux() {
         this.round = 1;
         this.roundTimeRemainingRatio = 1.0;
         this.roundTimeElapsedMs = 0;
-        this.gameSpeed = 'slow';
-        this.roundDurationMs = 2000;
+        let speedSetting = INTERVALS[1]; // default Slow
+        try {
+            const meta = getMeta();
+            if (meta && INTERVALS.includes(meta.combatSpeed)) {
+                speedSetting = meta.combatSpeed;
+            }
+        } catch (e) {}
+        this.updateAllFightIntervals(speedSetting);
         this.combatants = {};
         this.vctByMonster = {};
         this.pendingBombardments = [];
@@ -579,6 +585,8 @@ export function CombatManagerRedux() {
             setTargetId: (c, tid) => { c.targetId = tid; },
             getAllCombatants: () => this.combatants
         };
+        // Store callbacks so siege and other extended modes can register additional combatants
+        this._combatCallbacks = callbacks;
 
         const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
 
@@ -905,6 +913,67 @@ export function CombatManagerRedux() {
         }
     };
 
+    // ── Siege-specific initializer ──────────────────────────────────────────────
+    // Sets up a large-scale siege board (e.g. 15×20) by:
+    //  1. Running standard initializeCombat for crew + hashmallim + hashmallim army
+    //  2. Expanding the board to siegeMaxDepth columns
+    //  3. Remapping all monster-side combatants to the right half of the board
+    //  4. Registering siege army units at x=1 (alongside crew at x=0)
+    this.initializeSiegeCombat = ({ crew, siegeArmy, monster, minions, siegeMaxDepth = 19 }) => {
+        // Standard setup with crew only.  initializeCombat resets MAX_DEPTH to 7 internally,
+        // so we pass only crew here and handle the rest ourselves afterwards.
+        const crewForInit = (crew || []).slice(0, MAX_LANES);
+        this.initializeCombat({ crew: crewForInit, monster, minions });
+
+        // Now expand the board to siege dimensions
+        setMaxDepth(siegeMaxDepth);
+        this.numColumns = siegeMaxDepth + 1;
+
+        // Offset all monster-side combatants to the right half of the board.
+        // During initializeCombat they were placed around x=7 (old MAX_DEPTH).
+        // We add MONSTER_X_OFFSET so the hashmallim lands near column 17 on a 20-col board.
+        const MONSTER_X_OFFSET = siegeMaxDepth - 7; // e.g. 19-7 = 12
+        Object.values(this.combatants).forEach(combatant => {
+            if (!combatant || !combatant.isMonster) return;
+            const newX = Math.min(combatant.coordinates.x + MONSTER_X_OFFSET, siegeMaxDepth);
+            combatant.coordinates = { x: newX, y: combatant.coordinates.y };
+            try { this._setCombatantOccupiedCoords(combatant); } catch (_) {}
+        });
+
+        // Register siege army units at x=1 using the stored callbacks reference.
+        // Each unit is treated as isMonster=false (friendly side, like crew).
+        if (this._combatCallbacks && (siegeArmy || []).length > 0) {
+            const armyColors = ['#4a9e6b', '#3b8a5c', '#5db87e', '#2e7a4f', '#6ec991'];
+            (siegeArmy || []).forEach((unit, idx) => {
+                if (idx >= MAX_LANES) return; // hard cap at lane limit
+                const x = 1 + Math.floor(idx / MAX_LANES);
+                const y = idx % MAX_LANES;
+                unit.coordinates = { x, y };
+                unit.color = armyColors[idx % armyColors.length];
+                unit.isMonster = false;
+                unit.isSiegeUnit = true;
+                unit.isSiegeArmy = true;
+                const fighter = createFighter(unit, this._combatCallbacks, this.FIGHT_INTERVAL);
+                fighter.maxEndurance = (unit.stats && unit.stats.vitality) || 30;
+                fighter.endurance = fighter.maxEndurance;
+                fighter.enduranceFrozenRounds = 0;
+                fighter.cooldowns = {};
+                fighter.movesTakenThisRound = 0;
+                fighter.actionsTakenThisRound = 0;
+                fighter.isSiegeUnit = true;
+                fighter.isSiegeArmy = true;
+                this.combatants[unit.id] = fighter;
+                try { this._setCombatantOccupiedCoords(fighter); } catch (_) {}
+                this._initializeInitialCooldowns(fighter);
+            });
+        }
+
+        // Broadcast the updated combatant positions
+        if (typeof this.updateData === 'function') {
+            this.updateData(clone(this.combatants));
+        }
+    };
+
     this._setCombatantOccupiedCoords = (combatant, battleData) => {
         if (!combatant) return;
         combatant.occupiedCoords = [];
@@ -1106,7 +1175,8 @@ export function CombatManagerRedux() {
 
         // Block moves that cross an active shield wall
         const intelTier = this.getUnitIntelligenceTier(unit);
-        if (intelTier !== 'dumb' && unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, { x, y })) {
+        const isMonsterOrMinion = unit.isMonster || unit.isMinion;
+        if (unit.coordinates && (intelTier !== 'dumb' || !isMonsterOrMinion) && crossesShieldWall(unit.coordinates, { x, y })) {
             return false;
         }
 
@@ -1149,7 +1219,7 @@ export function CombatManagerRedux() {
             ];
             for (let coord of extraCoords) {
                 if (coord.x < 0 || coord.x > MAX_DEPTH || coord.y < 0 || coord.y >= MAX_LANES) return false;
-                if (intelTier !== 'dumb' && unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
+                if (unit.coordinates && (intelTier !== 'dumb' || !isMonsterOrMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
                 if (this.isTileOccupied(coord.x, coord.y, unit.id)) return false;
             }
         } else if (isLarge) {
@@ -1161,7 +1231,7 @@ export function CombatManagerRedux() {
             ];
             for (let coord of extraCoords) {
                 if (coord.x < 0 || coord.x > MAX_DEPTH || coord.y < 0 || coord.y >= MAX_LANES) return false;
-                if (intelTier !== 'dumb' && unit.coordinates && (unit.isMonster || unit.isMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
+                if (unit.coordinates && (intelTier !== 'dumb' || !isMonsterOrMinion) && crossesShieldWall(unit.coordinates, coord)) return false;
                 if (this.isTileOccupied(coord.x, coord.y, unit.id)) return false;
             }
         }
@@ -1217,7 +1287,7 @@ export function CombatManagerRedux() {
 
         // If Sage has Circle active and actually moved/repositioned, end the Circles immediately
         if (unit.type === 'sage' && (ox !== nx || oy !== ny)) {
-            const hasCircle = unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection');
+            const hasCircle = unit.activeBuffs && unit.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection' || b.name === 'invigorate');
             if (hasCircle) {
                 this._endSageCircles(unit, 'Sage moved');
             }
@@ -2244,6 +2314,30 @@ export function CombatManagerRedux() {
                 unit.endurance = Math.min(unit.maxEndurance || 100, (unit.endurance || 0) + regenAmt);
                 this.appendCombatLog(`${this.getCombatantLogName(unit)} is Inspired — stamina restored by ${regenAmt}.`);
             }
+            // Per-round Invigorate effects: check distance to Sage and regen stamina
+            if (buff.name === 'invigorate') {
+                const sameTeamSage = Object.values(this.combatants).find(c => {
+                    if (!c || c.dead || c.isVCT) return false;
+                    const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                    return sameTeam && c.type === 'sage';
+                });
+                if (sameTeamSage) {
+                    const dx = unit.coordinates.x - sameTeamSage.coordinates.x;
+                    const dy = unit.coordinates.y - sameTeamSage.coordinates.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+                    if (dist <= 2.25) {
+                        const regenAmt = Math.round((unit.maxEndurance || 100) * 0.20);
+                        unit.endurance = Math.min(unit.maxEndurance || 100, (unit.endurance || 0) + regenAmt);
+                        this.appendCombatLog(`${this.getCombatantLogName(unit)} is inside Invigorate circle — stamina restored by ${regenAmt}.`);
+                        unit.damageIndicators = unit.damageIndicators || [];
+                        unit.damageIndicators.push({
+                            id: Date.now() + Math.random() + 99,
+                            value: `+${regenAmt} STAM`,
+                            type: 'heal'
+                        });
+                    }
+                }
+            }
             buff.roundsLeft--;
             return true;
         });
@@ -2780,6 +2874,68 @@ export function CombatManagerRedux() {
             const cornerY = Math.abs(unit.coordinates.y - 0) <= Math.abs(unit.coordinates.y - (MAX_LANES - 1)) ? 0 : MAX_LANES - 1;
             this.moveCloserToCoord(unit, targetX, cornerY);
             return;
+        }
+
+        // ── Intelligent Invisibility AI Strategy ──
+        if ((unit.isMonster || unit.isMinion) && this.getUnitIntelligenceTier(unit) === 'intelligent') {
+            const hasInvisibility = (unit.skills || []).includes('invisibility') || (unit.specials || []).includes('invisibility');
+            if (hasInvisibility) {
+                const invisibilitySpec = this.resolveSpecial(unit, 'invisibility');
+                const invisibilityReady = invisibilitySpec && this._abilityReady(unit, 'invisibility');
+                const isInvisible = unit.beholderInvisible;
+
+                // 1. Cast invisibility if ready and not already invisible
+                if (invisibilityReady && !isInvisible) {
+                    this.useAbility(unit, invisibilitySpec, unit);
+                }
+
+                // Re-evaluate invisibility state (might have just cast it)
+                const activeInvisible = unit.beholderInvisible;
+
+                if (activeInvisible) {
+                    const justCast = unit.actionsTakenThisRound >= 1;
+                    this.acquireTarget(unit, true, unit._excludedTargetIds || []);
+                    const target = this.combatants[unit.targetId];
+
+                    if (target) {
+                        const hasRanged = (() => {
+                            const attacks = unit.attacks || [];
+                            const skills = unit.skills || [];
+                            return [...attacks, ...skills].some(a => {
+                                if (typeof a === 'object' && a) return a.range === 'far' || a.range === 'medium' || a.range > 2;
+                                if (typeof a === 'string') {
+                                    const resolved = this.resolveSpecial(unit, a);
+                                    return resolved && (resolved.range === 'far' || resolved.range === 'medium' || resolved.range > 2);
+                                }
+                                return false;
+                            });
+                        })();
+
+                        if (!hasRanged) {
+                            // Melee setup
+                            const isAdjacent = this.targetInRange(unit, target, 'close');
+                            if (!isAdjacent) {
+                                this.moveCloser(unit, target);
+                                return; // Do not attack, set up
+                            } else if (justCast) {
+                                return; // Just cast it, cannot attack anyway
+                            }
+                        } else {
+                            // Ranged setup: go to nearest corner on own side of the board
+                            const cornerX = unit.isMonster ? MAX_DEPTH : 0;
+                            const cornerY = unit.coordinates.y <= (MAX_LANES / 2) ? 0 : MAX_LANES - 1;
+                            const inCorner = unit.coordinates.x === cornerX && unit.coordinates.y === cornerY;
+
+                            if (!inCorner) {
+                                this.moveCloserToCoord(unit, cornerX, cornerY);
+                                return; // Do not attack, set up
+                            } else if (justCast) {
+                                return; // Just cast it, cannot attack anyway
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         const unitType = unit.type || unit.image || '';
@@ -3802,6 +3958,72 @@ export function CombatManagerRedux() {
             }
         }
 
+        // Priority 2.5: Invigorate (tier 2) — green stamina-regen barrier
+        if (this.round > 1 && this._abilityReady(unit, 'invigorate')) {
+            const pick = this.resolveSpecial(unit, 'invigorate');
+            if (pick) {
+                const getScore = (nx, ny) => {
+                    let score = 0;
+                    Object.values(this.combatants).forEach(c => {
+                        if (!c || c.dead || c.isVCT) return;
+                        const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                        if (!sameTeam) return;
+                        const dx = c.coordinates.x - nx;
+                        const dy = c.coordinates.y - ny;
+                        const dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < 1.9) score += 2;
+                        else if (dist <= 2.25) score += 1;
+                    });
+                    return score;
+                };
+
+                const curScore = getScore(unit.coordinates.x, unit.coordinates.y);
+                let bestCoords = { ...unit.coordinates };
+                let bestScore = curScore;
+
+                const candidates = [
+                    { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                    { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                    { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                    { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                ];
+                candidates.forEach(tile => {
+                    if (tile.x < 0 || tile.x > MAX_DEPTH || tile.y < 0 || tile.y >= MAX_LANES) return;
+                    if (!this.canFitAt(unit, tile.x, tile.y)) return;
+                    const score = getScore(tile.x, tile.y);
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestCoords = tile;
+                    }
+                });
+
+                if (bestCoords.x !== unit.coordinates.x || bestCoords.y !== unit.coordinates.y) {
+                    unit.coordinates = { x: bestCoords.x, y: bestCoords.y };
+                    this._setCombatantOccupiedCoords(unit, this.combatants);
+                    this.syncVCTs();
+                    this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'move');
+                }
+
+                const dur = 3;
+                Object.values(this.combatants).forEach(c => {
+                    const sameTeam = (!!unit.isMonster === !!c.isMonster);
+                    if (!sameTeam) return;
+                    this._applyBuff(c, {}, 'invigorate', dur);
+                });
+
+                this.appendCombatLog(`${this.getCombatantLogName(unit)} casts Invigorate.`);
+                this._setCooldown(unit, 'invigorate', 10);
+                unit.actionsTakenThisRound += 1;
+
+                if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                    this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, 'invigorate', false, null, unit.id);
+                }
+
+                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                return;
+            }
+        }
+
         // Priority 3: Circle of Deflection (tier 3) — teal ranged-deflection barrier
         if (this.round > 1 && this._abilityReady(unit, 'circle_of_deflection')) {
             const pick = this.resolveSpecial(unit, 'circle_of_deflection');
@@ -4553,9 +4775,9 @@ export function CombatManagerRedux() {
             const sameTeam = (!!sageUnit.isMonster === !!c.isMonster);
             if (!sameTeam) return;
             if (c.activeBuffs) {
-                const hadCircle = c.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection');
+                const hadCircle = c.activeBuffs.some(b => b.name === 'circle_of_protection' || b.name === 'circle_of_deflection' || b.name === 'invigorate');
                 if (hadCircle) {
-                    c.activeBuffs = c.activeBuffs.filter(b => b.name !== 'circle_of_protection' && b.name !== 'circle_of_deflection');
+                    c.activeBuffs = c.activeBuffs.filter(b => b.name !== 'circle_of_protection' && b.name !== 'circle_of_deflection' && b.name !== 'invigorate');
                 }
             }
         });
@@ -4584,6 +4806,11 @@ export function CombatManagerRedux() {
             if (fighter.activeBuffs && fighter.activeBuffs.some(b => b.name === 'circle_of_deflection')) {
                 fighter.activeBuffs = fighter.activeBuffs.filter(b => b.name !== 'circle_of_deflection');
                 this.appendCombatLog(`${this.getCombatantLogName(fighter)}'s Circle of Deflection is dispelled as they are seized by the Trial!`);
+            }
+            // Likewise dispel Invigorate
+            if (fighter.activeBuffs && fighter.activeBuffs.some(b => b.name === 'invigorate')) {
+                fighter.activeBuffs = fighter.activeBuffs.filter(b => b.name !== 'invigorate');
+                this.appendCombatLog(`${this.getCombatantLogName(fighter)}'s Invigorate circle is dispelled as they are seized by the Trial!`);
             }
         }
 
@@ -6455,6 +6682,11 @@ export function CombatManagerRedux() {
     this.useAbility = (unit, ability, target) => {
         if (!ability || !target) return;
 
+        const targetCoordsAtCast = target && target.coordinates ? { x: target.coordinates.x, y: target.coordinates.y } : null;
+        const targetOccupiedCoordsAtCast = target && Array.isArray(target.occupiedCoords) 
+            ? target.occupiedCoords.map(c => ({ x: c.x, y: c.y })) 
+            : null;
+
         const activeArrowType = unit.notchedArrowType;
 
         if (target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
@@ -6569,6 +6801,18 @@ export function CombatManagerRedux() {
         if (unit.actionsTakenThisRound >= 1) return;
         unit.actionsTakenThisRound += 1;
         this.applyEnduranceCost(unit, this.ACTION_ENDURANCE_COST, ability.id || ability.name || 'ability');
+
+        // Cancel invisibility on action use (unless they are casting invisibility itself)
+        if (unit.beholderInvisible && abilityId !== 'invisibility') {
+            unit.beholderInvisible = false;
+            unit.beholderInvisibleRounds = 0;
+            unit.beholderInvisibleTotalRounds = 0;
+            unit.beholderDodgeBonus = 0;
+            if (Array.isArray(unit.activeBuffs)) {
+                unit.activeBuffs = unit.activeBuffs.filter(b => b.name !== 'Invisible' && b.name !== 'invisibility');
+            }
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} breaks invisibility to cast ${ability.name || abilityId}!`);
+        }
 
         // Endurance-penalty cooldown scaling
         const baseCooldown = (typeof ability.cooldown === 'number') ? ability.cooldown : 5;
@@ -8309,9 +8553,24 @@ export function CombatManagerRedux() {
 
         // Apply self-buffs
         const effects = Array.isArray(ability.effect) ? ability.effect : (ability.effect ? [ability.effect] : []);
-        if (effects.some(e => typeof e === 'string' && e.includes('buff_self')) && ability.buff) {
+        if (effects.some(e => typeof e === 'string' && e.includes('buff_self')) && ability.buff && abilityId !== 'circle_of_protection' && abilityId !== 'circle_of_deflection' && abilityId !== 'invigorate') {
             this._applyBuff(unit, ability.buff.increase_stats ? ability.buff : { increase_stats: { stats: [] } },
                 ability.name, getDurationRounds(ability.duration || 'long'));
+        }
+
+        if (abilityId === 'circle_of_protection' || abilityId === 'circle_of_deflection' || abilityId === 'invigorate') {
+            const dur = abilityId === 'invigorate' ? 3 : 6;
+            Object.values(this.combatants).forEach(ally => {
+                if (!ally || ally.dead || ally.isVCT) return;
+                const sameTeam = (!!unit.isMonster === !!ally.isMonster);
+                if (sameTeam) {
+                    this._applyBuff(ally, ability.buff || {}, abilityId, dur);
+                }
+            });
+            this.appendCombatLog(`${this.getCombatantLogName(unit)} casts ${ability.name || abilityId}.`);
+            if (this.animManagerRedux && typeof this.animManagerRedux.triggerAbility === 'function') {
+                this.animManagerRedux.triggerAbility(unit.coordinates, unit.coordinates, abilityId, false, null, unit.id);
+            }
         }
 
         const selfBuffDuration = getDurationRounds(ability.duration || 'long');
@@ -8768,8 +9027,24 @@ export function CombatManagerRedux() {
                 return;
             }
 
+            let targetStillInTile = true;
+            if (isMagicMissile && target) {
+                if (targetOccupiedCoordsAtCast) {
+                    const currentOccupied = target.occupiedCoords || (target.coordinates ? [target.coordinates] : []);
+                    targetStillInTile = currentOccupied.some(c1 => 
+                        targetOccupiedCoordsAtCast.some(c2 => c1.x === c2.x && c1.y === c2.y)
+                    );
+                } else if (targetCoordsAtCast && target.coordinates) {
+                    targetStillInTile = (target.coordinates.x === targetCoordsAtCast.x && target.coordinates.y === targetCoordsAtCast.y);
+                } else {
+                    targetStillInTile = false;
+                }
+            }
+
             let hit;
-            if (isMagicMissile && Array.isArray(preRolledHits)) {
+            if (isMagicMissile && !targetStillInTile) {
+                hit = false;
+            } else if (isMagicMissile && Array.isArray(preRolledHits)) {
                 hit = preRolledHits[h];
             } else if ((abilityId === 'acid_blast' || abilityId === 'fireball' || abilityId === 'ice_blast') && Array.isArray(preRolledHits)) {
                 hit = preRolledHits[0];

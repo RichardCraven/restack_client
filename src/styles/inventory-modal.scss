@@ -483,7 +483,7 @@
         flex-direction: row;
         gap: 24px;
         align-items: stretch;
-        height: 740px;
+        height: 800px;
         
         .inventory-main-column {
             flex: 0 0 460px;
@@ -494,11 +494,11 @@
             // In expanded mode the left column shows only the selected crew member.
             // Center them fully within the available space.
             .crew-panels {
-                min-height: 480px;
-                max-height: 600px;
+                min-height: unset;
+                max-height: unset;
                 justify-content: center;    // center the single panel horizontally
-                align-items: center;        // center it vertically too
-                align-content: center;      // needed when flex-wrap: wrap
+                align-items: flex-start;    // avoid vertical center overflow clipping
+                padding-top: 16px;
                 gap: 0;
             }
 

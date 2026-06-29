@@ -506,7 +506,7 @@ export function MonsterManager() {
             portrait: images['high_priest_of_the_basilisk_portrait'],
             greetings: ['*chants in tongues of the cosmos*', 'The stars demand your blood!'],
             deathCries: ['*cosmic screams*'],
-            skills: ['claw_strike', 'bite'],
+            skills: ['voidbite', 'paradox_engine', 'void_rake', 'invoke_darkness'],
             weaknesses: ['holy', 'fire'],
             minions: ['basilisk_cultists', 'blalok', 'blalok'],
             drops: [
@@ -684,7 +684,7 @@ export function MonsterManager() {
             portrait: images['kabuki_demon_portrait'],
             greetings: ['Assaaa'],
             deathCries: ['No! Impossible!'],
-            skills: ['void_lance', 'claws', 'obliterate', 'invisibility', 'greater_magic_missile'],
+            skills: ['claw_strike', 'invisibility', 'greater_magic_missile', 'rake', 'voidbite'],
             passives: ['flying'],
             weaknesses: ['arcane', 'holy'],
             minions: ['kabuki_demon_minion', 'kabuki_demon_minion'],

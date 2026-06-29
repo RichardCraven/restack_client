@@ -176,7 +176,7 @@ const SkillTree = ({ crewMember, onClose }) => {
                                                 const k = typeof gs === 'string' ? gs : gs.key;
                                                 return k === skill.id;
                                             });
-                                            const isKnown = skill.knownByDefault || !!gsRecord;
+                                            const isKnown = skill.knownByDefault || !!gsRecord || (Array.isArray(crewMember.skills) && crewMember.skills.includes(skill.id));
                                             const level = gsRecord ? (typeof gsRecord === 'string' ? 1 : (gsRecord.level || 1)) : (skill.knownByDefault ? 1 : 0);
                                             
                                             let finalSkill = { ...skill };
