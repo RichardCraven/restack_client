@@ -1,7 +1,9 @@
 import React from 'react';
 import '../../styles/tower-siege.scss';
+import '../../styles/monster-battle.scss';
 import SiegeCombatGrid from '../../components/combat-panes/SiegeCombatGrid';
 import { MonsterManager } from '../../utils/monster-manager';
+import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
 
 // ── Board constants ──────────────────────────────────────────────────────────
 const SIEGE_ROWS = 15;
@@ -55,23 +57,113 @@ class TowerSiege extends React.Component {
         this._phaseTimers = [];
         this._combatInterval = null;
         this.state = {
-            siegePhase: 'empty',   // empty | crew | hashmallim | armies | combat | summary
+            siegePhase: 'loading',
             combatTiles: [],
             battleData: {},
             showSummaryPanel: false,
-            summaryResult: null,   // 'victory' | 'defeat'
+            summaryResult: null,
             boardScale: 1,
+            activeAnimations: [],
+            animationOverlays: {},
+            localPaused: false,
         };
     }
 
+    // ── Animation connection helpers ─────────────────────────────────────────
+
+    renderAnimation = () => {
+        // no-op, matching expected callback signature
+    };
+
+    updateAnimationData = (activeAnimations) => {
+        if (this._isMounted) {
+            this.setState({ activeAnimations });
+        }
+    };
+
+    recieveAnimationBroadcastFromOverlayManager = (animationOverlays) => {
+        if (this._isMounted) {
+            this.setState({ animationOverlays });
+        }
+    };
+
+    getAllOverlaysById = (id) => {
+        const overlays = this.state.animationOverlays?.[id]?.animations;
+        if (!overlays) return [];
+        let finalVal = [];
+        Object.values(overlays).forEach(e => {
+            if (Array.isArray(e)) {
+                finalVal = finalVal.concat(e);
+            }
+        });
+        return finalVal;
+    };
+
     // ── Lifecycle ────────────────────────────────────────────────────────────
+
+    _handleKeyDown = (event) => {
+        if (event.key === 'p' || event.key === 'P') {
+            this.setState(prev => {
+                const localPaused = !prev.localPaused;
+                const { combatManager } = this.props;
+                if (combatManager) {
+                    try { combatManager.pauseCombat(localPaused); } catch (e) {}
+                }
+                return { localPaused };
+            });
+        }
+    };
 
     componentDidMount() {
         this._isMounted = true;
         this._buildTiles();
         this._updateBoardScale();
         window.addEventListener('resize', this._updateBoardScale);
+        window.addEventListener('keydown', this._handleKeyDown);
+
+        const { combatManager, animationManager, overlayManager } = this.props;
+        if (combatManager && overlayManager) {
+            combatManager.connectOverlayManager(overlayManager);
+            overlayManager.establishBroadcastAnimationEventCallback(this.recieveAnimationBroadcastFromOverlayManager);
+        }
+        if (combatManager && animationManager) {
+            combatManager.connectAnimationManager(animationManager);
+            animationManager.TILE_SIZE = SIEGE_TILE_SIZE;
+            animationManager.TILE_BORDER = SIEGE_TILE_BORDER;
+            animationManager.isSiegeMode = true;
+            if (typeof animationManager.establishAnimationCallback === 'function') {
+                animationManager.establishAnimationCallback(this.renderAnimation);
+            }
+            if (typeof animationManager.connect === 'function') {
+                animationManager.connect(this.updateAnimationData);
+            } else if (typeof animationManager.establishUpdateAnimationDataCallback === 'function') {
+                animationManager.establishUpdateAnimationDataCallback(this.updateAnimationData);
+            }
+        }
+        
+        // Instantiate and connect Sandbox-style AnimationManagerRedux (used by combatManager)
+        this._animManagerRedux = new AnimationManagerRedux();
+        this._animManagerRedux.TILE_SIZE = SIEGE_TILE_SIZE;
+        this._animManagerRedux.TILE_BORDER = SIEGE_TILE_BORDER;
+        this._animManagerRedux.isSiegeMode = true;
+        this._animManagerRedux.connect(this.updateAnimationData);
+        if (combatManager && typeof combatManager.connectAnimationManagerRedux === 'function') {
+            combatManager.connectAnimationManagerRedux(this._animManagerRedux);
+        }
+
+        // Initialize combat state immediately so units are loaded and can fade in sequentially
+        this._initializeSiegeCombat();
+        
         this._startFadeInSequence();
+    }
+
+    componentDidUpdate(prevProps) {
+        if (prevProps.paused !== this.props.paused) {
+            const { combatManager } = this.props;
+            if (combatManager) {
+                try { combatManager.pauseCombat(this.props.paused); } catch (e) {}
+            }
+        }
     }
 
     componentWillUnmount() {
@@ -79,6 +171,31 @@ class TowerSiege extends React.Component {
         this._phaseTimers.forEach(t => clearTimeout(t));
         if (this._combatInterval) clearInterval(this._combatInterval);
         window.removeEventListener('resize', this._updateBoardScale);
+        window.removeEventListener('keydown', this._handleKeyDown);
+
+        const { combatManager, animationManager, overlayManager } = this.props;
+        if (combatManager) {
+            try { combatManager.reset(); } catch (e) {}
+            if (typeof combatManager.disconnectOverlayManager === 'function') {
+                combatManager.disconnectOverlayManager();
+            }
+            if (typeof combatManager.connectAnimationManagerRedux === 'function') {
+                combatManager.connectAnimationManagerRedux(null);
+            }
+        }
+        if (animationManager) {
+            animationManager.isSiegeMode = false;
+            animationManager.TILE_SIZE = 100;
+            animationManager.TILE_BORDER = 2;
+            if (typeof animationManager.reset === 'function') {
+                try { animationManager.reset(); } catch (_) {}
+            }
+        }
+        if (overlayManager) {
+            if (typeof overlayManager.reset === 'function') {
+                try { overlayManager.reset(); } catch (_) {}
+            }
+        }
     }
 
     // ── Board setup ──────────────────────────────────────────────────────────
@@ -107,9 +224,6 @@ class TowerSiege extends React.Component {
             const t = setTimeout(() => {
                 if (!this._isMounted) return;
                 this.setState({ siegePhase: phase });
-                if (phase === 'armies') {
-                    this._initializeSiegeCombat();
-                }
                 if (phase === 'combat') {
                     this._startCombatTick();
                 }
@@ -187,11 +301,16 @@ class TowerSiege extends React.Component {
     _startCombatTick = () => {
         const { combatManager } = this.props;
         if (!combatManager) return;
-        const interval = combatManager.FIGHT_INTERVAL || 40;
-        this._combatInterval = setInterval(() => {
-            if (!this._isMounted) return;
-            try { combatManager.tick(); } catch (e) {}
-        }, interval);
+        
+        // Start the standard Redux round timer and turns
+        try {
+            combatManager.startRoundTimer();
+            combatManager.processRoundTurns();
+            // Sync current pause state
+            combatManager.pauseCombat(!!this.props.paused);
+        } catch (e) {
+            console.error('[TowerSiege] startRoundTimer/processRoundTurns failed', e);
+        }
     };
 
     // ── Event handlers ───────────────────────────────────────────────────────
@@ -238,11 +357,13 @@ class TowerSiege extends React.Component {
                         </div>
 
                         {/* ── Faction zone overlays ── */}
-                        <div className="ts-zone ts-zone--player" style={{ width: this.tilePos(4), height: BOARD_HEIGHT }} />
-                        <div className="ts-zone ts-zone--enemy"  style={{ width: this.tilePos(7), height: BOARD_HEIGHT, left: this.tilePos(13) }} />
+                        <div className="ts-zone ts-zone--player" style={{ width: this.tilePos(2), height: BOARD_HEIGHT }} />
+                        <div className="ts-zone ts-zone--enemy"  style={{ width: this.tilePos(3), height: BOARD_HEIGHT, left: this.tilePos(17) }} />
 
                         {/* ── Unit portraits ── */}
                         <SiegeCombatGrid
+                            crew={this.props.crew}
+                            combatManager={this.props.combatManager}
                             battleData={battleData}
                             tileSize={SIEGE_TILE_SIZE}
                             tileBorder={SIEGE_TILE_BORDER}
@@ -252,6 +373,9 @@ class TowerSiege extends React.Component {
                             showHashmallim={showHashmallim}
                             showArmies={showArmies}
                             combatStarted={combatStarted}
+                            activeAnimations={this.state.activeAnimations}
+                            animationOverlays={this.state.animationOverlays}
+                            getAllOverlaysById={this.getAllOverlaysById}
                         />
 
                         {/* ── Phase label (during fade-in only) ── */}
@@ -267,8 +391,8 @@ class TowerSiege extends React.Component {
 
                 {/* ── HUD bar ── */}
                 <div className="ts-hud">
-                    <div className="ts-hud__title">TOWER SIEGE</div>
-                    <div className="ts-hud__phase">{siegePhase === 'combat' ? 'Combat in progress' : siegePhase.toUpperCase()}</div>
+                    <div className="ts-hud__title">TOWER SIEGE {this.state.localPaused ? '(PAUSED)' : ''}</div>
+                    <div className="ts-hud__phase">{siegePhase === 'combat' ? (this.state.localPaused ? '⏸ PAUSED — press P to resume' : 'Combat in progress') : siegePhase.toUpperCase()}</div>
                     <button className="ts-hud__exit" onClick={this.handleExit}><span role="img" aria-label="retreat">✕</span> Retreat</button>
                 </div>
 

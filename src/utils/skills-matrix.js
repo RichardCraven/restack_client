@@ -512,6 +512,7 @@ const skillsMatrix = {
         desc: 'Strike with a fist of pure honor, stunning the target for 2 rounds.',
         icon: images['soldier_fist_of_honor'],
         cooldown: 4,
+        initial: 3,
         duration: 'instant',
         range: 'close',
         atkPercentage: 100,
@@ -1241,7 +1242,8 @@ const skillsMatrix = {
         name: 'Summon Skeleton',
         desc: 'Summon a skeleton warrior to the field.',
         icon: images['summon_skeleton_icon'],
-        cooldown: 6,
+        cooldown: 7,
+        initialCount: 3,
         duration: 'instant',
         range: 'medium',
         type: 'utility'
@@ -1255,7 +1257,8 @@ const skillsMatrix = {
         name: 'Summon Imp',
         desc: 'Summon a fiery imp minion.',
         icon: images['summon_imp_icon'],
-        cooldown: 6,
+        cooldown: 8,
+        initialCount: 1,
         duration: 'instant',
         range: 'medium',
         type: 'utility'
@@ -2175,6 +2178,40 @@ const skillsMatrix = {
         atkPercentage: 150,
         type: 'damage',
         effect: { type: 'drain', duration: 'instant' }
+    },
+    void_rake: {
+        id: 'void_rake',
+        name: 'Void Rake',
+        desc: "Execute a claw strike with a 50% chance to strike again after 0.75 seconds. Deals 200% ATK damage and has a 30% chance to teleport the target to a random corner of the board.",
+        icon: images.void_rake,
+        cooldown: 4,
+        initialCooldown: 1,
+        duration: 'instant',
+        range: 'close',
+        atkPercentage: 200,
+        type: 'damage'
+    },
+    eldritch_wind: {
+        id: 'eldritch_wind',
+        name: 'Eldritch Wind',
+        desc: "Fully restores the stamina of all friendly units and restores 10% of their max HP.",
+        icon: images.eldritch_wind,
+        cooldown: 10,
+        initialCooldown: 4,
+        duration: 'instant',
+        range: 'self',
+        type: 'heal'
+    },
+    paradox_engine: {
+        id: 'paradox_engine',
+        name: 'Paradox Engine',
+        desc: "Teleports the target unit to an unoccupied corner, locking them in place facing the center, confronted by an upside-down red pulsing reflection of themselves. The target is stationary and takes 50% of the caster's ATK each round. Mentality check at the end determines if it lasts 2 more rounds.",
+        icon: images.paradox_engine,
+        cooldown: 10,
+        initialCooldown: 6,
+        duration: 3,
+        range: 'far',
+        type: 'debuff'
     }
 };
 

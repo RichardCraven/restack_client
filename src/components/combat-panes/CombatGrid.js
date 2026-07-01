@@ -1255,12 +1255,16 @@ export default function CombatGrid(props) {
                                 (details?.berserkerActive && details?.feared && !details?.stunned) ? 'brightness(1.18)' : '',
                                 meltScales[fighter.id] !== undefined ? `url('#melt-effect-${fighter.id}')` : null
                             ].filter(Boolean).join(' '),
+                            transform: (getLiveCombatant(fighter.id)?.isUpsideDown || details?.isUpsideDown) ? 'rotate(180deg)' : 'none',
+                            boxShadow: (getLiveCombatant(fighter.id)?.isSinisterReflection || details?.isSinisterReflection) ? '0 0 15px rgba(220, 20, 60, 0.8), inset 0 0 10px rgba(220, 20, 60, 0.5)' : undefined,
                             zIndex: 300,
-                            animation: (details?.stunned && !isAsleepFighter && !details?.dead)
-                                ? 'stunWobble 0.6s ease-in-out infinite'
-                                : ((details?.wounded && !details?.dead)
-                                    ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
-                                    : undefined),
+                            animation: (getLiveCombatant(fighter.id)?.isSinisterReflection || details?.isSinisterReflection)
+                                ? 'sinisterPulse 1.5s ease-in-out infinite alternate'
+                                : ((details?.stunned && !isAsleepFighter && !details?.dead)
+                                    ? 'stunWobble 0.6s ease-in-out infinite'
+                                    : ((details?.wounded && !details?.dead)
+                                        ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
+                                        : undefined)),
                         }}
                         onClick={() => fighterPortraitClicked(fighter.id)}
                         onMouseDown={(e) => {
@@ -1562,7 +1566,7 @@ export default function CombatGrid(props) {
                             ) : null}
                         </div>
                     )}
-                    {details?.stunned && !isAsleepFighter && !details?.dead && (
+                    {details?.stunned && !isAsleepFighter && !details?.dead && !details?.paradoxEngineActive && (
                         <div style={{
                             position: 'absolute',
                             top: '-12px',
@@ -1992,16 +1996,21 @@ export default function CombatGrid(props) {
                             position: 'relative',
                             width: '100%',
                             height: '100%',
-                            transform: unit.type === 'spider_minion' ? 'scale(0.5)' : 'none',
+                            transform: unit.isUpsideDown 
+                                ? 'rotate(180deg)' 
+                                : (unit.type === 'spider_minion' ? 'scale(0.5)' : 'none'),
+                            boxShadow: unit.isSinisterReflection ? '0 0 15px rgba(220, 20, 60, 0.8), inset 0 0 10px rgba(220, 20, 60, 0.5)' : undefined,
                             borderRadius: '0',
                             transition: 'filter 0.25s ease-in-out',
-                            animation: unit.type === 'darkness_sphere'
-                                ? 'sphereOfDarknessFadeIn 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards'
-                                : ((unit.stunned && !isAsleepMonster && !isDead)
-                                    ? 'stunWobble 0.6s ease-in-out infinite'
-                                    : ((unit.wounded && !isDead)
-                                        ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
-                                        : undefined))
+                            animation: unit.isSinisterReflection
+                                ? 'sinisterPulse 1.5s ease-in-out infinite alternate'
+                                : (unit.type === 'darkness_sphere'
+                                    ? 'sphereOfDarknessFadeIn 1.5s cubic-bezier(0.19, 1, 0.22, 1) forwards'
+                                    : ((unit.stunned && !isAsleepMonster && !isDead)
+                                        ? 'stunWobble 0.6s ease-in-out infinite'
+                                        : ((unit.wounded && !isDead)
+                                            ? 'BulgePortrait var(--portrait-animation-duration, 420ms) var(--portrait-animation-timing, cubic-bezier(.2,.8,.2,1)) forwards'
+                                            : undefined)))
                         }}
                         onAnimationEnd={e => {
                             if (isDead && e.animationName && e.animationName.includes('meltDownDeath') && showDeathAnimation[unit.id]) {
@@ -2272,7 +2281,7 @@ export default function CombatGrid(props) {
                             </div>
                         )
                     )}
-                    {unit.stunned && !isAsleepMonster && !isDead && (
+                    {unit.stunned && !isAsleepMonster && !isDead && !unit.paradoxEngineActive && (
                         <div style={{
                             position: 'absolute',
                             top: '-12px',
@@ -2518,6 +2527,88 @@ export default function CombatGrid(props) {
     const renderAnimation = (anim) => {
         if (!anim) return null;
         const key = anim.id;
+
+        if (anim.type === 'eldritch_wind_overlay') {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: 0,
+                    top: 0,
+                    width: '100%',
+                    height: '100%',
+                    background: 'radial-gradient(circle, rgba(13, 238, 189, 0.25) 0%, rgba(3, 160, 90, 0.1) 70%, transparent 100%)',
+                    pointerEvents: 'none',
+                    zIndex: 3500,
+                    animation: 'scaleUpFadeOut 1.5s ease-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'paradox_warp_source' && anim.srcPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.srcPx.x}px`,
+                    top: `${anim.srcPx.y}px`,
+                    width: '100px',
+                    height: '100px',
+                    transform: 'translate(-50%, -50%)',
+                    background: 'radial-gradient(circle, #5b21b6 0%, #1e1b4b 60%, transparent 100%)',
+                    boxShadow: '0 0 25px #8b5cf6, 0 0 50px #4c1d95',
+                    borderRadius: '50%',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'implodeVortex 1.0s ease-in-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'paradox_warp_target' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '100px',
+                    height: '100px',
+                    transform: 'translate(-50%, -50%)',
+                    background: 'radial-gradient(circle, #8b5cf6 0%, #312e81 60%, transparent 100%)',
+                    boxShadow: '0 0 25px #a78bfa, 0 0 50px #6d28d9',
+                    borderRadius: '50%',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'explodeVortex 1.0s ease-in-out forwards',
+                }} />
+            );
+        }
+
+        if (anim.type === 'paradox_fail_burst' && anim.tgtPx) {
+            return (
+                <div key={key} style={{
+                    position: 'absolute',
+                    left: `${anim.tgtPx.x}px`,
+                    top: `${anim.tgtPx.y}px`,
+                    width: '80px',
+                    height: '80px',
+                    transform: 'translate(-50%, -50%)',
+                    background: 'radial-gradient(circle, rgba(239, 68, 68, 0.2) 0%, transparent 70%)',
+                    border: '2px dashed #ef4444',
+                    borderRadius: '50%',
+                    pointerEvents: 'none',
+                    zIndex: 4500,
+                    animation: 'shatterBurst 1.0s ease-out forwards',
+                }}>
+                    <div style={{
+                        color: '#ef4444',
+                        fontWeight: 'bold',
+                        fontSize: '12px',
+                        textAlign: 'center',
+                        marginTop: '28px',
+                        textShadow: '0 0 4px #000'
+                    }}>RESISTED</div>
+                </div>
+            );
+        }
 
         if (anim.type === 'betrayal_success_overlay' && anim.tgtPx) {
             const imgUrl = images.betrayal_hit?.default || images.betrayal_hit;

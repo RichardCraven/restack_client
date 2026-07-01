@@ -1025,6 +1025,13 @@
                             &:hover{
                                 background-color: rgba(143, 143, 135, 0.488);
                             }
+                            &.disabled {
+                                cursor: default;
+                                opacity: 0.4;
+                                &:hover {
+                                    background-color: transparent;
+                                }
+                            }
                             .progress-overlay{
                                 position: absolute;
                                 top: 0;

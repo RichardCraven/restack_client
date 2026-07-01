@@ -20,7 +20,7 @@ describe('Witch AI debug', () => {
       stats: { hp: 1000, atk: 10, def: 5, speed: 6, vitality: 50 },
       skills: ['slash'],
       inventory: [],
-      coordinates: { x: 0, y: 2 } // Left side of board
+      coordinates: { x: 4, y: 2 } // Left side of board
     };
 
     cm.initializeCombat({
@@ -37,6 +37,11 @@ describe('Witch AI debug', () => {
 
     expect(witch).toBeDefined();
     expect(soldier).toBeDefined();
+
+    witch.coordinates = { x: 7, y: 2 };
+    witch.occupiedCoords = [{ x: 7, y: 2 }];
+    soldier.coordinates = { x: 4, y: 2 };
+    soldier.occupiedCoords = [{ x: 4, y: 2 }];
 
     // Check skills mapped to specials/attacks
     const specialIds = witch.specials.map(s => s.id);

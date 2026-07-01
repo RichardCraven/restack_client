@@ -155,7 +155,7 @@ function hexToRgba(hex, alpha = 1){
 }
 
 // Small subcomponent to render modal header + body based on modalType
-const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions, onLearnRitual, inventoryManager, saveUserData, onForceUpdate }) => {
+const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitual, handleCrewTileHover, setMemberRitualOptions, onLearnRitual, inventoryManager, saveUserData, onForceUpdate, onClose }) => {
     const [merchantStock, setMerchantStock] = React.useState([]);
     const [feedbackMsg, setFeedbackMsg] = React.useState('');
     const [feedbackColor, setFeedbackColor] = React.useState('#fff');
@@ -757,6 +757,73 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
                     </div>
                 </div>
             )}
+
+            {modalType === 'SharpenBladesDetails' && (
+                <div className="sharpen-blades-details-zone" style={{
+                    padding: '24px',
+                    color: '#f3f4f6',
+                    backgroundColor: '#1b1d21',
+                    borderRadius: '12px',
+                    fontFamily: 'system-ui, -apple-system, sans-serif'
+                }}>
+                    <div style={{ display: 'flex', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '16px' }}>
+                        <div style={{
+                            width: '40px',
+                            height: '40px',
+                            backgroundImage: `url(${images['shortsword'] || ''})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center',
+                            marginRight: '14px',
+                            filter: 'drop-shadow(0 0 6px rgba(235,166,54,0.4))'
+                        }} />
+                        <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 600, color: '#eba636' }}>Sharpen Blades</h3>
+                    </div>
+                    
+                    <div style={{ fontSize: '0.98rem', lineHeight: '1.6', color: '#d1d5db', marginBottom: '20px' }}>
+                        <p style={{ margin: '0 0 12px 0' }}>
+                            Begin a detailed sharpening process for the party's bladed weapons. 
+                            The Soldier will spend dedicated time honing the edges of all cutting weapons.
+                        </p>
+                        
+                        <div style={{
+                            backgroundColor: 'rgba(235,166,54,0.06)',
+                            borderLeft: '4px solid #eba636',
+                            padding: '12px 16px',
+                            borderRadius: '4px',
+                            marginBottom: '20px'
+                        }}>
+                            <span style={{ fontWeight: '600', color: '#eba636' }}>⏱ Preparation Time:</span> 2 Hours
+                        </div>
+
+                        <h4 style={{ margin: '0 0 8px 0', fontSize: '1.05rem', fontWeight: 600, color: '#f3f4f6' }}>Upgrade Benefits:</h4>
+                        <ul style={{ margin: 0, paddingLeft: '20px', color: '#9ca3af' }}>
+                            <li style={{ marginBottom: '8px' }}>
+                                Applies a permanent <strong style={{ color: '#10b981' }}>+80% flat damage boost</strong> to all cutting weapons currently in the shared inventory or equipped by crew members.
+                            </li>
+                            <li>
+                                Weapons will be upgraded to their <strong style={{ color: '#38bdf8' }}>(Sharpened)</strong> version upon completion.
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px', marginTop: '24px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '16px' }}>
+                        <button className="camp-action-btn" onClick={() => onClose && onClose()} style={{
+                            backgroundColor: '#eba636',
+                            color: '#111827',
+                            border: 'none',
+                            fontWeight: '600',
+                            padding: '10px 20px',
+                            borderRadius: '6px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}>
+                            Begin Sharpening
+                        </button>
+                    </div>
+                </div>
+            )}
         </CModalBody>
     )
 }
@@ -937,6 +1004,7 @@ class DungeonPage extends React.Component {
                 type: 'ritual',
                 name: 'Prepare Ritual',
                 iconUrl: images['magic_moon_1'] || '',
+                disabled: knownRituals.length === 0,
                 subTypes: ritualSubTypes
             });
         }
@@ -965,6 +1033,7 @@ class DungeonPage extends React.Component {
                 type: 'ritual',
                 name: 'Prepare Ritual',
                 iconUrl: images['magic_moon_1'] || '',
+                disabled: knownRituals.length === 0,
                 subTypes: ritualSubTypes
             });
         }
@@ -1020,6 +1089,16 @@ class DungeonPage extends React.Component {
                 noMaxCap: true,
                 subTypes: tacticSubTypes,
                 activeTactic,
+            });
+
+            // Sharpen Blades action
+            const activeSharpen = (character.specialActions || []).find(a => a.type === 'sharpen_blades' && new Date(a.endDate) > new Date());
+            actions.push({
+                type: 'sharpen_blades',
+                name: 'Sharpen Blades',
+                iconUrl: images['shortsword'] || '',
+                disabled: !!activeSharpen,
+                subTypes: []
             });
         }
         // ── Monk: Inner Discipline ──────────────────────────────────────────
@@ -1092,7 +1171,63 @@ class DungeonPage extends React.Component {
                 subTypes: disciplineSubTypes,
             });
         }
+        // ── Ranger: Prepare Poison & Deploy Animal Agent ──────────────────────
+        if (character.type === 'ranger') {
+            const specialActions = character.specialActions || [];
+
+            // — Prepare Poison —
+            const readyBombs   = specialActions.filter(a => a.type === 'acid_bomb' && a.available).length;
+            const bombPrepping = specialActions.some(a => a.type === 'acid_bomb' && !a.available && new Date(a.endDate) > new Date());
+            actions.push({
+                type: 'prepare_poison',
+                name: 'Prepare Poison',
+                iconUrl: images['ranger_acid_bomb'] || images['wizard_acid_blast'] || '',
+                noMaxCap: true,
+                subTypes: [
+                    {
+                        type: 'Acid Bomb',
+                        bombType: 'acid_bomb',
+                        iconUrl: images['ranger_acid_bomb'] || images['wizard_acid_blast'] || '',
+                        available: readyBombs < 2 && !bombPrepping,
+                        count: readyBombs,
+                    },
+                    {
+                        type: 'Poison Weapons',
+                        bombType: 'poison_weapons',
+                        iconUrl: images['ranger_poison_arrow'] || images['poison'] || '',
+                        available: false,
+                        count: 0,
+                    },
+                ],
+            });
+
+            // — Deploy Animal Agent —
+            const ratPrepping = specialActions.some(a => a.type === 'rat_agent' && !a.available && new Date(a.endDate) > new Date());
+            actions.push({
+                type: 'deploy_animal',
+                name: 'Deploy Animal',
+                iconUrl: images['scrounging_rat'] || '',
+                noMaxCap: true,
+                subTypes: [
+                    {
+                        type: 'Scrounging Rat',
+                        agentType: 'scrounging_rat',
+                        iconUrl: images['scrounging_rat'] || '',
+                        available: !ratPrepping,
+                        count: 0,
+                    },
+                    {
+                        type: 'Scout Crow',
+                        agentType: 'scout_crow',
+                        iconUrl: images['fastidious_crow'] || '',
+                        available: false,
+                        count: 0,
+                    },
+                ],
+            });
+        }
         // Add other class logic here as needed
+
         // Compute per-action maximum: only count subtypes belonging to that action type.
         // Glyph actions have no cap (multiple glyphs of same tier are allowed).
         // Rituals cap at 3.
@@ -1118,9 +1253,15 @@ class DungeonPage extends React.Component {
                 const maximumReached = getMaxReachedForAction(action);
                 // find the active special action that matches THIS action's type
                 // type:'glyph' covers new format; type:'spell' fallback covers legacy magic missile
+                // type:'prepare_poison' covers acid_bomb child; type:'deploy_animal' covers rat_agent child
                 let activeAction = (character.specialActions || []).find(a => {
                     if (!a || !a.startDate || !a.endDate) return false;
-                    if (a.type !== action.type && !(action.type === 'glyph' && (a.type === 'spell' || a.type === 'glyph'))) return false;
+                    const typeMatches =
+                        a.type === action.type ||
+                        (action.type === 'glyph' && (a.type === 'spell' || a.type === 'glyph')) ||
+                        (action.type === 'prepare_poison' && a.type === 'acid_bomb') ||
+                        (action.type === 'deploy_animal' && a.type === 'rat_agent');
+                    if (!typeMatches) return false;
                     const start = new Date(a.startDate);
                     const end = new Date(a.endDate);
                     const now = new Date();
@@ -1141,8 +1282,8 @@ class DungeonPage extends React.Component {
                     }
                 }
                 return (
-                <div className={`action-wrapper action-wrapper--${action.type}`} key={i}>
-                    <div className='action-hover-wrapper' onClick={() => this.handleActionClick(action)} style={{
+                <div className={`action-wrapper action-wrapper--${action.type} ${action.disabled ? 'disabled' : ''}`} key={i}>
+                    <div className={`action-hover-wrapper ${action.disabled ? 'disabled' : ''}`} onClick={() => this.handleActionClick(action)} style={{
                         border: `${this.getActionCooldownPercentage() && (character.specialActions || []).find(e=>e.type === action.type) ? '1px solid #635b4a' : ''}`
                     }}>
                         {/* placeholder used by canvas to draw high-frequency progress overlays */}
@@ -1164,7 +1305,22 @@ class DungeonPage extends React.Component {
                                 ></div>
                             );
                         })()}
-                        <div className='action-icon' style={{backgroundImage: `url(${action.iconUrl})`, filter: action.type === 'compound' ? 'invert(1)' : undefined}}></div>
+                        {(() => {
+                            let rawIcon = action.iconUrl;
+                            if (rawIcon && typeof rawIcon === 'object') {
+                                rawIcon = rawIcon.default || rawIcon;
+                            }
+                            if (rawIcon && typeof rawIcon === 'object') {
+                                rawIcon = rawIcon.default || '';
+                            }
+                            const resolvedUrl = rawIcon || '';
+                            return (
+                                <div className='action-icon' style={{
+                                    backgroundImage: resolvedUrl ? `url("${encodeURI(String(resolvedUrl))}")` : 'none',
+                                    filter: action.type === 'compound' ? 'invert(1)' : undefined
+                                }}></div>
+                            );
+                        })()}
                         <div className="action-text">
                             {action.type === 'imprint_tattoo' && action.isImprinting
                                 ? this.getTattooImprintLabel(this.state.selectedCrewMember) || action.name
@@ -1395,7 +1551,7 @@ class DungeonPage extends React.Component {
                             });
                         };
                         return (
-                        <div className="compound-builder-panel" style={{ width: 'calc(100% + 24px)', margin: '6px -12px 0 -12px' }}>
+                        <div className="compound-builder-panel">
                             {/* TOP: 2 ingredient slots */}
                             <div className="compound-slot-row dual-slots" style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
                                 {[0, 1].map(i => {
@@ -1607,6 +1763,25 @@ class DungeonPage extends React.Component {
                                 }
                             }
 
+                            // Rat agent: award food and set fog reveal for current board
+                            if (a.type === 'rat_agent') {
+                                const rangerLvl = a.rangerLevel || 1;
+                                const foodAmt = 10 * rangerLvl;
+                                meta.food = (typeof meta.food === 'number' ? meta.food : 0) + foodAmt;
+                                try {
+                                    // Pick a random 3x3 patch on the current board
+                                    const bm = this.props.boardManager;
+                                    const levelId   = bm?.currentLevel?.id ?? null;
+                                    const boardIdx  = bm?.playerTile?.boardIndex ?? null;
+                                    if (levelId !== null && boardIdx !== null) {
+                                        const startRow = Math.floor(Math.random() * 9) + 15; // 15-23
+                                        const startCol = Math.floor(Math.random() * 9) + 15; // 15-23
+                                        const revealUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+                                        meta.ratAgentReveal = { levelId, boardIndex: boardIdx, startRow, startCol, revealUntil };
+                                    }
+                                } catch (e) {}
+                            }
+
                             if (a.type === 'brew') {
                                 const brew = BREWS[a.brewId];
                                 if (brew) {
@@ -1618,19 +1793,56 @@ class DungeonPage extends React.Component {
                                 }
                             }
 
-                            const updateText = isRitual
-                                ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
-                                : (a.type === 'compound'
-                                    ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
-                                    : (a.type === 'brew'
-                                        ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
-                                        : (a.type === 'inner_discipline'
-                                            ? (a.category === 'chi'
-                                                ? `${member.name} has gathered a chi charge through ${a.name}`
-                                                : a.category === 'stance'
-                                                    ? `${member.name} has trained ${a.name} stance`
-                                                    : `${member.name} has completed ${a.name}`)
-                                            : `${member.name} has finished ${a.name}`)));
+                            let updateText = '';
+                            if (a.type === 'sharpen_blades') {
+                                let cuttingWeapons = [];
+                                if (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory)) {
+                                    this.props.inventoryManager.inventory.forEach(item => {
+                                        if (item && item.type === 'weapon' && item.subtype === 'cutting' && !item.name.includes('(Sharpened)')) {
+                                            cuttingWeapons.push(item);
+                                        }
+                                    });
+                                }
+                                if (Array.isArray(member.inventory)) {
+                                    member.inventory.forEach(item => {
+                                        if (item && item.type === 'weapon' && item.subtype === 'cutting' && !item.name.includes('(Sharpened)')) {
+                                            cuttingWeapons.push(item);
+                                        }
+                                    });
+                                }
+
+                                if (cuttingWeapons.length === 0) {
+                                    updateText = `${member.name} has finished sharpening blades, but no valid cutting weapons were present in the inventory when the process completed.`;
+                                } else {
+                                    const details = cuttingWeapons.map(item => {
+                                        const bonus = Math.round(item.damage * 0.8);
+                                        if (markNotified) {
+                                            item.damage += bonus;
+                                            item.name = `${item.name} (Sharpened)`;
+                                        }
+                                        return `Applied +${bonus} damage to "${item.name}${markNotified ? '' : ' (Sharpened)'}"`;
+                                    }).join(', ');
+                                    updateText = `${member.name} finished sharpening blades! ${details}`;
+                                }
+                            } else {
+                                updateText = isRitual
+                                    ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
+                                    : (a.type === 'compound'
+                                        ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
+                                        : (a.type === 'brew'
+                                            ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
+                                            : (a.type === 'inner_discipline'
+                                                ? (a.category === 'chi'
+                                                    ? `${member.name} has gathered a chi charge through ${a.name}`
+                                                    : a.category === 'stance'
+                                                        ? `${member.name} has trained ${a.name} stance`
+                                                        : `${member.name} has completed ${a.name}`)
+                                                : (a.type === 'acid_bomb'
+                                        ? `🧪 ${member.name}'s Acid Bomb is ready to use in combat!`
+                                        : (a.type === 'rat_agent'
+                                            ? `🐀 ${member.name}'s Scrounging Rat has returned with ${10 * (a.rangerLevel || 1)} food! A patch of the dungeon has been revealed for 30 minutes.`
+                                            : `${member.name} has finished ${a.name}`)))));
+                            }
                             updates.push({
                                 text: updateText,
                                 owner: `${member.name}`,
@@ -1644,19 +1856,52 @@ class DungeonPage extends React.Component {
                         if (!a.notified) {
                             const isRitual = a.type === 'ritual';
                             if (isRitual) hasRitualUpdate = true;
-                            const updateText = isRitual
-                                ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
-                                : (a.type === 'compound'
-                                    ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
-                                    : (a.type === 'brew'
-                                        ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
-                                        : (a.type === 'inner_discipline'
-                                            ? (a.category === 'chi'
-                                                ? `${member.name} has gathered a chi charge through ${a.name}`
-                                                : a.category === 'stance'
-                                                    ? `${member.name} has trained ${a.name} stance`
-                                                    : `${member.name} has completed ${a.name}`)
-                                            : `${member.name} has finished ${a.name}`)));
+                            let updateText = '';
+                            if (a.type === 'sharpen_blades') {
+                                let cuttingWeapons = [];
+                                if (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory)) {
+                                    this.props.inventoryManager.inventory.forEach(item => {
+                                        if (item && item.type === 'weapon' && item.subtype === 'cutting' && !item.name.includes('(Sharpened)')) {
+                                            cuttingWeapons.push(item);
+                                        }
+                                    });
+                                }
+                                if (Array.isArray(member.inventory)) {
+                                    member.inventory.forEach(item => {
+                                        if (item && item.type === 'weapon' && item.subtype === 'cutting' && !item.name.includes('(Sharpened)')) {
+                                            cuttingWeapons.push(item);
+                                        }
+                                    });
+                                }
+
+                                if (cuttingWeapons.length === 0) {
+                                    updateText = `${member.name} has finished sharpening blades, but no valid cutting weapons were present in the inventory when the process completed.`;
+                                } else {
+                                    const details = cuttingWeapons.map(item => {
+                                        const bonus = Math.round(item.damage * 0.8);
+                                        return `Applied +${bonus} damage to "${item.name} (Sharpened)"`;
+                                    }).join(', ');
+                                    updateText = `${member.name} finished sharpening blades! ${details}`;
+                                }
+                            } else {
+                                updateText = isRitual
+                                    ? `${member.name}'s ritual "${a.name}" is complete and ready to use`
+                                    : (a.type === 'compound'
+                                        ? `${member.name} has finished mixing ${a.name.replace('Brewing: ', '')}!`
+                                        : (a.type === 'brew'
+                                            ? `${member.name} has finished brewing ${a.name.replace('Brewing: ', '')}!`
+                                            : (a.type === 'inner_discipline'
+                                                ? (a.category === 'chi'
+                                                    ? `${member.name} has gathered a chi charge through ${a.name}`
+                                                    : a.category === 'stance'
+                                                        ? `${member.name} has trained ${a.name} stance`
+                                                        : `${member.name} has completed ${a.name}`)
+                                                : (a.type === 'acid_bomb'
+                                                    ? `🧪 ${member.name}'s Acid Bomb is ready to use in combat!`
+                                                    : (a.type === 'rat_agent'
+                                                        ? `🐀 ${member.name}'s Scrounging Rat has returned with ${10 * (a.rangerLevel || 1)} food!`
+                                                        : `${member.name} has finished ${a.name}`))))); 
+                            }
                             updates.push({
                                 text: updateText,
                                 owner: `${member.name}`,
@@ -2398,12 +2643,12 @@ class DungeonPage extends React.Component {
         if (!this.reduxCombatManager) {
             this.reduxCombatManager = new CombatManagerRedux();
         }
-        this.setState({ inTowerSiege: true });
+        this.setState({ inTowerSiege: true, keysLocked: true });
     }
 
     onSiegeComplete = () => {
         this.reduxCombatManager = null;
-        this.setState({ inTowerSiege: false });
+        this.setState({ inTowerSiege: false, keysLocked: false });
     }
 
     handleDebugLevelUpComplete = () => {
@@ -3307,7 +3552,15 @@ class DungeonPage extends React.Component {
                 showAmbushPopup: ambushTriggered ? true : this.state.showAmbushPopup,
                 ambushMonster: ambushTriggered ? ambushMonster : this.state.ambushMonster,
                 showTrapPopup: trapTriggered ? true : this.state.showTrapPopup,
-                trapResults: trapTriggered ? trapResults : this.state.trapResults
+                trapResults: trapTriggered ? trapResults : this.state.trapResults,
+                // Refresh selected crew member HP if trap damage was applied to them
+                ...(trapTriggered && this.state.selectedCrewMember?.id ? (() => {
+                    try {
+                        const meta = getMeta() || {};
+                        const updated = (meta.crew || []).find(c => c && c.id === this.state.selectedCrewMember.id);
+                        return updated ? { selectedCrewMember: { ...updated } } : {};
+                    } catch (e) { return {}; }
+                })() : {})
             }, () => {
                 if (ambushTriggered) {
                     this.ambushTimeout = setTimeout(() => {
@@ -4818,6 +5071,21 @@ class DungeonPage extends React.Component {
     establishAnimationCallback = () => {
         this.props.animationManager.establishAnimationCallback(this.renderAnimation)
     }
+    checkItemRetrievalQuests = (itemDisplayName) => {
+        if (this.props.questManager) {
+            // Collector's run progress
+            this.props.questManager.updateProgressByType('item_retrieval', 1);
+
+            // Specific item retrieval check
+            const activeQuests = this.props.questManager.getActiveQuests() || [];
+            const retrievalQuests = activeQuests.filter(q => q.key === 'recover_the_artifact');
+            retrievalQuests.forEach(q => {
+                if (q.context && q.context.item && itemDisplayName && itemDisplayName.toLowerCase().includes(q.context.item.toLowerCase())) {
+                    this.props.questManager.updateProgress(q.id, 1);
+                }
+            });
+        }
+    }
     addItemToInventory = (tile) => {
         //this is coming from a board tile
         const tileContains = tile.contains;
@@ -4826,6 +5094,10 @@ class DungeonPage extends React.Component {
         if (itemDefinition) {
             this.props.inventoryManager.addItem(itemDefinition)
         }
+        
+        // Progress item retrieval quests
+        this.checkItemRetrievalQuests(itemDisplayName);
+
         const matrix = this.state.inventoryHoverMatrix;
         this.getCombinedInventory().forEach((e,i)=>{
             matrix[i] = '';
@@ -4855,6 +5127,9 @@ class DungeonPage extends React.Component {
         const itemDefinition = this.props.inventoryManager.allItems[treasure.item];
         const itemDisplayName = itemDefinition?.name || item.replaceAll('_', ' ');
         const itemIconName = itemDefinition?.icon || treasure.item;
+        
+        // Progress item retrieval quests
+        this.checkItemRetrievalQuests(itemDisplayName);
         
         let currencyType = treasure.currency.type;
         let currencyIconKey = 'gold';
@@ -4896,6 +5171,15 @@ class DungeonPage extends React.Component {
     }
     messaging = (message) => {
         this.displayMessage(message)
+        if (typeof message === 'string') {
+            if (message.startsWith('✍') || message.startsWith('📝') || message.includes('inscription')) {
+                try {
+                    if (this.props.questManager) {
+                        this.props.questManager.updateProgressByType('inscription', 1);
+                    }
+                } catch (e) {}
+            }
+        }
     }
     setPending = (pendingState) => {
         this.setState({pending: pendingState})
@@ -5214,6 +5498,17 @@ class DungeonPage extends React.Component {
                 if (newHp <= 0) {
                     m.dead = true;
                 }
+
+                // Sync damage/death changes directly to live crewManager.crew references
+                if (this.props.crewManager && Array.isArray(this.props.crewManager.crew)) {
+                    const liveMember = this.props.crewManager.crew.find(c => c && c.id === m.id);
+                    if (liveMember) {
+                        liveMember.hp = newHp;
+                        if (newHp <= 0) {
+                            liveMember.dead = true;
+                        }
+                    }
+                }
             }
 
             crewResults.push({
@@ -5318,6 +5613,22 @@ class DungeonPage extends React.Component {
             meta.location.levelId = newLevelId;
             storeMeta(meta);
         }
+
+        // Progress travel quests
+        if (this.props.questManager) {
+            const activeQuests = this.props.questManager.getActiveQuests() || [];
+            const travelQuests = activeQuests.filter(q => q.type === 'travel');
+            travelQuests.forEach(q => {
+                const targetLvl = parseInt(q.context?.level, 10);
+                const currentLvl = parseInt(newLevelId, 10);
+                if (!isNaN(targetLvl) && !isNaN(currentLvl) && currentLvl >= targetLvl) {
+                    this.props.questManager.updateProgress(q.id, 1);
+                } else if (q.context?.level === newLevelId) {
+                    this.props.questManager.updateProgress(q.id, 1);
+                }
+            });
+        }
+
         this.setState({
             levelTracker,
             minimapZoomedTile: null,
@@ -5406,27 +5717,56 @@ class DungeonPage extends React.Component {
         this.setState({intervalId: intervalId})
     }
     displayMessage = (message) => {
-        this.setState(()=>{
-            return {
-                showMessage : true,
-                messageToDisplay: message
-            }
-        })
+        if (!message) return;
+
+        // Determine if this is a high-priority / pickup message
+        const isPickup = typeof message === 'string' && (
+            message.toLowerCase().includes('you found') || 
+            message.toLowerCase().includes('soul shard:')
+        );
+
+        const now = Date.now();
+
+        // If there is an active lock and the incoming message is NOT a pickup message, ignore it
+        if (this._messageLockUntil && now < this._messageLockUntil && !isPickup) {
+            return;
+        }
+
+        // Duration: 5 seconds for pickup messages, 2.5 seconds for standard ones
+        const duration = isPickup ? 5000 : 2500;
+
+        // Set or clear priority lock
+        if (isPickup) {
+            this._messageLockUntil = now + duration;
+        } else {
+            this._messageLockUntil = 0;
+        }
+
+        // Unique token for debouncing overlapping setTimeout calls
+        const msgToken = Math.random().toString(36).substring(2);
+        this._currentMessageToken = msgToken;
+
+        this.setState({
+            showMessage: true,
+            messageToDisplay: message
+        });
+
         this._setTimeout(() => {
-            this.setState(()=>{
-                return {
-                    showMessage : false
-                }
-            })
-        },2500)
+            if (this._currentMessageToken === msgToken) {
+                this.setState({
+                    showMessage: false
+                });
+                this._messageLockUntil = 0;
+            }
+        }, duration);
     }
     displayMessageAndHold = (message) => {
-        this.setState(()=>{
-            return {
-                showMessage : true,
-                messageToDisplay: message
-            }
-        })
+        this._messageLockUntil = 0;
+        this._currentMessageToken = 'hold';
+        this.setState({
+            showMessage: true,
+            messageToDisplay: message
+        });
     }
     toggleFullscreen = () => {
         const currentState = this.state.showFullScreen;
@@ -5599,7 +5939,7 @@ class DungeonPage extends React.Component {
             return;
         }
 
-        if(this.state.keysLocked && this.state.inMonsterBattle){
+        if(this.state.keysLocked && (this.state.inMonsterBattle || this.state.inTowerSiege)){
             this.combatKeyDownHandler(event);
             return
         }
@@ -5713,13 +6053,17 @@ class DungeonPage extends React.Component {
                     }
                     break;
                 }
-            case 'p':
-                let paused = !this.state.paused;
-                this.props.combatManager.pauseCombat(paused)
-                this.setState({
-                    paused
-                })
-            break;
+            case 'p': {
+                const paused = !this.state.paused;
+                if (this.props.combatManager) {
+                    this.props.combatManager.pauseCombat(paused);
+                }
+                if (this.reduxCombatManager) {
+                    this.reduxCombatManager.pauseCombat(paused);
+                }
+                this.setState({ paused });
+                break;
+            }
             case 'q':
                 if(this.monsterBattleComponentRef.current) this.monsterBattleComponentRef.current.selectSpecial();
             break;
@@ -6877,7 +7221,7 @@ class DungeonPage extends React.Component {
         }
         // Generate a fresh quest set for this dungeon run
         if (this.props.questManager) {
-            this.props.questManager.generateQuestSet(dungeon, this.props.monsterManager, this.props.inventoryManager);
+            this.props.questManager.generateQuestSet(dungeon, this.props.monsterManager, this.props.inventoryManager, this.props.crewManager);
         }
         const expanded = selectedCrewMember ? (Array.isArray(selectedCrewMember.actionMenuTypeExpanded) ? selectedCrewMember.actionMenuTypeExpanded : (selectedCrewMember.actionMenuTypeExpanded ? [selectedCrewMember.actionMenuTypeExpanded] : [])) : [];
         this.setState(()=>{
@@ -6971,6 +7315,12 @@ class DungeonPage extends React.Component {
         if(result === 'win'){
             // Suppress any lingering battle callbacks from overwriting HP/dead after win
             this._suppressFighterDeadHpUpdates = true;
+
+            // Progress bounty quests
+            if (this.props.questManager) {
+                this.props.questManager.updateProgressByType('bounty', 1);
+            }
+
             this.props.boardManager.removeDefeatedMonsterTile(this.state.monsterBattleTileId)
             this.props.crewManager.checkForLevelUp(this.props.crewManager.crew)
             let meta = getMeta()
@@ -7540,9 +7890,30 @@ class DungeonPage extends React.Component {
         })
     }
     handleActionClick = (action) => {
+        if (action.disabled && action.type !== 'sharpen_blades') {
+            return;
+        }
         if (action.type === 'scrimmage') {
             this.setState({ isCardScrimmage: true });
             this.openCardDuel(null);
+            return;
+        }
+        if (action.type === 'sharpen_blades') {
+            if (action.disabled) {
+                const active = (this.state.selectedCrewMember?.specialActions || []).find(a => a.type === 'sharpen_blades' && new Date(a.endDate) > new Date());
+                if (active) {
+                    const remainingMs = new Date(active.endDate) - new Date();
+                    if (remainingMs > 0) {
+                        const mins = Math.ceil(remainingMs / 60000);
+                        this.displayMessage(`Sharpen Blades is currently in progress! ${mins} minutes remaining.`);
+                    }
+                }
+                return;
+            }
+            this.setState({
+                showModal: true,
+                modalType: 'SharpenBladesDetails'
+            });
             return;
         }
 
@@ -7629,6 +8000,30 @@ class DungeonPage extends React.Component {
                 nextState.innerDisciplineSelected = null;
                 nextState.innerDisciplineCategoryOpen = null;
             }
+        }
+        // ── Prepare Poison builder toggle (Ranger) ─────────────────────────────
+        if (action.type === 'prepare_poison') {
+            const character = this.state.selectedCrewMember;
+            const bombPrepping = (character?.specialActions || []).some(a =>
+                a.type === 'acid_bomb' && !a.available && new Date(a.endDate) > new Date()
+            );
+            if (bombPrepping) {
+                this.displayMessage('Already preparing an Acid Bomb!');
+                return;
+            }
+            nextState.preparePoisonBuilderOpen = !isOpen;
+        }
+        // ── Deploy Animal Agent builder toggle (Ranger) ─────────────────────────
+        if (action.type === 'deploy_animal') {
+            const character = this.state.selectedCrewMember;
+            const ratPrepping = (character?.specialActions || []).some(a =>
+                a.type === 'rat_agent' && !a.available && new Date(a.endDate) > new Date()
+            );
+            if (ratPrepping) {
+                this.displayMessage('The Scrounging Rat is already deployed!');
+                return;
+            }
+            nextState.deployAnimalBuilderOpen = !isOpen;
         }
         this.setState(nextState);
     }
@@ -7794,9 +8189,67 @@ class DungeonPage extends React.Component {
                 return;
             }
         }
+        // For prepare_poison: directly begin the acid bomb preparation
+        if (action.type === 'prepare_poison' && subType.bombType === 'acid_bomb') {
+            if (!subType.available) return; // disabled (max 2 or in-progress)
+            const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+            if (!characterFromCrew) return;
+            // Enforce max 2 acid bombs
+            const readyBombs = (characterFromCrew.specialActions || []).filter(a => a.type === 'acid_bomb' && a.available).length;
+            const inProgress = (characterFromCrew.specialActions || []).some(a => a.type === 'acid_bomb' && !a.available && new Date(a.endDate) > new Date());
+            if (readyBombs >= 2) {
+                this.displayMessage('You can hold at most 2 Acid Bombs!');
+                return;
+            }
+            if (inProgress) {
+                this.displayMessage('Already preparing an Acid Bomb!');
+                return;
+            }
+            this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+            const nextExpanded = this.collapseActionMenu(action.type);
+            const meta = getMeta();
+            meta.crew = this.props.crewManager.crew;
+            storeMeta(meta);
+            this.props.saveUserData();
+            const updatedCrewMember = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+            this.displayMessage('🧪 Acid Bomb preparation started! Ready in 2 hours.');
+            this.setState({
+                preparePoisonBuilderOpen: false,
+                actionMenuTypeExpanded: nextExpanded,
+                selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
+            });
+            return;
+        }
+        // For deploy_animal: directly begin the rat/crow deployment
+        if (action.type === 'deploy_animal' && subType.agentType === 'scrounging_rat') {
+            if (!subType.available) return; // disabled (already deployed)
+            const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+            if (!characterFromCrew) return;
+            const inProgress = (characterFromCrew.specialActions || []).some(a => a.type === 'rat_agent' && !a.available && new Date(a.endDate) > new Date());
+            if (inProgress) {
+                this.displayMessage('The Scrounging Rat is already deployed!');
+                return;
+            }
+            this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+            const nextExpanded = this.collapseActionMenu(action.type);
+            const meta = getMeta();
+            meta.crew = this.props.crewManager.crew;
+            storeMeta(meta);
+            this.props.saveUserData();
+            const updatedCrewMember = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+            this.displayMessage('🐀 Scrounging Rat deployed! Returns in 30 minutes.');
+            this.setState({
+                deployAnimalBuilderOpen: false,
+                actionMenuTypeExpanded: nextExpanded,
+                selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
+            });
+            return;
+        }
         // Original path for rituals, scrimmage, etc.
+
         let characterFromCrew = this.props.crewManager.crew.find(e=>e.id === this.state.selectedCrewMember.id)
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType)
+        const nextExpanded = this.collapseActionMenu(action.type);
         const meta = getMeta();
         meta.crew = this.props.crewManager.crew;
         storeMeta(meta);
@@ -7805,7 +8258,10 @@ class DungeonPage extends React.Component {
         // Find updated selectedCrewMember from crewManager
         const updatedCrewMember = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
         if (updatedCrewMember) {
-            this.setState({ selectedCrewMember: { ...updatedCrewMember } });
+            this.setState({
+                actionMenuTypeExpanded: nextExpanded,
+                selectedCrewMember: { ...updatedCrewMember }
+            });
         }
     }
 
@@ -7834,6 +8290,16 @@ class DungeonPage extends React.Component {
         });
     }
 
+    collapseActionMenu = (actionType) => {
+        const nextExpanded = (Array.isArray(this.state.actionMenuTypeExpanded) ? this.state.actionMenuTypeExpanded : [])
+            .filter(t => t !== actionType);
+        const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
+        if (characterFromCrew) {
+            characterFromCrew.actionMenuTypeExpanded = nextExpanded;
+        }
+        return nextExpanded;
+    }
+
     // Commit the built glyph — starts the preparation timer.
     handleGlyphPrepare = () => {
         const tier = this.state.glyphBuilderOpen;
@@ -7844,6 +8310,7 @@ class DungeonPage extends React.Component {
         const subType = { glyphTier: tier, spellDefs };
         const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+        const nextExpanded = this.collapseActionMenu('glyph');
         const meta = getMeta();
         meta.crew = this.props.crewManager.crew;
         storeMeta(meta);
@@ -7852,6 +8319,7 @@ class DungeonPage extends React.Component {
         this.setState({
             glyphBuilderOpen: null,
             glyphBuilderSpells: [],
+            actionMenuTypeExpanded: nextExpanded,
             selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
         });
     }
@@ -7870,6 +8338,10 @@ class DungeonPage extends React.Component {
         const action = { type: 'tactics' };
         const subType = { tacticKey };
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+        const nextExpanded = this.collapseActionMenu('tactics');
+
+        // Persist the collapsed state to the crew member so it survives state reload
+        characterFromCrew.actionMenuTypeExpanded = nextExpanded;
 
         const meta = getMeta();
         meta.crew = this.props.crewManager.crew;
@@ -7881,6 +8353,7 @@ class DungeonPage extends React.Component {
         this.setState({
             tacticsBuilderOpen: false,
             tacticsBuilderSelected: null,
+            actionMenuTypeExpanded: nextExpanded,
             selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
         });
     }
@@ -7912,6 +8385,7 @@ class DungeonPage extends React.Component {
         const action = { type: 'inner_discipline' };
         const subType = { disciplineKey };
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+        const nextExpanded = this.collapseActionMenu('inner_discipline');
 
         const meta = getMeta();
         meta.crew = this.props.crewManager.crew;
@@ -7925,6 +8399,7 @@ class DungeonPage extends React.Component {
             innerDisciplineBuilderOpen: false,
             innerDisciplineSelected: null,
             innerDisciplineCategoryOpen: null,
+            actionMenuTypeExpanded: nextExpanded,
             selectedCrewMember: updatedCrewMember ? { ...updatedCrewMember } : this.state.selectedCrewMember,
         });
     }
@@ -7974,6 +8449,7 @@ class DungeonPage extends React.Component {
         const subType = { recipe, potion };
         const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+        const nextExpanded = this.collapseActionMenu('compound');
 
         // Persist
         try {
@@ -7995,6 +8471,7 @@ class DungeonPage extends React.Component {
         this.setState({
             compoundBuilderSlots: [],
             compoundBuilderOpen: false,
+            actionMenuTypeExpanded: nextExpanded,
             selectedCrewMember: characterFromCrew ? { ...characterFromCrew } : this.state.selectedCrewMember
         });
     }
@@ -8040,6 +8517,7 @@ class DungeonPage extends React.Component {
         const subType = { recipe, brew };
         const characterFromCrew = this.props.crewManager.crew.find(e => e.id === this.state.selectedCrewMember.id);
         this.props.crewManager.beginSpecialAction(characterFromCrew, action, subType);
+        const nextExpanded = this.collapseActionMenu('brew');
 
         // Persist
         try {
@@ -8061,6 +8539,7 @@ class DungeonPage extends React.Component {
         this.setState({
             brewBuilderSlots: [],
             brewBuilderOpen: false,
+            actionMenuTypeExpanded: nextExpanded,
             selectedCrewMember: characterFromCrew ? { ...characterFromCrew } : this.state.selectedCrewMember
         });
     }
@@ -8140,9 +8619,9 @@ class DungeonPage extends React.Component {
                         if (ref) ref.notified = true;
                     }
                 })
-                // Clean up notified compound actions
+                // Clean up notified compound, brew, and sharpen_blades actions
                 crew.forEach(c => {
-                    c.specialActions = (c.specialActions || []).filter(sa => !(sa.type === 'compound' && sa.notified));
+                    c.specialActions = (c.specialActions || []).filter(sa => !(['compound', 'brew', 'sharpen_blades'].includes(sa.type) && sa.notified));
                 });
                 meta.crew = crew;
                 this.props.crewManager.crew = crew;
@@ -8158,7 +8637,7 @@ class DungeonPage extends React.Component {
                 }
                 const prepCompleteMeta = getMeta();
                 prepCompleteMeta.crew.forEach(c => {
-                    c.specialActions = (c.specialActions || []).filter(sa => !(sa.type === 'compound' && sa.notified));
+                    c.specialActions = (c.specialActions || []).filter(sa => !(['compound', 'brew', 'sharpen_blades'].includes(sa.type) && sa.notified));
                 });
                 this.props.crewManager.crew = prepCompleteMeta.crew;
                 storeMeta(prepCompleteMeta);
@@ -8167,6 +8646,18 @@ class DungeonPage extends React.Component {
                     showModal: false,
                     selectedCrewMember: prepCompleteMeta.crew.find(c => c.selected) || this.state.selectedCrewMember
                 }, () => this._cleanupModalBodyClass());
+            break;
+            case 'SharpenBladesDetails':
+                this.setState({ showModal: false }, () => {
+                    this._cleanupModalBodyClass();
+                    const action = {
+                        type: 'sharpen_blades',
+                        name: 'Sharpen Blades',
+                        iconUrl: images['shortsword'] || '',
+                        subTypes: []
+                    };
+                    this.handleActionSubtypeClick(action, {});
+                });
             break;
             case 'RitualComplete':
                 // Ritual completion modal — same dismiss logic as PrepComplete
@@ -8303,6 +8794,12 @@ class DungeonPage extends React.Component {
     onShrineComplete = (result) => {
         const { success, shrineData, selectedSkill } = result || {};
 
+        if (success) {
+            if (this.props.questManager) {
+                this.props.questManager.updateProgressByType('communion', 1);
+            }
+        }
+
         if (success && selectedSkill) {
             // Delegate to existing confirmGlobalSkill — it handles marking used, awarding skill, removing tile
             // But we need shrineData in state for confirmGlobalSkill to read
@@ -8407,6 +8904,12 @@ class DungeonPage extends React.Component {
             try { if (typeof this.props.saveUserData === 'function') this.props.saveUserData(); } catch(e) {}
             // Remove tablet from board
             try { this.props.boardManager.removeTileFromBoard(tile); } catch(e) {}
+            
+            // Progress lore quests
+            if (this.props.questManager) {
+                this.props.questManager.updateProgressByType('lore', 1);
+            }
+
             const count = loreTokens[domain];
             try { if (this.props.boardManager.messaging) this.props.boardManager.messaging(`📜 ${selectedMember.name} absorbs the lore of ${domain}. (${count}/3 tokens)`); } catch(e) {}
         }
@@ -9342,7 +9845,7 @@ class DungeonPage extends React.Component {
                     </div>
                 );
             })()}
-            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : this.state.modalType === 'Merchant' ? 'merchant-modal' : this.state.modalType === 'Alchemist' ? 'alchemist-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
+            <CModal className={this.state.modalType === 'PrepComplete' ? 'prep-complete-modal' : this.state.modalType === 'RitualComplete' ? 'ritual-complete-modal' : this.state.modalType === 'Magic' ? 'ritual-encounter-modal' : this.state.modalType === 'FoodComplete' ? 'food-complete-modal' : this.state.modalType === 'Merchant' ? 'merchant-modal' : this.state.modalType === 'Alchemist' ? 'alchemist-modal' : this.state.modalType === 'SharpenBladesDetails' ? 'sharpen-blades-details-modal' : ''} alignment="center" visible={this.state.showModal} onClose={() => this.onUpdateModalClosed()}>
                 {this.state.modalType === 'Merchant' && (
                     <div className="merchant-modal-bg" style={{
                         position: 'absolute',
@@ -9387,6 +9890,7 @@ class DungeonPage extends React.Component {
                     inventoryManager={this.props.inventoryManager}
                     saveUserData={this.props.saveUserData}
                     onForceUpdate={() => this.forceUpdate()}
+                    onClose={() => this.onUpdateModalClosed()}
                 />
             </CModal>
             {/* Teleport popup */}
@@ -9493,7 +9997,7 @@ class DungeonPage extends React.Component {
                         }
 
                         return (
-                            <div style={{display: 'flex', flexDirection: 'column', gap: 12}}>
+                            <div className="quests-list">
                                 {all.map(quest => {
                                     const c = quest.color || { bg: '#1a2535', border: '#4a90d9', title: '#7eb8f7' };
                                     const showProgress = quest.progressTarget > 1;
@@ -9502,87 +10006,46 @@ class DungeonPage extends React.Component {
                                     const typeLabel = TYPE_LABELS[quest.type] || quest.type;
 
                                     return (
-                                        <div key={quest.id} style={{
-                                            display: 'flex',
-                                            alignItems: 'flex-start',
-                                            gap: 16,
-                                            background: c.bg,
-                                            borderRadius: 8,
-                                            padding: '14px 16px',
-                                            border: `1px solid ${isComplete ? 'rgba(255,255,255,0.08)' : c.border}`,
-                                            boxShadow: isComplete ? 'none' : `0 0 0 1px ${c.border}22, 0 4px 16px rgba(0,0,0,0.5)`,
-                                            opacity: isComplete ? 0.6 : 1,
-                                            transition: 'opacity 0.3s',
-                                        }}>
+                                        <div key={quest.id} className={`quest-item${isComplete ? ' quest-completed' : ''}`} style={{ '--quest-accent': c.border }}>
                                             {/* Icon badge */}
-                                            <div style={{
-                                                flexShrink: 0,
-                                                width: 48, height: 48,
-                                                borderRadius: 8,
-                                                background: `${c.border}22`,
-                                                border: `1px solid ${c.border}55`,
-                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                fontSize: 22,
-                                            }}>
+                                            <div className="quest-icon-badge">
                                                 {isComplete ? '✅' : (quest.icon || '📋')}
                                             </div>
 
                                             {/* Content */}
-                                            <div style={{flex: 1, minWidth: 0}}>
+                                            <div className="quest-body">
                                                 {/* Type label + status */}
-                                                <div style={{display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4}}>
-                                                    <span style={{
-                                                        fontSize: 9, fontWeight: 700, letterSpacing: '1.5px',
-                                                        textTransform: 'uppercase', color: c.border,
-                                                        background: `${c.border}18`, borderRadius: 3,
-                                                        padding: '2px 6px',
-                                                    }}>{typeLabel}</span>
-                                                    {isComplete && <span style={{fontSize: 9, color: '#6bc96b', fontWeight: 700, letterSpacing: '1px'}}>✓ COMPLETE</span>}
+                                                <div className="quest-meta-row">
+                                                    <span className="quest-tag">{typeLabel}</span>
+                                                    {isComplete && <span className="quest-completed-badge">✓ COMPLETE</span>}
                                                 </div>
 
                                                 {/* Title */}
-                                                <div style={{
-                                                    fontSize: 14, fontWeight: 700,
-                                                    color: isComplete ? '#888' : c.title,
-                                                    marginBottom: 4,
-                                                    letterSpacing: '0.3px',
-                                                }}>
+                                                <div className="quest-title">
                                                     {quest.title}
                                                 </div>
 
                                                 {/* Description */}
-                                                <div style={{fontSize: 12, color: '#bbb', lineHeight: 1.5, marginBottom: showProgress ? 8 : 0}}>
+                                                <div className="quest-desc">
                                                     {quest.description}
                                                 </div>
 
                                                 {/* Progress bar */}
                                                 {showProgress && (
-                                                    <div>
-                                                        <div style={{display: 'flex', justifyContent: 'space-between', marginBottom: 4}}>
-                                                            <span style={{fontSize: 10, color: '#888'}}>Progress</span>
-                                                            <span style={{fontSize: 10, color: '#aaa', fontWeight: 600}}>{quest.progress} / {quest.progressTarget}</span>
+                                                    <div className="quest-progress-section">
+                                                        <div className="quest-progress-header">
+                                                            <span className="label">Progress</span>
+                                                            <span className="val">{quest.progress} / {quest.progressTarget}</span>
                                                         </div>
-                                                        <div style={{height: 4, background: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden'}}>
-                                                            <div style={{
-                                                                height: '100%',
-                                                                width: `${pct}%`,
-                                                                background: isComplete ? '#6bc96b' : `linear-gradient(90deg, ${c.border}, ${c.title})`,
-                                                                borderRadius: 2,
-                                                                transition: 'width 0.4s ease',
-                                                                boxShadow: isComplete ? 'none' : `0 0 6px ${c.border}88`,
-                                                            }}/>
+                                                        <div className="quest-progress-track">
+                                                            <div className="quest-progress-bar" style={{ width: `${pct}%` }} />
                                                         </div>
                                                     </div>
                                                 )}
 
                                                 {/* Hint — shown when not complete */}
                                                 {!isComplete && quest.hint && (
-                                                    <div style={{
-                                                        marginTop: 8, fontSize: 10, color: '#666',
-                                                        fontStyle: 'italic', lineHeight: 1.4,
-                                                        borderLeft: `2px solid ${c.border}44`,
-                                                        paddingLeft: 8,
-                                                    }}>
+                                                    <div className="quest-hint">
                                                         {quest.hint}
                                                     </div>
                                                 )}
@@ -10881,9 +11344,16 @@ class DungeonPage extends React.Component {
                                         if (!iconUrl && typeof images !== 'undefined') {
                                             iconUrl = images['glyph_inverted'] || '';
                                         }
+                                        if (iconUrl && typeof iconUrl === 'object') {
+                                            iconUrl = iconUrl.default || iconUrl;
+                                        }
+                                        if (iconUrl && typeof iconUrl === 'object') {
+                                            iconUrl = iconUrl.default || '';
+                                        }
+                                        const resolvedIconString = typeof iconUrl === 'string' ? iconUrl : '';
                                         return (
                                             <div key={groupKey} className="special-action-wrapper" style={{position: 'relative'}}>
-                                                <div className="special-action-icon" style={{backgroundImage: `url(${iconUrl})`}}></div>
+                                                <div className="special-action-icon" style={{backgroundImage: resolvedIconString ? `url("${encodeURI(resolvedIconString)}")` : 'none'}}></div>
                                                 {inProgressAction && progressPct < 50 && <div className="progress-overlay"></div>}
                                                 {inProgressAction && <div className="left" style={{transform: `rotate(${this.getRotateDegreesLeft(progressPct)}deg)`}}></div>}
                                                 {inProgressAction && <div className="right" style={{transform: `rotate(${this.getRotateDegreesRight(progressPct)}deg)`}}></div>}
@@ -12031,13 +12501,15 @@ class DungeonPage extends React.Component {
                 saveUserData={this.props.saveUserData}
             ></MonsterBattle>}
 
-            {/* Tower Siege — full-screen large-scale battle event */}
             {this.state.inTowerSiege && (
                 <TowerSiege
                     combatManager={this.reduxCombatManager}
+                    animationManager={this.props.animationManager}
+                    overlayManager={this.props.overlayManager}
                     crew={this.props.crewManager.crew}
                     monsterManager={this.props.monsterManager}
                     onSiegeComplete={this.onSiegeComplete}
+                    paused={this.state.paused}
                 />
             )}
 

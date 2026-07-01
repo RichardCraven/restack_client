@@ -38,3 +38,14 @@ export const getDurationRounds = (dur) => {
     }
     return 4;
 };
+
+export const RANGE_CLOSE = 1;
+export const RANGE_MEDIUM = 3;
+export const RANGE_FAR = 5;
+
+export const RANGE_LIMITS = {
+    'close': RANGE_CLOSE,
+    'medium': RANGE_MEDIUM,
+    'far': RANGE_FAR,
+    'ranged': RANGE_FAR
+};

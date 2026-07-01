@@ -114,6 +114,8 @@ export function BoardManager(){
         'goat_demon',
         'golden_demon',
         'kabuki_demon',
+        'cyclops',
+        'high_priest_of_the_basilisk',
 
         // 'imp',
         // 'imp_overlord',
@@ -2597,7 +2599,30 @@ export function BoardManager(){
             }
         } catch (e) {}
 
+        // Check if this board has an active Scrounging Rat 3x3 fog reveal
+        let isRatRevealActive = false;
+        let ratRowStart = 0, ratRowEnd = 0, ratColStart = 0, ratColEnd = 0;
+        try {
+            const ratMeta = getMeta() || {};
+            if (ratMeta.ratAgentReveal) {
+                const now = new Date();
+                const revealUntil = new Date(ratMeta.ratAgentReveal.revealUntil);
+                if (now < revealUntil &&
+                    this.currentOrientation === 'F' &&
+                    this.currentLevel.id === ratMeta.ratAgentReveal.levelId &&
+                    this.playerTile.boardIndex === ratMeta.ratAgentReveal.boardIndex) {
+
+                    isRatRevealActive = true;
+                    ratRowStart = ratMeta.ratAgentReveal.startRow;
+                    ratRowEnd = ratRowStart + 2; // 3x3 patch
+                    ratColStart = ratMeta.ratAgentReveal.startCol;
+                    ratColEnd = ratColStart + 2;
+                }
+            }
+        } catch (e) {}
+
         const destCoords = this.getCoordinatesFromIndex(destinationTile.id);
+
         this.tiles.forEach((e) => {
             try {
                 _clearPlayerMarker(e);
@@ -2611,10 +2636,16 @@ export function BoardManager(){
                     coords[0] >= scoutRowStart && coords[0] <= scoutRowEnd &&
                     coords[1] >= scoutColStart && coords[1] <= scoutColEnd;
 
-                // Reveal tiles within radius 2 that are reachable OR within the scouted area
+                // Check if this tile falls within the Scrounging Rat 3x3 reveal
+                const inRatRevealArea = isRatRevealActive &&
+                    coords[0] >= ratRowStart && coords[0] <= ratRowEnd &&
+                    coords[1] >= ratColStart && coords[1] <= ratColEnd;
+
+                // Reveal tiles within radius 2 that are reachable OR within the scouted/rat-reveal area
                 const isVoid = this.getContainsType(e.contains) === 'void';
                 const hasInscriptions = e.inscriptions && Object.values(e.inscriptions).some(v => !!v);
-                if ((inScoutedArea || (manhattan <= 2 && visibleTileIds.has(e.id))) && (!isVoid || hasInscriptions)) {
+                if ((inScoutedArea || inRatRevealArea || (manhattan <= 2 && visibleTileIds.has(e.id))) && (!isVoid || hasInscriptions)) {
+
                     const persistedColor = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].color);
                     const persistedBorders = (this.currentBoard && this.currentBoard.tiles && this.currentBoard.tiles[e.id] && this.currentBoard.tiles[e.id].borders);
                     const runtimeColor = (e.color && e.color !== 'black' && e.color !== 'white' && e.color !== 'null') ? e.color : null;

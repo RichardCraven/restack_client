@@ -39,8 +39,8 @@ $zone-enemy-bg:      rgba(204, 51, 34, 0.06);
 }
 
 @keyframes ts-unit-appear {
-    from { opacity: 0; transform: translateY(-6px) scale(0.85); }
-    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+    from { transform: translateY(-6px) scale(0.85); }
+    to   { transform: translateY(0)    scale(1);    }
 }
 
 @keyframes ts-summary-slide {
@@ -57,7 +57,7 @@ $zone-enemy-bg:      rgba(204, 51, 34, 0.06);
 .ts-overlay {
     position: fixed;
     inset: 0;
-    z-index: 9000;
+    z-index: 9999999 !important;
     background: $siege-bg;
     display: flex;
     align-items: flex-start;
@@ -137,7 +137,7 @@ $zone-enemy-bg:      rgba(204, 51, 34, 0.06);
 .ts-unit {
     box-sizing: border-box;
     transition: opacity 0.6s ease, left 0.4s ease, top 0.4s ease;
-    animation: ts-unit-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    opacity: 0;
 
     &--dead {
         pointer-events: none;
@@ -146,6 +146,10 @@ $zone-enemy-bg:      rgba(204, 51, 34, 0.06);
     &--siege-army img {
         box-shadow: 0 0 8px rgba(74, 158, 107, 0.5);
     }
+}
+
+.ts-unit-appear-anim {
+    animation: ts-unit-appear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 
 // ── Phase label (during fade-in cinematic) ───────────────────────────────────
@@ -172,7 +176,7 @@ $zone-enemy-bg:      rgba(204, 51, 34, 0.06);
     top: 0;
     left: 0;
     right: 0;
-    z-index: 9100;
+    z-index: 10000000 !important;
     height: 44px;
     background: linear-gradient(180deg, rgba(10, 9, 13, 0.98) 0%, rgba(10, 9, 13, 0.7) 100%);
     border-bottom: 1px solid $siege-border;
@@ -222,7 +226,7 @@ $zone-enemy-bg:      rgba(204, 51, 34, 0.06);
 .ts-summary {
     position: fixed;
     inset: 0;
-    z-index: 9200;
+    z-index: 10000001 !important;
     background: rgba(0, 0, 0, 0.88);
     display: flex;
     flex-direction: column;

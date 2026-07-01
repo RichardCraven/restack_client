@@ -17,9 +17,13 @@ export async function setUpCamp(component, maybeDuration) {
         let meta = getMeta() || {};
 
         // --- Food cost check ---
-        // Cost = sum of (3 + member.level) for each crew member
+        // Cost = sum of (5 * member.level) for each crew member + (10 * member.level) for each dead member
         const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
-        const foodCost = crew.reduce((sum, m) => sum + (3 + (typeof m.level === 'number' ? m.level : 1)), 0);
+        const foodCost = crew.reduce((sum, m) => {
+            const baseCost = 5 * (typeof m.level === 'number' ? m.level : 1);
+            const reviveCost = m.dead ? 10 * (typeof m.level === 'number' ? m.level : 1) : 0;
+            return sum + baseCost + reviveCost;
+        }, 0);
         const currentFood = typeof meta.food === 'number' ? meta.food : 55;
         const hasFortify = crew.some(member => 
             member && !member.dead && member.globalSkills && 

@@ -201,16 +201,28 @@ export function QuestManager() {
      * Always includes one travel + one bounty, then one drawn from the
      * exploration types (lore/communion/inscription/item_retrieval).
      */
-    this.generateQuestSet = (dungeon, monsterManager, inventoryManager) => {
+    this.generateQuestSet = (dungeon, monsterManager, inventoryManager, crewManager) => {
         this.activeQuests = [];
+
+        const crew = (crewManager && crewManager.crew) || [];
+        const avgLevel = crew.length > 0 ? (crew.reduce((sum, c) => sum + (c.level || 1), 0) / crew.length) : 1;
+        const crewSize = crew.length || 1;
+        // Calculate dynamic crew power (ranges from 1.0 to 10.0+)
+        const crewPower = avgLevel * 0.6 + crewSize * 0.4;
 
         const levels = dungeon && Array.isArray(dungeon.levels) ? dungeon.levels : [];
         const deepestLevel = levels.length ? levels[levels.length - 1].id : 1;
+        const deepestLevelNum = parseInt(deepestLevel, 10);
+
+        // Scale target floor based on crew power (so beginners don't need to reach the deepest floor)
+        const targetLevel = isNaN(deepestLevelNum)
+            ? deepestLevel
+            : Math.max(1, Math.min(deepestLevelNum, Math.floor(crewPower * 1.5)));
 
         // ── Travel quest ──────────────────────────────────────────────────
         const travelTemplates = this._POOL.filter(p => p.type === 'travel');
         const travelTmpl = travelTemplates[Math.floor(Math.random() * travelTemplates.length)];
-        const travel = this._makeFromTemplate(travelTmpl, { level: deepestLevel });
+        const travel = this._makeFromTemplate(travelTmpl, { level: targetLevel });
         if (travel) this.activeQuests.push(travel);
 
         // ── Bounty quest ──────────────────────────────────────────────────
@@ -218,9 +230,13 @@ export function QuestManager() {
         const monsterName = monsterKeys.length
             ? monsterKeys[Math.floor(Math.random() * monsterKeys.length)].replace(/_/g, ' ')
             : 'enemies';
+        
+        // Scale bounty count dynamically
+        const bountyCount = Math.max(2, Math.min(15, Math.round(3 * crewPower)));
+
         const bountyTemplates = this._POOL.filter(p => p.type === 'bounty');
         const bountyTmpl = bountyTemplates[Math.floor(Math.random() * bountyTemplates.length)];
-        const bounty = this._makeFromTemplate(bountyTmpl, { count: 5, monster: monsterName, level: deepestLevel });
+        const bounty = this._makeFromTemplate(bountyTmpl, { count: bountyCount, monster: monsterName, level: targetLevel });
         if (bounty) this.activeQuests.push(bounty);
 
         // ── Exploration quest (lore / communion / inscription / retrieval) ─
@@ -229,17 +245,34 @@ export function QuestManager() {
         const exploTmpl = explorationPool[Math.floor(Math.random() * explorationPool.length)];
 
         const LORE_DOMAINS = ['Endurance', 'Perception', 'Willpower', 'Cunning', 'Fortitude'];
-        const CLASS_TYPES  = ['ranger', 'sage', 'soldier', 'wizard', 'barbarian', 'monk', 'summoner'];
+        
+        // Find a class actually present in the crew, falling back to random if crew is empty
+        const CLASS_TYPES = ['ranger', 'sage', 'soldier', 'wizard', 'barbarian', 'monk', 'summoner'];
+        const crewClasses = crew.map(c => (c.type || '').toLowerCase()).filter(Boolean);
+        const chosenClass = crewClasses.length > 0
+            ? crewClasses[Math.floor(Math.random() * crewClasses.length)]
+            : CLASS_TYPES[Math.floor(Math.random() * CLASS_TYPES.length)];
+
         const itemKeys = inventoryManager ? Object.keys(inventoryManager.allItems || {}) : [];
         const randomItemKey = itemKeys.length ? itemKeys[Math.floor(Math.random() * itemKeys.length)] : null;
         const itemName = (randomItemKey && inventoryManager.allItems[randomItemKey]?.name) || 'lost relic';
 
+        // Scale exploration target count dynamically
+        let exploCount = exploTmpl.progressTarget;
+        if (exploTmpl.type === 'lore' || exploTmpl.type === 'inscription') {
+            exploCount = Math.max(1, Math.min(5, Math.round(1.5 * crewPower)));
+        } else if (exploTmpl.type === 'item_retrieval' && exploTmpl.key === 'the_collectors_run') {
+            exploCount = Math.max(1, Math.min(8, Math.round(2 * crewPower)));
+        } else if (exploTmpl.type === 'communion' && exploTmpl.key === 'the_long_vigil') {
+            exploCount = Math.max(1, Math.min(3, Math.round(1 * crewPower)));
+        }
+
         const exploCtx = {
-            level: deepestLevel,
+            level: targetLevel,
             domain: LORE_DOMAINS[Math.floor(Math.random() * LORE_DOMAINS.length)],
-            class: CLASS_TYPES[Math.floor(Math.random() * CLASS_TYPES.length)],
+            class: chosenClass,
             item: itemName,
-            count: exploTmpl.progressTarget,
+            count: exploCount,
         };
         const explo = this._makeFromTemplate(exploTmpl, exploCtx);
         if (explo) this.activeQuests.push(explo);

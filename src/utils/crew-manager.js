@@ -651,6 +651,37 @@ export function CrewManager(){
                 member.specialActions.push(entry);
             }
             break;
+            case 'prepare_poison':
+                if (actionSubtype.bombType === 'acid_bomb') {
+                    const prepTime = 2 * 60 * 60 * 1000; // 2 hours
+                    endDate = new Date(Date.now() + prepTime);
+                    member.specialActions.push({
+                        type: 'acid_bomb',
+                        name: 'Acid Bomb',
+                        iconUrl: images['ranger_acid_bomb'] || images['wizard_acid_blast'] || '',
+                        available: false,
+                        startDate,
+                        endDate,
+                        notified: false,
+                    });
+                }
+                break;
+            case 'deploy_animal':
+                if (actionSubtype.agentType === 'scrounging_rat') {
+                    const prepTime = 30 * 60 * 1000; // 30 minutes
+                    endDate = new Date(Date.now() + prepTime);
+                    member.specialActions.push({
+                        type: 'rat_agent',
+                        name: 'Scrounging Rat',
+                        iconUrl: images['scrounging_rat'] || '',
+                        available: false,
+                        rangerLevel: member.level || 1,
+                        startDate,
+                        endDate,
+                        notified: false,
+                    });
+                }
+                break;
             default:
                 break;
         }

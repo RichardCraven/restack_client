@@ -224,7 +224,8 @@ export function MonsterManager() {
             subtype: 'aberration',
             key: 'blalok',
             image_names: ['blalok'],
-            monster_names: [],
+            lordName: 'Ghulguth the Soul Glutton',
+            monster_names: ['blalokin', 'blalorn', 'blaloz'],
             stats: {
                 hp: 90,
                 atk: 7,
@@ -248,6 +249,7 @@ export function MonsterManager() {
             key: 'shade',
             image_names: ['shade'],
             monster_names: ['Whisperer', 'Gloom'],
+            lordName: 'Oblivion',
             stats: {
                 hp: 120,
                 atk: 8,
@@ -278,6 +280,7 @@ export function MonsterManager() {
             key: 'troll',
             image_names: ['troll'],
             monster_names: ['Mundzungu', 'Wugum'],
+            lordName: 'Brog the Tenderizer',
             stats: {
                 hp: 178,
                 atk: 10,
@@ -308,6 +311,7 @@ export function MonsterManager() {
             key: 'mummy',
             image_names: ['mummy'],
             monster_names: ['Kufu', 'Razeset'],
+            lordName: 'Akmen-Ra the Undying',
             stats: {
                 hp: 210,
                 atk: 10,
@@ -338,6 +342,7 @@ export function MonsterManager() {
             key: 'basilisk_cultists',
             image_names: ['basilisk_cultists'],
             monster_names: ['Acolyte Vane', 'Zealot Malakor', 'Initiate Selene'],
+            lordName: 'Mewlok the Mad',
             stats: {
                 hp: 80,
                 atk: 6,
@@ -369,6 +374,7 @@ export function MonsterManager() {
             key: 'wraith',
             image_names: ['wraith'],
             monster_names: ['Sicirath', 'Olnuk', 'Ygra'],
+            lordName: 'Vesper the Soul Collector',
             stats: {
                 hp: 128,
                 atk: 9,
@@ -399,6 +405,7 @@ export function MonsterManager() {
             key: 'ogre',
             image_names: ['ogre'],
             monster_names: ['Uggo', 'Tubodu', 'Gumluk'],
+            lordName: 'Ug the Unmindful',
             stats: {
                 hp: 192,
                 atk: 9,
@@ -430,6 +437,7 @@ export function MonsterManager() {
             key: 'gorgon',
             image_names: ['gorgon'],
             monster_names: ['Lithios', 'Merkaba', 'Axolus'],
+            lordName: 'The Great Mother',
             stats: {
                 hp: 162,
                 atk: 8,
@@ -461,6 +469,7 @@ export function MonsterManager() {
             key: 'vampire',
             image_names: ['black_vampire'],
             monster_names: ['Vukodlak', 'Morias', 'Sekhem Apep'],
+            lordName: 'Lord Sengir',
             stats: {
                 hp: 204,
                 atk: 9,
@@ -491,6 +500,7 @@ export function MonsterManager() {
             key: 'high_priest_of_the_basilisk',
             image_names: ['high_priest_of_the_basilisk'],
             monster_names: ['Kael-Zara', 'Zul-Garth', 'Mok-Tor'],
+            lordName: 'Shithrak the Pestilent',
             stats: {
                 hp: 140,
                 atk: 11,
@@ -506,7 +516,7 @@ export function MonsterManager() {
             portrait: images['high_priest_of_the_basilisk_portrait'],
             greetings: ['*chants in tongues of the cosmos*', 'The stars demand your blood!'],
             deathCries: ['*cosmic screams*'],
-            skills: ['voidbite', 'paradox_engine', 'void_rake', 'invoke_darkness'],
+            skills: ['voidbite', 'paradox_engine', 'void_rake', 'invoke_darkness', 'eldritch_wind'],
             weaknesses: ['holy', 'fire'],
             minions: ['basilisk_cultists', 'blalok', 'blalok'],
             drops: [
@@ -523,8 +533,9 @@ export function MonsterManager() {
             key: 'goat_demon',
             image_names: ['goat_demon'],
             monster_names: ['ur-Xulu', 'ur-Baba', 'ur-Zuzu'],
+            lordName: 'Lord Balaxu',
             stats: {
-                hp: 92,
+                hp: 155,
                 atk: 11,
                 def: 11,
                 speed: 10, // demonic quickness
@@ -547,6 +558,38 @@ export function MonsterManager() {
                 { itemPool: TIER2_WEAPONS, percentChance: 35 },
             ]
         },
+        cyclops: {
+            type: 'cyclops',
+            tier: 3,
+            subtype: 'brutekin',
+            key: 'cyclops',
+            image_names: ['cyclops'],
+            monster_names: ['mog-gol', 'mog-blal', 'mog-sur'],
+            lordName: 'The Blooded Scourge',
+            stats: {
+                hp: 140,
+                atk: 11,
+                def: 11,
+                speed: 7,
+                willpower: 3,
+                str: 12,
+                int: 4,
+                dex: 6,
+                fort: 8
+            },
+            level: 11,
+            portrait: images['cyclops_portrait'],
+            greetings: ['Zug Zug'],
+            deathCries: ['Arrrghhh!'],
+            skills: ['stomp', 'gore_horns', 'claw_strike'],
+            weaknesses: ['ice', 'fire', 'psionic'],
+            minions: ['troll', 'ogre'],
+            drops: [
+                { item: TIER2_POTION, percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
+                { itemPool: TIER2_WEAPONS, percentChance: 35 },
+            ]
+        },
         // ── Level 12 ─────────────────────────────────────────────────────
         witch: {
             type: 'witch',
@@ -555,6 +598,7 @@ export function MonsterManager() {
             key: 'witch',
             image_names: ['witch_p1_1'],
             monster_names: ['Rhea', 'BabaYaga'],
+            lordName: 'Yuuul the Ancient',
             stats: {
                 hp: 360,
                 atk: 13,
@@ -669,6 +713,7 @@ export function MonsterManager() {
             key: 'kabuki_demon',
             image_names: ['kabuki_demon_portrait'],
             monster_names: ['Ikiro', 'Jimbu'],
+            lordName: 'Lord Sargas',
             stats: {
                 hp: 440,
                 atk: 13,
@@ -701,6 +746,7 @@ export function MonsterManager() {
             key: 'djinn',
             image_names: ['djinn'],
             monster_names: ['Murmeros', 'Ixcalot', 'il Hagan'],
+            lordName: 'Malice the Eternal',
             stats: {
                 hp: 375,
                 atk: 10,
@@ -718,6 +764,7 @@ export function MonsterManager() {
             deathCries: ['it seems your fate has other plans'],
             skills: ['betrayal', 'arcane_barrier', 'bind', 'death_missile', 'rift', 'rake'],
             weaknesses: ['arcane'],
+            minions: ['troll', 'troll'],
             drops: [
                 { item: TIER2_POTION, percentChance: 35 },
                 { itemPool: TIER3_MAGICAL, percentChance: 45 },
@@ -729,7 +776,8 @@ export function MonsterManager() {
             subtype: 'construct',
             key: 'precipice_guardian',
             image_names: ['precipice_guardian'],
-            monster_names: [],
+            monster_names: ['rulmak', 'kulnar'],
+            lordName: 'The Iron Guard',
             stats: {
                 hp: 370,
                 atk: 13,
@@ -742,6 +790,7 @@ export function MonsterManager() {
                 fort: 5
             },
             level: 17,
+            minions: ['ogre'],
             portrait: images['precipice_guardian_portrait'],
             greetings: ['go no further'], deathCries: ['then I must perish'], skills: ['rake', 'madness', 'magic_missile'], weaknesses: [], drops: []
         },
@@ -752,6 +801,7 @@ export function MonsterManager() {
             key: 'sphinx',
             image_names: ['sphinx'],
             monster_names: ['Nunufet', 'Ipalot', 'Vizieros'],
+            lordName: 'Delphon the Indisputable',
             stats: {
                 hp: 365,
                 atk: 13,
@@ -787,6 +837,7 @@ export function MonsterManager() {
             key: 'dragon',
             image_names: ['dragon'],
             monster_names: ['Theraxes', 'Daedron', 'Kykerod'],
+            lordName: 'Melkor the Great',
             stats: {
                 hp: 485,
                 atk: 20,

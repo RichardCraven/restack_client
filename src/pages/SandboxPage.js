@@ -42,6 +42,7 @@ import {
   wraith_portrait,
   goat_demon_portrait,
   gorgon_portrait,
+  cyclops_portrait,
   Hagigah,
   Hashmallim,
   ghoul_portrait,
@@ -195,6 +196,7 @@ import {
   third_eye,
   shadow_presence,
   rake,
+  gore_horns,
   witch_p1_1,
   greater_magic_missile,
   shadow_curse,
@@ -212,6 +214,10 @@ import {
   invoke_darkness,
   sphere_of_darkness,
   bifurcate,
+  voidbite,
+  void_rake,
+  eldritch_wind,
+  paradox_engine,
 } from '../utils/images';
 import '../styles/monster-battle.scss';
 
@@ -373,6 +379,11 @@ const monstersData = [
     ]
   },
   { id: 'goat_demon', name: 'Goat Demon', portrait: goat_demon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
+  { id: 'cyclops', name: 'Cyclops', portrait: cyclops_portrait, abilities: [
+    { id: 'stomp', name: 'Stomp', desc: 'Leap and slam the ground, damaging and stunning adjacent enemies.', icon: stomp, type: 'stomp' },
+    { id: 'gore_horns', name: 'Gore Horns', desc: 'Gore the target with massive horns, dealing heavy damage.', icon: gore_horns, type: 'gore_horns' },
+    { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }
+  ] },
   { id: 'gorgon', name: 'Gorgon', portrait: gorgon_portrait, abilities: [{ id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' }] },
   {
     id: 'dragon', name: 'Dragon', portrait: wyvern_portrait, abilities: [
@@ -430,9 +441,12 @@ const monstersData = [
     ]
   },
   {
-    id: 'high_priest_of_the_basilisk', name: 'Orbital Shaman', portrait: high_priest_of_the_basilisk_portrait, abilities: [
-      { id: 'claw_strike', name: 'Claw Strike', desc: 'Execute a savage claw strike.', icon: claw_strike, type: 'claw_strike' },
-      { id: 'bite', name: 'Bite', desc: 'Savage bite attack.', icon: monster_bite, type: 'bite' }
+    id: 'high_priest_of_the_basilisk', name: 'High Priest of the Basilisk', portrait: high_priest_of_the_basilisk_portrait, abilities: [
+      { id: 'voidbite', name: 'Voidbite', desc: 'Savage maw strike dealing 150% ATK and draining 30% damage as stamina.', icon: voidbite, type: 'voidbite_type' },
+      { id: 'invoke_darkness', name: 'Invoke Darkness', desc: 'Summon unkillable black sphere adjacent that deals damage and swallows projectiles.', icon: invoke_darkness, type: 'invoke_darkness_type' },
+      { id: 'void_rake', name: 'Void Rake', desc: 'Behaves like rake, but does 200% ATK damage and 30% chance to teleport to a random corner.', icon: void_rake, type: 'void_rake_type' },
+      { id: 'eldritch_wind', name: 'Eldritch Wind', desc: 'Restores all friendly units\' stamina and heals 10% max HP.', icon: eldritch_wind, type: 'eldritch_wind_type' },
+      { id: 'paradox_engine', name: 'Paradox Engine', desc: 'Teleports target unit to unoccupied corner facing center, locking them and spawning a pulsing red upside-down reflection.', icon: paradox_engine, type: 'paradox_engine_type' }
     ]
   },
   {

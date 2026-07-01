@@ -49,8 +49,9 @@ export class AnimationManagerRedux {
   _px(coords, forceLarge = false, ignoreLarge = false) {
     if (!coords || typeof coords.x !== 'number' || typeof coords.y !== 'number') return { x: 0, y: 0 };
     const borderOffset = this.USE_TILE_BORDERS ? this.TILE_BORDER : 0;
+    const yVal = this.isSiegeMode ? coords.y + 4 : coords.y;
     let x = coords.x * (this.TILE_SIZE + borderOffset) + this.TILE_SIZE / 2;
-    let y = coords.y * (this.TILE_SIZE + borderOffset) + this.TILE_SIZE / 2;
+    let y = yVal * (this.TILE_SIZE + borderOffset) + this.TILE_SIZE / 2;
     const isLarge = !ignoreLarge && (forceLarge || (this._isTargetLarge && this._currentTargetCoords && coords.x === this._currentTargetCoords.x && coords.y === this._currentTargetCoords.y));
     if (isLarge) {
       // Anchor row y is the bottom row of the 2x2. Center is 50px up.
@@ -190,6 +191,7 @@ export class AnimationManagerRedux {
       case 'dispair':
         this._despair(sourceCoords, targetCoords);
         break;
+      case 'void_rake':
       case 'rake':
         this._rakeStrike(sourceCoords, targetCoords, sourceUnitId);
         break;
@@ -393,6 +395,15 @@ export class AnimationManagerRedux {
         break;
       case 'voidbite':
         this._voidbite(sourceCoords, targetCoords, sourceUnitId);
+        break;
+      case 'eldritch_wind':
+        this._eldritchWind(sourceCoords);
+        break;
+      case 'paradox_engine_success':
+        this._paradoxEngineSuccess(sourceCoords, targetCoords);
+        break;
+      case 'paradox_engine_fail':
+        this._paradoxEngineFail(sourceCoords, targetCoords);
         break;
       default:
         // Generic melee hit for unknown abilities
@@ -1989,5 +2000,39 @@ export class AnimationManagerRedux {
         duration: 400,
       });
     }, 500);
+  }
+
+  _eldritchWind(src) {
+    const srcPx = this._px(src);
+    this._emit({
+      type: 'eldritch_wind_overlay',
+      srcPx,
+      duration: 1500
+    });
+  }
+
+  _paradoxEngineSuccess(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'paradox_warp_source',
+      srcPx,
+      duration: 1000
+    });
+    this._emit({
+      type: 'paradox_warp_target',
+      tgtPx,
+      duration: 1000
+    });
+  }
+
+  _paradoxEngineFail(src, tgt) {
+    const srcPx = this._px(src);
+    const tgtPx = this._px(tgt);
+    this._emit({
+      type: 'paradox_fail_burst',
+      tgtPx,
+      duration: 1000
+    });
   }
 }

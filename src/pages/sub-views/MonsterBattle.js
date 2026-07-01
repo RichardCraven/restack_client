@@ -215,6 +215,9 @@ class MonsterBattle extends React.Component {
             activeEffectPopup: null,
             activeSkillPopup: null,
             popupOpenedWhilePaused: false,
+            // Skill panel UX: queued skill per fighter and hover-label tracking
+            queuedSkillMap: {},   // fighterId → skillKey
+            hoveredAbilityKey: null,
             message: '',
             combatStarted: false,
             source: null,
@@ -285,6 +288,11 @@ class MonsterBattle extends React.Component {
             dragTargetIsEnemy: false, // true when cursor is over an enemy unit
             dragFlashTile: null,      // { x, y, color } tile playing flash-on-release
             _preDragPaused: false,    // was combat paused before drag started?
+            // ── Acid Bomb targeting mode ─────────────────────────────────────
+            acidBombMode: false,
+            acidBombItem: null,
+            acidBombPlacedAt: null,   // { x, y } where the bomb icon is shown on the board
+            acidBombExploding: null,  // { x, y } tile currently exploding (acid rain animation)
         }
         this.combatLogContainerRef = React.createRef();
         this.latestCombatLogEntryRef = React.createRef();
@@ -623,6 +631,26 @@ class MonsterBattle extends React.Component {
             } catch (err) {
                 console.warn('componentDidUpdate: combat-log scroll failed', err);
             }
+        }
+
+        // Sync queuedSkillMap: if the AI consumed and cleared a queued skill
+        // (unit.queuedSkill set to null on combatants), remove it from local state too.
+        if (prevState.battleData !== this.state.battleData) {
+            try {
+                const cm = this.props.combatManager;
+                if (cm && cm.combatants) {
+                    const map = this.state.queuedSkillMap;
+                    const staleIds = Object.keys(map).filter(fid => {
+                        const c = cm.combatants[fid];
+                        return !c || c.queuedSkill !== map[fid];
+                    });
+                    if (staleIds.length > 0) {
+                        const newMap = { ...map };
+                        staleIds.forEach(fid => delete newMap[fid]);
+                        this.setState({ queuedSkillMap: newMap });
+                    }
+                }
+            } catch (e) { /* non-critical */ }
         }
     }
     componentWillUnmount() {
@@ -1049,6 +1077,34 @@ class MonsterBattle extends React.Component {
             this.props.combatManager.pauseCombat(false);
         }
     }
+
+    // Open the skill description popup (called when user clicks a hover-label)
+    openSkillPopup = (spec) => {
+        const initiallyPaused = !!(this.props.paused || this.props.combatManager?.combatPaused);
+        this.setState({ activeSkillPopup: spec, popupOpenedWhilePaused: initiallyPaused });
+        if (!initiallyPaused && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
+            this.props.combatManager.pauseCombat(true);
+        }
+    }
+
+    // Toggle the queued skill for a PC fighter. Setting a skill on the combatant
+    // object lets the AI in executeUnitAI pick it up on the next turn.
+    handleQueueSkill = (fighterId, skillKey) => {
+        const cm = this.props.combatManager;
+        const current = this.state.queuedSkillMap[fighterId];
+        const newKey = current === skillKey ? null : skillKey;
+
+        // Persist to the combatants object so the AI can read it
+        if (cm && cm.combatants && cm.combatants[fighterId]) {
+            cm.combatants[fighterId].queuedSkill = newKey;
+        }
+
+        this.setState(prev => ({
+            queuedSkillMap: { ...prev.queuedSkillMap, [fighterId]: newKey }
+        }));
+    }
+
+
 
     // Ensure each wizard combatant has at least 3 magic missile spells in their specialActions
     ensureWizardSpells = (battleData) => {
@@ -2057,7 +2113,133 @@ class MonsterBattle extends React.Component {
             hoveredGlyphTile: val ? val.type : null
         })
     }
+
+    // ── Acid Bomb: activate targeting mode ──────────────────────────────────
+    fireAcidBomb = (bombItem) => {
+        if (this.state.acidBombMode) {
+            // Toggle off if already in targeting mode
+            this.setState({ acidBombMode: false, acidBombItem: null });
+            return;
+        }
+        this.setState({ acidBombMode: true, acidBombItem: bombItem });
+    }
+
+    // ── Acid Bomb: called when player clicks a combat tile in acidBombMode ──
+    handleAcidBombPlacement = (tile) => {
+        const { acidBombItem } = this.state;
+        if (!acidBombItem) return;
+
+        // Exit targeting mode immediately
+        this.setState({ acidBombMode: false, acidBombItem: null, acidBombPlacedAt: { x: tile.x, y: tile.y } });
+
+        // Consume the bomb from the Ranger's specialActions (in the meta / crewManager)
+        try {
+            const meta = getMeta ? getMeta() : null;
+            if (meta && meta.crew) {
+                meta.crew.forEach(m => {
+                    if (!m || !m.specialActions) return;
+                    const bombIdx = m.specialActions.findIndex(a => a && a.type === 'acid_bomb' && a.available);
+                    if (bombIdx >= 0) {
+                        m.specialActions.splice(bombIdx, 1);
+                    }
+                });
+                if (typeof storeMeta === 'function') storeMeta(meta);
+            }
+        } catch (e) {}
+
+        // Find Ranger and shoot arrow at the bomb immediately
+        const battleData = this.state.battleData || {};
+        const rangerUnit = Object.values(battleData).find(u => u && !u.dead && (u.type === 'ranger' || u.image === 'ranger'));
+        if (rangerUnit && rangerUnit.coordinates && this._animManagerRedux) {
+            this._animManagerRedux.triggerAbility(
+                rangerUnit.coordinates,
+                { x: tile.x, y: tile.y },
+                'loose',
+                false,
+                null,
+                rangerUnit.id,
+                'poison'
+            );
+        }
+
+        // Detonate when the projectile reaches its tile (700ms)
+        setTimeout(() => {
+            this.setState({ acidBombPlacedAt: null, acidBombExploding: { x: tile.x, y: tile.y } });
+
+            // Apply poison and damage to all enemy units within 1 tile (Manhattan distance <= 1)
+            try {
+                const cm = this.props.combatManager;
+                if (cm && cm.combatants) {
+                    const blastDmg = 15;
+                    Object.values(cm.combatants).forEach(unit => {
+                        if (!unit || unit.dead || unit.team !== 'enemy') return;
+                        
+                        // Check if any tile occupied by the unit is adjacent to the bomb (Manhattan distance <= 1)
+                        const occupied = (Array.isArray(unit.occupiedCoords) && unit.occupiedCoords.length > 0)
+                            ? unit.occupiedCoords
+                            : (unit.coordinates ? [unit.coordinates] : []);
+
+                        const isInRadius = occupied.some(coord => {
+                            if (!coord) return false;
+                            const dist = Math.abs(coord.x - tile.x) + Math.abs(coord.y - tile.y);
+                            return dist <= 1;
+                        });
+
+                        if (isInRadius) {
+                            // Apply immediate damage
+                            unit.hp = Math.max(0, unit.hp - blastDmg);
+                            
+                            // Initialize and push damage indicator
+                            unit.damageIndicators = unit.damageIndicators || [];
+                            unit.damageIndicators.push({
+                                id: Date.now() + Math.random(),
+                                value: `-${blastDmg}`,
+                                source: 'Acid Bomb',
+                                type: 'damage'
+                            });
+
+                            // Apply poison status effect
+                            unit.poison = true;
+                            unit.poisonRounds = 8;
+                            if (typeof cm._applyDebuff === 'function') {
+                                cm._applyDebuff(unit, { decrease_stats: { stats: [{ stat: 'atk', amount: 3 }] } }, 'poison', 8);
+                            }
+
+                            if (typeof cm.appendCombatLog === 'function') {
+                                const logName = typeof cm.getCombatantLogName === 'function'
+                                    ? cm.getCombatantLogName(unit) : (unit.name || 'Enemy');
+                                cm.appendCombatLog(`💥 Acid bomb explodes! ${logName} takes ${blastDmg} acid damage and is poisoned for 8 rounds!`);
+                            }
+
+                            // Handle unit death if hp reaches 0
+                            if (unit.hp <= 0) {
+                                if (typeof cm.targetKilled === 'function') {
+                                    cm.targetKilled(unit);
+                                } else {
+                                    unit.dead = true;
+                                }
+                            }
+                        }
+                    });
+
+                    // Force refresh combat UI with updated combatants
+                    if (typeof cm.updateData === 'function') {
+                        cm.updateData(JSON.parse(JSON.stringify(cm.combatants)));
+                    }
+                }
+            } catch (e) {
+                console.warn("Acid bomb detonation update failed:", e);
+            }
+
+            // Clear explosion animation after 2s
+            setTimeout(() => {
+                this.setState({ acidBombExploding: null });
+            }, 2000);
+        }, 700);
+    }
+
     portraitHovered = (id) => {
+
         this.setState({ portraitHoveredId: id })
     }
     getManualMovementArc = (fighter) => {
@@ -2332,7 +2514,7 @@ class MonsterBattle extends React.Component {
         const cooldownRemainingAngle = `${Math.max(0, Math.min(360, (1 - (cooldownElapsedPct / 100)) * 360))}deg`;
 
         return (
-            <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''}`}>
+            <div className={`mb-board ${this.state.showCrosshair ? 'show-crosshair' : ''} ${this.state.acidBombMode ? 'acid-bomb-mode' : ''}`}>
                 {/* Monster name in upper left */}
                 <div style={{ position: 'absolute', top: -35, left: 20, color: 'white', fontSize: '18px', zIndex: 1000 }}>
                     {(() => {
@@ -2578,7 +2760,8 @@ class MonsterBattle extends React.Component {
                                                                 name: itemKey.replaceAll('_', ' '),
                                                                 icon: 'sould_shards'
                                                             } : this.props.inventoryManager.allItems[itemKey];
-                                                            const iconSrc = itemDef?.icon ? images[itemDef.icon] : null;
+                                                            const rawIcon = itemDef?.icon ? images[itemDef.icon] : null;
+                                                            const iconSrc = rawIcon?.default || rawIcon || null;
                                                             const displayName = itemDef?.name || itemKey.replaceAll('_', ' ');
                                                             return (
                                                                 <div key={`item-${idx}`} className="item-spoil-row">
@@ -2594,7 +2777,8 @@ class MonsterBattle extends React.Component {
                                                         this.state.stolenItems.map((entry, idx) => {
                                                             const itemName = typeof entry === 'string' ? entry : entry?.itemName;
                                                             const itemIconKey = typeof entry === 'string' ? null : entry?.itemIconKey;
-                                                            const iconSrc = (itemIconKey && images[itemIconKey]) ? images[itemIconKey] : images.goblin_portrait;
+                                                            const rawStolen = (itemIconKey && images[itemIconKey]) ? images[itemIconKey] : images.goblin_portrait;
+                                                            const iconSrc = rawStolen?.default || rawStolen;
                                                             return (
                                                                 <div key={`stolen-${idx}`} className="item-spoil-row stolen">
                                                                     <div className="item-icon-wrapper stolen">
@@ -2857,16 +3041,22 @@ class MonsterBattle extends React.Component {
                                     ? ' combat-tile--flash-red'
                                     : ' combat-tile--flash-yellow';
                             }
+                            const isAcidBombTarget = this.state.acidBombMode;
+                            const isBombPlaced = this.state.acidBombPlacedAt && this.state.acidBombPlacedAt.x === t.x && this.state.acidBombPlacedAt.y === t.y;
+                            const isExploding = this.state.acidBombExploding && this.state.acidBombExploding.x === t.x && this.state.acidBombExploding.y === t.y;
                             return (
                                 <div
                                     key={i}
                                     className={tileClassName}
                                     onDragOver={(event) => this.onDragOver(event, i)}
                                     onDrop={() => { this.onDrop(i) }}
+                                    onClick={isAcidBombTarget ? () => this.handleAcidBombPlacement(t) : undefined}
                                     style={{
                                         border: isDragTarget
                                             ? (dragEnemy ? '2px solid rgba(231, 76, 60, 0.9)' : '2px solid rgba(255, 183, 3, 0.8)')
-                                            : isSelectedFighter
+                                            : isAcidBombTarget
+                                                ? '1px solid rgba(122, 255, 54, 0.4)'
+                                                : isSelectedFighter
                                                 ? '1px dashed rgba(255, 183, 3, 0.25)'
                                                 : isSelectedMonster
                                                     ? '1px dashed rgba(255, 84, 0, 0.25)'
@@ -2892,6 +3082,16 @@ class MonsterBattle extends React.Component {
                                     <div style={{ position: 'absolute', top: '5px', left: '5px', fontSize: '9px', color: 'rgba(255,255,255,0.15)', pointerEvents: 'none' }}>
                                         {t.x},{t.y}
                                     </div>
+                                    {/* Acid Bomb placed icon */}
+                                    {isBombPlaced && (
+                                        <div className="acid-bomb-placed-icon" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none', zIndex: 25, fontSize: '22px', animation: 'acidBombDrop 0.4s ease' }}>
+                                            <span role="img" aria-label="acid bomb">💣</span>
+                                        </div>
+                                    )}
+                                    {/* Acid rain explosion */}
+                                    {isExploding && (
+                                        <div className="acid-rain-explosion" style={{ position: 'absolute', inset: '-50%', pointerEvents: 'none', zIndex: 26 }} />
+                                    )}
                                     {this.state.ghostPortraitMatrix[i] && <div className="ghost-portrait"
                                         style={{
                                             backgroundImage: "url(" + this.state.ghostPortraitMatrix[i] + ")"
@@ -3388,109 +3588,229 @@ class MonsterBattle extends React.Component {
 
                             {/* MIDDLE COLUMN: ability cooldown grid */}
                             <div className="redux-abilities-col">
-                                <div className="interaction-tile-container">
-                                    {liveSelectedFighter && (() => {
-                                        const rawSpecials = [
-                                            ...(liveSelectedFighter.specials || []),
-                                            ...(liveSelectedFighter.attacks || []),
-                                            ...(liveSelectedFighter.specialActions?.filter(a => a.type === 'glyph' && a.available) || [])
-                                        ];
-                                        const seenKeys = new Set();
-                                        const cm = this.props.combatManager;
-                                        return rawSpecials.filter(entry => {
-                                            const key = typeof entry === 'string' ? entry : (entry?.key || entry?.name || '');
-                                            const nk = String(key).trim().toLowerCase().replaceAll(' ', '_');
-                                            if (!nk || seenKeys.has(nk)) return false;
-                                            seenKeys.add(nk);
-                                            return true;
-                                        }).map((a, i) => {
-                                            const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
-                                            const normalizedSourceKey = String(sourceKey).toLowerCase().replaceAll(' ', '_');
-                                            const canonicalSpecial = cm
-                                                ? ((cm.specialsMatrix && (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[normalizedSourceKey])) ||
-                                                    (cm.attacksMatrix && (cm.attacksMatrix[sourceKey] || cm.attacksMatrix[normalizedSourceKey])) || {})
-                                                : {};
-                                            const runtimeSpecial = (cm?.resolveSpecial && liveSelectedFighter)
-                                                ? (cm.resolveSpecial(liveSelectedFighter, sourceKey) || {})
-                                                : {};
-                                            const spec = { ...canonicalSpecial, ...(typeof a === 'object' ? a : {}), ...runtimeSpecial };
-                                            if (!spec.name) {
-                                                spec.name = String(sourceKey).replaceAll('_', ' ');
-                                            }
-                                            const iconCandidate = spec.iconUrl || spec.icon;
-                                            const resolveIcon = (candidate) => {
-                                                if (!candidate) return '';
-                                                if (typeof candidate === 'string') {
-                                                    if (candidate.trim().startsWith('url(')) return candidate.replace(/^url\((.*)?\)$/i, '$1').replace(/^['"]|['"]$/g, '');
-                                                    const mapped = images[candidate.trim()];
-                                                    if (mapped) return mapped.default || mapped;
-                                                    return candidate;
-                                                }
-                                                if (typeof candidate === 'object' && candidate.default) return candidate.default;
-                                                return '';
-                                            };
-                                            const iconUrl = resolveIcon(iconCandidate);
-                                            const remainingRounds = liveSelectedFighter?.cooldowns?.[spec.id] || liveSelectedFighter?.cooldowns?.[sourceKey] || liveSelectedFighter?.cooldowns?.[normalizedSourceKey] || 0;
-                                            const baseCd = spec.cooldown || 5;
-                                            const ratio = this.props.combatManager?.roundTimeRemainingRatio ?? 1.0;
-                                            const smoothRemaining = remainingRounds > 0 ? Math.max(0, remainingRounds - (1 - ratio)) : 0;
-                                            const cooldownPct = smoothRemaining > 0 ? (smoothRemaining / baseCd) * 100 : 0;
-                                            const isReady = cooldownPct === 0;
-                                            return (
-                                                <div key={i} className="interaction-tile-wrapper">
+                                {liveSelectedFighter && (() => {
+                                    const cm = this.props.combatManager;
+                                    const fighterId = liveSelectedFighter.id;
+
+                                    // ── Icon resolution helper ─────────────────────────────────
+                                    const resolveIcon = (candidate) => {
+                                        if (!candidate) return '';
+                                        if (typeof candidate === 'string') {
+                                            if (candidate.trim().startsWith('url(')) return candidate.replace(/^url\((.*)?\/\)$/i, '$1').replace(/^['"]|['"]$/g, '');
+                                            const mapped = images[candidate.trim()];
+                                            if (mapped) return mapped.default || mapped;
+                                            return candidate;
+                                        }
+                                        if (typeof candidate === 'object' && candidate.default) return candidate.default;
+                                        return '';
+                                    };
+
+                                    // ── Spec resolution helper ─────────────────────────────────
+                                    const resolveSpec = (a) => {
+                                        const sourceKey = typeof a === 'string' ? a : (a?.key || a?.name || '');
+                                        const normalizedKey = String(sourceKey).toLowerCase().replaceAll(' ', '_');
+                                        const canonical = cm
+                                            ? ((cm.specialsMatrix && (cm.specialsMatrix[sourceKey] || cm.specialsMatrix[normalizedKey])) ||
+                                                (cm.attacksMatrix && (cm.attacksMatrix[sourceKey] || cm.attacksMatrix[normalizedKey])) || {})
+                                            : {};
+                                        const runtime = (cm?.resolveSpecial && liveSelectedFighter)
+                                            ? (cm.resolveSpecial(liveSelectedFighter, sourceKey) || {})
+                                            : {};
+                                        const spec = { ...canonical, ...(typeof a === 'object' ? a : {}), ...runtime };
+                                        if (!spec.name) spec.name = String(sourceKey).replaceAll('_', ' ');
+                                        return { spec, sourceKey, normalizedKey };
+                                    };
+
+                                    // ── Build consumable list from specialActions ──────────────
+                                    const consumableTypes = new Set(['glyph', 'acid_bomb', 'spell']);
+                                    const consumableActions = (liveSelectedFighter.specialActions || []).filter(
+                                        a => a && consumableTypes.has(a.type) && a.available
+                                    );
+
+                                    // ── Build regular skills (specials + attacks, de-duped, no consumables) ──
+                                    const allSpecials = [
+                                        ...(liveSelectedFighter.specials || []),
+                                        ...(liveSelectedFighter.attacks || []),
+                                    ];
+                                    const seenKeys = new Set();
+                                    const regularEntries = allSpecials.filter(entry => {
+                                        const key = typeof entry === 'string' ? entry : (entry?.key || entry?.name || '');
+                                        const nk = String(key).trim().toLowerCase().replaceAll(' ', '_');
+                                        if (!nk || seenKeys.has(nk)) return false;
+                                        seenKeys.add(nk);
+                                        return true;
+                                    });
+
+                                    const hoveredKey = this.state.hoveredAbilityKey;
+                                    const queuedKey = this.state.queuedSkillMap[fighterId] || null;
+
+                                    // ── Cooldown helper ────────────────────────────────────────
+                                    const getCooldownPct = (spec, sourceKey, normalizedKey) => {
+                                        const remaining = liveSelectedFighter?.cooldowns?.[spec.id]
+                                            || liveSelectedFighter?.cooldowns?.[sourceKey]
+                                            || liveSelectedFighter?.cooldowns?.[normalizedKey] || 0;
+                                        if (remaining <= 0) return { pct: 0, smooth: 0 };
+                                        const baseCd = spec.cooldown || 5;
+                                        const ratio = cm?.roundTimeRemainingRatio ?? 1.0;
+                                        const smooth = Math.max(0, remaining - (1 - ratio));
+                                        return { pct: (smooth / baseCd) * 100, smooth };
+                                    };
+
+                                    // ── Cooldown SVG overlay ───────────────────────────────────
+                                    const CooldownSvg = ({ pct }) => pct <= 0 ? null : (
+                                        <svg
+                                            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', transform: 'rotate(-90deg)', pointerEvents: 'none', zIndex: 10 }}
+                                            viewBox="0 0 20 20"
+                                        >
+                                            <circle cx="10" cy="10" r="10" fill="none" stroke="rgba(0,0,0,0.75)" strokeWidth="20" strokeDasharray="62.83" strokeDashoffset={(1 - (pct / 100)) * 62.83} />
+                                        </svg>
+                                    );
+
+                                    // ─────────────────────────────────────────────────────────────
+                                    // REGULAR SKILL TILE
+                                    // ─────────────────────────────────────────────────────────────
+                                    const renderRegularTile = (a, i) => {
+                                        const { spec, sourceKey, normalizedKey } = resolveSpec(a);
+                                        const iconUrl = resolveIcon(spec.iconUrl || spec.icon);
+                                        const { pct: cooldownPct, smooth: smoothRemaining } = getCooldownPct(spec, sourceKey, normalizedKey);
+                                        const isReady = cooldownPct === 0;
+                                        const isQueued = queuedKey === normalizedKey || queuedKey === sourceKey;
+                                        const isHovered = hoveredKey === normalizedKey;
+
+                                        return (
+                                            <div
+                                                key={`reg-${i}`}
+                                                className="skill-tile-outer"
+                                                onMouseEnter={() => this.setState({ hoveredAbilityKey: normalizedKey })}
+                                                onMouseLeave={() => this.setState({ hoveredAbilityKey: null })}
+                                            >
+                                                {/* Label — always takes 18px; visible on hover. Click = popup */}
+                                                <div
+                                                    className={`skill-hover-label${isHovered ? ' visible' : ''}`}
+                                                    onClick={(e) => { e.stopPropagation(); this.openSkillPopup(spec); }}
+                                                >
+                                                    {spec.name || sourceKey}
+                                                </div>
+                                                {/* Icon wrapper */}
+                                                <div className="interaction-tile-wrapper">
                                                     <div
-                                                        className={`interaction-tile special ${isReady ? 'available' : ''}`}
+                                                        className={`interaction-tile special${isReady ? ' available' : ''}${isQueued ? ' queued' : ''}`}
                                                         style={{
                                                             backgroundImage: iconUrl ? `url("${encodeURI(String(iconUrl).replace(/^['"]|['"]$/g, ''))}")` : 'none',
                                                             cursor: 'pointer',
                                                             opacity: isReady ? 1 : 0.7,
                                                         }}
-                                                        title={spec.name || sourceKey}
-                                                        onClick={() => {
-                                                            const initiallyPaused = !!(this.props.paused || this.props.combatManager?.combatPaused);
-                                                            this.setState({
-                                                                activeSkillPopup: spec,
-                                                                popupOpenedWhilePaused: initiallyPaused
-                                                            });
-                                                            if (!initiallyPaused && this.props.combatManager && typeof this.props.combatManager.pauseCombat === 'function') {
-                                                                this.props.combatManager.pauseCombat(true);
-                                                            }
-                                                        }}
+                                                        onClick={() => this.handleQueueSkill(fighterId, normalizedKey)}
                                                     />
-                                                    {cooldownPct > 0 && (
-                                                        <svg
-                                                            style={{
-                                                                position: 'absolute',
-                                                                top: 0,
-                                                                left: 0,
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                transform: 'rotate(-90deg)',
-                                                                pointerEvents: 'none',
-                                                                zIndex: 10
-                                                            }}
-                                                            viewBox="0 0 20 20"
-                                                        >
-                                                            <circle
-                                                                cx="10"
-                                                                cy="10"
-                                                                r="10"
-                                                                fill="none"
-                                                                stroke="rgba(0, 0, 0, 0.75)"
-                                                                strokeWidth="20"
-                                                                strokeDasharray="62.83"
-                                                                strokeDashoffset={(1 - (cooldownPct / 100)) * 62.83}
-                                                            />
-                                                        </svg>
-                                                    )}
+                                                    <CooldownSvg pct={cooldownPct} />
                                                     {!isReady && (
                                                         <div className="redux-cd-badge">{Math.ceil(smoothRemaining)}</div>
                                                     )}
                                                 </div>
-                                            );
-                                        });
-                                    })()}
-                                </div>
+                                            </div>
+                                        );
+                                    };
+
+                                    // ─────────────────────────────────────────────────────────────
+                                    // CONSUMABLE TILE (glyph, acid_bomb, legacy spell)
+                                    // ─────────────────────────────────────────────────────────────
+                                    const renderConsumableTile = (a, idx) => {
+                                        // Resolve icon
+                                        const rawIcon = a.iconUrl || (a.type === 'acid_bomb' ? (images['ranger_acid_bomb'] || '') : '') || (a.type === 'glyph' ? (images[`${a.glyphTier || 'minor'}_glyph`] || images['glyph_inverted'] || '') : '');
+                                        let resolvedIconUrl = '';
+                                        if (rawIcon) {
+                                            if (typeof rawIcon === 'string') {
+                                                const mapped = images[rawIcon.trim()];
+                                                resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                            } else if (typeof rawIcon === 'object') {
+                                                resolvedIconUrl = rawIcon.default || String(rawIcon);
+                                            }
+                                        }
+                                        if (!resolvedIconUrl && typeof rawIcon === 'string' && rawIcon.startsWith('data:')) {
+                                            resolvedIconUrl = rawIcon;
+                                        }
+
+                                        const name = a.name || (a.type === 'acid_bomb' ? 'Acid Bomb' : a.type === 'glyph' ? `${a.glyphTier || 'Minor'} Glyph` : 'Spell');
+                                        const isAcidActive = a.type === 'acid_bomb' && this.state.acidBombMode;
+                                        const consumableKey = `consumable-${a.type}-${a.glyphTier || a.subtype || idx}`;
+                                        const isHovered = hoveredKey === consumableKey;
+
+                                        // Determine fire action based on type
+                                        const fireConsumable = () => {
+                                            if (a.type === 'acid_bomb') {
+                                                this.fireAcidBomb(a);
+                                            } else if (a.type === 'glyph') {
+                                                this.fireGlyph(a);
+                                            } else if (a.type === 'spell') {
+                                                this.fireSpell(a);
+                                            }
+                                        };
+
+                                        return (
+                                            <div
+                                                key={consumableKey}
+                                                className="skill-tile-outer"
+                                                onMouseEnter={() => this.setState({ hoveredAbilityKey: consumableKey })}
+                                                onMouseLeave={() => this.setState({ hoveredAbilityKey: null })}
+                                            >
+                                                {/* Label — click = popup */}
+                                                <div
+                                                    className={`skill-hover-label${isHovered ? ' visible' : ''}`}
+                                                    onClick={(e) => { e.stopPropagation(); this.openSkillPopup({ name, desc: a.desc || a.explanation || '', icon: resolvedIconUrl, type: a.type, cooldown: a.cooldown }); }}
+                                                >
+                                                    {name}
+                                                </div>
+                                                {/* Icon wrapper — click = fire */}
+                                                <div className="interaction-tile-wrapper" style={{ position: 'relative' }}>
+                                                    <div
+                                                        className={`interaction-tile special consumable${isAcidActive ? ' acid-bomb-active' : ''}`}
+                                                        style={{
+                                                            backgroundImage: resolvedIconUrl ? `url("${encodeURI(String(resolvedIconUrl).replace(/^['"]|['"]$/g, ''))}"), radial-gradient(white 0%, black 60%)` : 'radial-gradient(lime 0%, black 60%)',
+                                                            cursor: a.type === 'acid_bomb' ? 'crosshair' : 'pointer',
+                                                            outline: isAcidActive ? '2px solid #7aff36' : 'none',
+                                                            boxShadow: isAcidActive ? '0 0 8px #7aff36' : 'none'
+                                                        }}
+                                                        onClick={fireConsumable}
+                                                    />
+                                                    {/* Stack count badge */}
+                                                    {a.count > 1 && (
+                                                        <div className="stack-badge small">{a.count > 5 ? '5+' : ['', 'I', 'II', 'III', 'IV', 'V'][a.count]}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    };
+
+                                    // Group consumables by type/tier and pick representative + count
+                                    const consumableGroups = {};
+                                    consumableActions.forEach(a => {
+                                        const gKey = a.type === 'glyph' ? `glyph-${a.glyphTier || 'minor'}` : a.type === 'acid_bomb' ? 'acid_bomb' : `spell-${a.subtype || 'generic'}`;
+                                        if (!consumableGroups[gKey]) consumableGroups[gKey] = [];
+                                        consumableGroups[gKey].push(a);
+                                    });
+                                    const consumableTiles = Object.values(consumableGroups).map((group, idx) => {
+                                        const rep = { ...group[0], count: group.length };
+                                        return renderConsumableTile(rep, idx);
+                                    });
+
+                                    return (
+                                        <>
+                                            {/* Regular skills — wrapping row */}
+                                            <div className="redux-regular-skills-wrap">
+                                                {regularEntries.map(renderRegularTile)}
+                                            </div>
+                                            {/* Consumable strip — bottom, only if any consumables */}
+                                            {consumableTiles.length > 0 && (
+                                                <>
+                                                    <div className="redux-consumable-divider" />
+                                                    <div className="redux-consumable-strip">
+                                                        {consumableTiles}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </>
+                                    );
+                                })()}
                             </div>
 
                             {/* RIGHT COLUMN: event log */}
@@ -3741,105 +4061,140 @@ class MonsterBattle extends React.Component {
                                     })()}
                                 </div>
                             </div>
-                            <div className="spells-col" style={{ width: this.state.glyphTrayExpanded ? '100px' : '0px' }}>
-                                <div className="interaction-header">Spells</div>
-                                <div className="interaction-tooltip">{this.state.hoveredSpellTile}</div>
-                                <div className="interaction-tile-container">
-                                    {(() => {
-                                        const specialActions = this.state.selectedFighter?.specialActions || [];
+                            {(() => {
+                                const specialActions = this.state.selectedFighter?.specialActions || [];
+                                const legacySpells = specialActions.filter(a => a && a.type === 'spell' && a.available);
+                                const readyGlyphs = specialActions.filter(a => a && a.type === 'glyph' && a.available);
+                                const readyAcidBombs = specialActions.filter(a => a && a.type === 'acid_bomb' && a.available);
+                                const hasSpells = legacySpells.length > 0 || readyGlyphs.length > 0 || readyAcidBombs.length > 0;
+                                const isExpanded = this.state.glyphTrayExpanded || hasSpells;
 
-                                        // Legacy spell entries (type:'spell', e.g. old magic missile)
-                                        const legacySpells = specialActions.filter(a => a.type === 'spell' && a.available);
-                                        // New tiered glyphs (type:'glyph', available)
-                                        const readyGlyphs = specialActions.filter(a => a.type === 'glyph' && a.available);
+                                return (
+                                    <div className="spells-col" style={{ width: isExpanded ? '100px' : '0px', border: isExpanded ? '' : 'none' }}>
+                                        <div className="interaction-header">Spells</div>
+                                        <div className="interaction-tooltip">{this.state.hoveredSpellTile}</div>
+                                        <div className="interaction-tile-container">
+                                            {hasSpells && (() => {
+                                                const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V'];
 
-                                        if (!legacySpells.length && !readyGlyphs.length) return null;
+                                                // ── Legacy spell tiles ──────────────────────────────────────
+                                                const legacyGrouped = {};
+                                                legacySpells.forEach(spellUnit => {
+                                                    if (!spellUnit) return;
+                                                    const spellType = spellUnit.subtype;
+                                                    if (!legacyGrouped[spellType]) legacyGrouped[spellType] = [];
+                                                    legacyGrouped[spellType].push(spellUnit);
+                                                });
+                                                const legacyTiles = Object.keys(legacyGrouped).map((type, idx) => {
+                                                    const group = legacyGrouped[type];
+                                                    const spellUnit = group[0];
+                                                    const count = group.length;
+                                                    const rawIcon = spellUnit.iconUrl || spellUnit.icon;
+                                                    let resolvedIconUrl = '';
+                                                    if (rawIcon) {
+                                                        if (typeof rawIcon === 'string') {
+                                                            const mapped = images[rawIcon.trim()];
+                                                            resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                                        } else if (typeof rawIcon === 'object') {
+                                                            resolvedIconUrl = rawIcon.default || rawIcon;
+                                                        }
+                                                    }
+                                                    return (
+                                                        <div key={`legacy-${type}`} className='interaction-tile-wrapper' style={{ position: 'relative' }}>
+                                                            <div
+                                                                style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
+                                                                className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
+                                                                onClick={() => this.fireSpell(spellUnit)}
+                                                                onMouseEnter={() => this.spellTileHovered(spellUnit)}
+                                                                onMouseLeave={() => this.spellTileHovered(null)}>
+                                                            </div>
+                                                            {count > 0 && (
+                                                                <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                });
 
-                                        const romanNumerals = ['', 'I', 'II', 'III', 'IV', 'V'];
+                                                // ── New tiered glyph tiles ──────────────────────────────
+                                                const glyphGrouped = {};
+                                                readyGlyphs.forEach(g => {
+                                                    const tier = g.glyphTier || 'minor';
+                                                    if (!glyphGrouped[tier]) glyphGrouped[tier] = [];
+                                                    glyphGrouped[tier].push(g);
+                                                });
+                                                const glyphTiles = Object.keys(glyphGrouped).map((tier, idx) => {
+                                                    const group = glyphGrouped[tier];
+                                                    const representative = group[0];
+                                                    const count = group.length;
+                                                    const rawIcon = representative.iconUrl || images[`${tier}_glyph`] || images['glyph_inverted'] || '';
+                                                    let resolvedIconUrl = '';
+                                                    if (rawIcon) {
+                                                        if (typeof rawIcon === 'string') {
+                                                            const mapped = images[rawIcon.trim()];
+                                                            resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                                        } else if (typeof rawIcon === 'object') {
+                                                            resolvedIconUrl = rawIcon.default || String(rawIcon);
+                                                        }
+                                                    }
+                                                    const spellNames = (representative.spellDefs || []).map(s => s.name).join(', ');
+                                                    const tooltip = `${representative.name}${spellNames ? ': ' + spellNames : ''}`;
+                                                    return (
+                                                        <div key={`glyph-${tier}`} className='interaction-tile-wrapper' style={{ position: 'relative' }}>
+                                                            <div
+                                                                style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
+                                                                className={`interaction-tile special glyph-tile glyph-tile--${tier}`}
+                                                                onClick={() => this.fireGlyph(representative)}
+                                                                onMouseEnter={() => this.spellTileHovered({ subtype: tier, name: tooltip })}
+                                                                onMouseLeave={() => this.spellTileHovered(null)}
+                                                                title={tooltip}>
+                                                            </div>
+                                                            {count > 0 && (
+                                                                <div className={`stack-badge small glyph-badge--${tier}`}>{romanNumerals[Math.min(count, 5)]}</div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                });
 
-                                        // ── Legacy spell tiles ──────────────────────────────────────
-                                        const legacyGrouped = {};
-                                        legacySpells.forEach(spellUnit => {
-                                            if (!spellUnit) return;
-                                            const spellType = spellUnit.subtype;
-                                            if (!legacyGrouped[spellType]) legacyGrouped[spellType] = [];
-                                            legacyGrouped[spellType].push(spellUnit);
-                                        });
-                                        const legacyTiles = Object.keys(legacyGrouped).map((type, idx) => {
-                                            const group = legacyGrouped[type];
-                                            const spellUnit = group[0];
-                                            const count = group.length;
-                                            const rawIcon = spellUnit.iconUrl || spellUnit.icon;
-                                            let resolvedIconUrl = '';
-                                            if (rawIcon) {
-                                                if (typeof rawIcon === 'string') {
-                                                    const mapped = images[rawIcon.trim()];
-                                                    resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
-                                                } else if (typeof rawIcon === 'object') {
-                                                    resolvedIconUrl = rawIcon.default || rawIcon;
-                                                }
-                                            }
-                                            return (
-                                                <div key={`legacy-${type}`} className='interaction-tile-wrapper' style={{ position: 'relative' }}>
-                                                    <div
-                                                        style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
-                                                        className={`interaction-tile special ${spellUnit.selected ? 'selected' : ''}`}
-                                                        onClick={() => this.fireSpell(spellUnit)}
-                                                        onMouseEnter={() => this.spellTileHovered(spellUnit)}
-                                                        onMouseLeave={() => this.spellTileHovered(null)}>
-                                                    </div>
-                                                    {count > 0 && (
-                                                        <div className={`stack-badge small`}>{romanNumerals[Math.min(count, 5)]}</div>
-                                                    )}
-                                                </div>
-                                            );
-                                        });
+                                                // ── Acid Bomb tiles (Ranger dungeon skill) ──────────────────────────
+                                                const acidBombTiles = readyAcidBombs.length > 0 ? (() => {
+                                                    const bombCount = readyAcidBombs.length;
+                                                    const bombIcon = readyAcidBombs[0].iconUrl || images['ranger_acid_bomb'] || images['wizard_acid_blast'] || '';
+                                                    let resolvedBombUrl = '';
+                                                    if (bombIcon) {
+                                                        if (typeof bombIcon === 'string') {
+                                                            const mapped = images[bombIcon.trim()];
+                                                            resolvedBombUrl = mapped ? (mapped.default || mapped) : bombIcon;
+                                                        } else if (typeof bombIcon === 'object') {
+                                                            resolvedBombUrl = bombIcon.default || String(bombIcon);
+                                                        }
+                                                    }
+                                                    if (!resolvedBombUrl && typeof bombIcon === 'string' && bombIcon.startsWith('data:')) {
+                                                        resolvedBombUrl = bombIcon;
+                                                    }
+                                                    const isActive = this.state.acidBombMode;
+                                                    return [(
+                                                        <div key="acid-bomb" className='interaction-tile-wrapper' style={{ position: 'relative' }}>
+                                                            <div
+                                                                style={{ backgroundImage: resolvedBombUrl ? `url("${encodeURI(String(resolvedBombUrl).replace(/^['"]|['"]$/g, ''))}"), radial-gradient(white 0%, black 60%)` : 'radial-gradient(lime 0%, black 60%)', cursor: 'crosshair', outline: isActive ? '2px solid #7aff36' : 'none', boxShadow: isActive ? '0 0 8px #7aff36' : 'none' }}
+                                                                className={`interaction-tile special acid-bomb-tile ${isActive ? 'selected acid-bomb-active' : ''}`}
+                                                                onClick={() => this.fireAcidBomb(readyAcidBombs[0])}
+                                                                onMouseEnter={() => this.spellTileHovered({ subtype: 'acid_bomb', name: 'Acid Bomb – Click to target a tile' })}
+                                                                onMouseLeave={() => this.spellTileHovered(null)}
+                                                                title="Acid Bomb – Click to target a tile">
+                                                            </div>
+                                                            {bombCount > 0 && (
+                                                                <div className="stack-badge small" style={{ background: '#3b8a1e', color: '#d0f0a0' }}>{romanNumerals[Math.min(bombCount, 5)]}</div>
+                                                            )}
+                                                        </div>
+                                                    )];
+                                                })() : [];
 
-                                        // ── New tiered glyph tiles ──────────────────────────────
-                                        // Group by tier so each tier gets one tile with a count badge
-                                        const glyphGrouped = {};
-                                        readyGlyphs.forEach(g => {
-                                            const tier = g.glyphTier || 'minor';
-                                            if (!glyphGrouped[tier]) glyphGrouped[tier] = [];
-                                            glyphGrouped[tier].push(g);
-                                        });
-                                        const glyphTiles = Object.keys(glyphGrouped).map((tier, idx) => {
-                                            const group = glyphGrouped[tier];
-                                            const representative = group[0];
-                                            const count = group.length;
-                                            const rawIcon = representative.iconUrl || images[`${tier}_glyph`] || images['glyph_inverted'] || '';
-                                            let resolvedIconUrl = '';
-                                            if (rawIcon) {
-                                                if (typeof rawIcon === 'string') {
-                                                    const mapped = images[rawIcon.trim()];
-                                                    resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
-                                                } else if (typeof rawIcon === 'object') {
-                                                    resolvedIconUrl = rawIcon.default || String(rawIcon);
-                                                }
-                                            }
-                                            const spellNames = (representative.spellDefs || []).map(s => s.name).join(', ');
-                                            const tooltip = `${representative.name}${spellNames ? ': ' + spellNames : ''}`;
-                                            return (
-                                                <div key={`glyph-${tier}`} className='interaction-tile-wrapper' style={{ position: 'relative' }}>
-                                                    <div
-                                                        style={{ backgroundImage: resolvedIconUrl ? `url(${resolvedIconUrl}), radial-gradient(white 0%, black 60%)` : 'none', cursor: 'pointer' }}
-                                                        className={`interaction-tile special glyph-tile glyph-tile--${tier}`}
-                                                        onClick={() => this.fireGlyph(representative)}
-                                                        onMouseEnter={() => this.spellTileHovered({ subtype: tier, name: tooltip })}
-                                                        onMouseLeave={() => this.spellTileHovered(null)}
-                                                        title={tooltip}>
-                                                    </div>
-                                                    {count > 0 && (
-                                                        <div className={`stack-badge small glyph-badge--${tier}`}>{romanNumerals[Math.min(count, 5)]}</div>
-                                                    )}
-                                                </div>
-                                            );
-                                        });
-
-                                        return [...legacyTiles, ...glyphTiles];
-                                    })()}
-                                </div>
-                            </div>
+                                                return [...legacyTiles, ...glyphTiles, ...acidBombTiles];
+                                            })()}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             <div className="attacks-col">
                                 <div className="interaction-header">Attacks</div>
                                 <div className="interaction-tooltip">{this.state.hoveredAttackTile}</div>

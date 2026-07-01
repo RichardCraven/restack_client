@@ -5952,6 +5952,42 @@
         cursor: crosshair !important;
     }
 
+    &.acid-bomb-mode {
+        cursor: crosshair !important;
+
+        .combat-tile {
+            cursor: crosshair !important;
+
+            &:hover {
+                background: rgba(122, 255, 54, 0.12) !important;
+            }
+        }
+    }
+
+    .acid-bomb-placed-icon {
+        animation: acidBombDrop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .acid-rain-explosion {
+        animation: acidRainBurst 2s ease-out forwards;
+        border-radius: 4px;
+        background: radial-gradient(circle, rgba(90, 255, 60, 0.85) 0%, rgba(40, 200, 20, 0.6) 40%, rgba(0, 140, 0, 0.0) 80%);
+        pointer-events: none;
+    }
+
+    @keyframes acidBombDrop {
+        0%   { transform: scale(0.3) translateY(-30px); opacity: 0; }
+        60%  { transform: scale(1.15) translateY(4px);  opacity: 1; }
+        100% { transform: scale(1.0) translateY(0);    opacity: 1; }
+    }
+
+    @keyframes acidRainBurst {
+        0%   { transform: scale(0.1); opacity: 1; }
+        30%  { transform: scale(1.4); opacity: 0.9; }
+        70%  { transform: scale(1.8); opacity: 0.55; }
+        100% { transform: scale(2.2); opacity: 0; }
+    }
+
     // COMBAT ANIMATIONS //
     .weapon-wrapper {
         position: absolute;
@@ -6276,34 +6312,92 @@
     display: flex;
     flex-direction: column;
 
-    .interaction-header {
-        height: 25px;
-        width: 100%;
-        color: white;
-        text-align: center;
-        border-bottom: 1px solid #ffffff5c;
-    }
-
-    .interaction-tile-container {
-        height: calc(100% - 26px);
-        width: 100%;
+    // ── Regular skills section (wrapping icon grid) ──────────────────────
+    .redux-regular-skills-wrap {
+        flex: 1 1 auto;
         display: flex;
         flex-direction: row;
         flex-wrap: wrap;
-        justify-content: space-evenly;
         align-content: flex-start;
+        padding: 6px 6px 4px 6px;
+        gap: 6px;
         overflow-y: auto;
-        padding: 8px;
-        gap: 8px;
         box-sizing: border-box;
     }
 
-    .interaction-tile-wrapper {
-        position: relative;
-        height: 40px;
-        width: 40px;
-        min-height: 40px;
+    // ── Consumable divider ───────────────────────────────────────────────
+    .redux-consumable-divider {
+        width: 100%;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.15);
         flex-shrink: 0;
+    }
+
+    // ── Consumable strip (bottom row) ────────────────────────────────────
+    .redux-consumable-strip {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: nowrap;
+        gap: 6px;
+        padding: 4px 8px 6px 8px;
+        box-sizing: border-box;
+        align-items: flex-end;
+        flex-shrink: 0;
+        background: rgba(0, 0, 0, 0.12);
+        min-height: 64px;
+    }
+
+    // ── Tile outer wrapper (label zone + icon) ───────────────────────────
+    // Always 58px tall: 18px label area + 40px tile icon
+    .skill-tile-outer {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        width: 40px;
+        flex-shrink: 0;
+        cursor: default;
+
+        // Hover label: always present (18px), invisible until parent hovered
+        .skill-hover-label {
+            height: 18px;
+            width: 100%;
+            font-size: 8px;
+            line-height: 18px;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: transparent;
+            cursor: pointer;
+            user-select: none;
+            border-radius: 3px 3px 0 0;
+            padding: 0 2px;
+            box-sizing: border-box;
+            transition: color 0.15s ease, background 0.1s ease;
+            letter-spacing: 0.2px;
+
+            &.visible {
+                color: rgba(255, 255, 255, 0.82);
+                background: rgba(0, 0, 0, 0.3);
+            }
+
+            &.visible:hover {
+                color: #ffdd60;
+                background: rgba(0, 0, 0, 0.5);
+                text-decoration: underline;
+                text-shadow: 0 0 5px rgba(255, 220, 60, 0.4);
+            }
+        }
+
+        // Icon tile wrapper (40×40)
+        .interaction-tile-wrapper {
+            position: relative;
+            height: 40px;
+            width: 40px;
+            min-height: 40px;
+            flex-shrink: 0;
+        }
     }
 
     .interaction-tile {
@@ -6315,12 +6409,18 @@
         background-color: transparent;
         background-size: 100% 100%;
         border: none;
+
+        // Queued state: gold pulsing outline
+        &.queued {
+            outline: 2px solid #ffdd60;
+            outline-offset: 0px;
+            animation: reduxQueuePulse 1.5s ease-in-out infinite;
+        }
     }
 
     .interaction-tile.read-only {
         cursor: pointer !important;
 
-        // Suppress the hover lift animation for read-only tiles
         &:hover {
             transform: none;
             box-shadow: none;
@@ -6328,6 +6428,14 @@
         }
     }
 }
+
+// Queued skill pulse animation
+@keyframes reduxQueuePulse {
+    0%, 100% { box-shadow: 0 0 5px rgba(255, 220, 60, 0.5); }
+    50%       { box-shadow: 0 0 13px rgba(255, 220, 60, 0.9), inset 0 0 4px rgba(255, 220, 60, 0.15); }
+}
+
+
 
 // Cooldown round badge on ability tiles
 .redux-cd-badge {
@@ -9858,5 +9966,69 @@
     50% {
         opacity: 0.2;
         box-shadow: 0 0 20px rgba(150, 230, 255, 0.6);
+    }
+}
+
+/* High Priest of the Basilisk custom animations */
+@keyframes sinisterPulse {
+    0% {
+        box-shadow: 0 0 10px rgba(220, 20, 60, 0.6), inset 0 0 5px rgba(220, 20, 60, 0.4);
+        filter: brightness(1) drop-shadow(0 0 2px rgba(220, 20, 60, 0.5));
+    }
+    100% {
+        box-shadow: 0 0 25px rgba(220, 20, 60, 1), inset 0 0 15px rgba(220, 20, 60, 0.8);
+        filter: brightness(0.8) drop-shadow(0 0 8px rgba(220, 20, 60, 0.9));
+    }
+}
+
+@keyframes scaleUpFadeOut {
+    0% {
+        transform: scale(0.8);
+        opacity: 0;
+    }
+    15% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1.4);
+        opacity: 0;
+    }
+}
+
+@keyframes implodeVortex {
+    0% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+}
+
+@keyframes explodeVortex {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    50% {
+        transform: translate(-50%, -50%) scale(1.2);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
+}
+
+@keyframes shatterBurst {
+    0% {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 1;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1.5);
+        opacity: 0;
     }
 }

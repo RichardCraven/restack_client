@@ -618,6 +618,10 @@ import blalok from '../assets/portraits/monsters/blalok.png'
 import shade from '../assets/portraits/monsters/shade.png'
 import high_priest_of_the_basilisk from '../assets/portraits/monsters/high_priest_of_the_basilisk.png'
 import high_priest_of_the_basilisk_portrait from '../assets/portraits/monsters/high_priest_of_the_basilisk.png'
+import void_rake from '../assets/icons/combat-icons/specials/monsters/high priest of the basilisk/void_rake.png'
+import eldritch_wind from '../assets/icons/combat-icons/specials/monsters/high priest of the basilisk/eldritch_wind.png'
+import paradox_engine from '../assets/icons/combat-icons/specials/monsters/high priest of the basilisk/paradox_engine.png'
+import voidbite from '../assets/icons/combat-icons/specials/monsters/high priest of the basilisk/voidbite.png'
 import basilisk_cultists from '../assets/portraits/monsters/basilisk_cultist.png'
 import basilisk_cultists_portrait from '../assets/portraits/monsters/basilisk_cultist.png'
 import horned_pet from '../assets/portraits/monsters/horned_pet.png'
@@ -631,6 +635,7 @@ import gorgon from '../assets/portraits/monsters/gorgon.png'
 
 import gorgon_portrait from '../assets/portraits/monsters/gorgon.png'
 import goat_demon_portrait from '../assets/portraits/monsters/goat_demon.png'
+import cyclops_portrait from '../assets/portraits/monsters/cyclops.png'
 
 import witch from '../assets/icons/monsters/mj_icons/witch.png';
 import witch_transformed from '../assets/portraits/monsters/witch_transformed.png';
@@ -793,6 +798,7 @@ import ranger_burst_shot from '../assets/icons/combat-icons/specials/ranger/burs
 import ranger_ensnare from '../assets/icons/combat-icons/specials/ranger/ensnare.png'
 import ranger_net_throw from '../assets/icons/combat-icons/specials/ranger/net-throw.png'
 import eagle_eye from '../assets/icons/combat-icons/specials/ranger/eagle_eye.png'
+import ranger_acid_bomb from '../assets/icons/combat-icons/specials/ranger/acid bomb.png';
 import healing_hands from '../assets/icons/combat-icons/specials/sage/healing_hands.png'
 import circle_of_protection from '../assets/icons/combat-icons/specials/sage/circle_of_protection.png'
 import circle_of_deflection from '../assets/icons/combat-icons/specials/sage/circle_of_deflection.png'
@@ -1682,6 +1688,7 @@ export {
     goat_demon_portrait,
     gorgon,
     gorgon_portrait,
+    cyclops_portrait,
 
     witch,
     witch_transformed,
@@ -1832,6 +1839,7 @@ export {
     ranger_ensnare,
     ranger_net_throw,
     eagle_eye,
+    ranger_acid_bomb,
     healing_hands,
     perceive,
     weakness_doubled,
@@ -2159,4 +2167,8 @@ export {
     rubedo_badge,
     vermine_badge,
     sould_shards,
+    void_rake,
+    eldritch_wind,
+    paradox_engine,
+    voidbite,
 };
