@@ -1121,6 +1121,7 @@ import septemons_grimoire from '../assets/icons/items/weapons/books/Septemons gr
 import rubedo_dust from '../assets/icons/loot/rubedo_dust.png';
 import spectral_dust from '../assets/icons/loot/spectral_dust.png';
 import monadic_dust from '../assets/icons/loot/monadic_dust.png';
+import shimmering_dust from '../assets/icons/loot/Enchantment_07_magicdust.png';
 import monadic_nugget from '../assets/icons/loot/monadic_nugget.png';
 import tattoo_ink from '../assets/icons/items/potions/Res_42_ink.png';
 
@@ -2154,6 +2155,7 @@ export {
     rubedo_dust,
     spectral_dust,
     monadic_dust,
+    shimmering_dust,
     monadic_nugget,
 
     // unlock spell & indicator

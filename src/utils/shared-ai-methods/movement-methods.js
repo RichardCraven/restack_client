@@ -38,7 +38,7 @@ export function setMaxDepth(val) {
     MAX_DEPTH = val;
 }
 // ^ index 7, actual col count is 8
-const MAX_LANES = 5
+const MAX_LANES = 6
 const getSurroundings = (coords) => {
     const N = {x: coords.x, y: coords.y-1},
               S = {x: coords.x, y: coords.y+1},
@@ -66,7 +66,7 @@ const someoneIsInCoords = (coords, combatants)=>{
     })
 }
 const isOutOfBounds = (coords) => {
-    return coords.x > MAX_DEPTH || coords.y > MAX_LANES || coords.x < 0 || coords.y < 0
+    return coords.x > MAX_DEPTH || coords.y >= MAX_LANES || coords.x < 0 || coords.y < 0
 }
 
 // ─── Shield Wall registry ─────────────────────────────────────────────────────
@@ -565,8 +565,8 @@ export const MovementMethods = {
         newCoords.y += amount
         if(newCoords.y < 0){
             newCoords.y = 0;
-        } else if(newCoords.y > MAX_LANES){
-            newCoords.y = MAX_LANES
+        } else if(newCoords.y > MAX_LANES - 1){
+            newCoords.y = MAX_LANES - 1
         }
         caller.coordinates = newCoords;
     },
@@ -578,8 +578,8 @@ export const MovementMethods = {
         newCoords.y -= amount
         if(newCoords.y < 0){
             newCoords.y = 0;
-        } else if(newCoords.y > MAX_LANES){
-            newCoords.y = MAX_LANES
+        } else if(newCoords.y > MAX_LANES - 1){
+            newCoords.y = MAX_LANES - 1
         }
         caller.coordinates = newCoords;
     },
@@ -865,7 +865,7 @@ export const MovementMethods = {
 
         const finalize = () => {
             if(newPosition < 0) newPosition = 0
-            if(newPosition > MAX_LANES) newPosition = MAX_LANES;
+            if(newPosition > MAX_LANES - 1) newPosition = MAX_LANES - 1;
             if(newDepth < 0) newDepth = 0
             if(newDepth > MAX_DEPTH) newDepth = MAX_DEPTH;
 

@@ -32,7 +32,7 @@ const NUM_COLUMNS = 8;
 
 const MAX_ROWS = 6;
 const TILE_SIZE = 100;
-const SHOW_TILE_BORDERS = true;
+const SHOW_TILE_BORDERS = false;
 // const SHOW_COMBAT_BORDER_COLORS = false;
 const SHOW_INTERACTION_PANE = true;
 const SHOW_MONSTER_IDS = false;
@@ -2172,7 +2172,7 @@ class MonsterBattle extends React.Component {
                 if (cm && cm.combatants) {
                     const blastDmg = 15;
                     Object.values(cm.combatants).forEach(unit => {
-                        if (!unit || unit.dead || unit.team !== 'enemy') return;
+                        if (!unit || unit.dead || !unit.isMonster) return;
                         
                         // Check if any tile occupied by the unit is adjacent to the bomb (Manhattan distance <= 1)
                         const occupied = (Array.isArray(unit.occupiedCoords) && unit.occupiedCoords.length > 0)
@@ -2181,8 +2181,7 @@ class MonsterBattle extends React.Component {
 
                         const isInRadius = occupied.some(coord => {
                             if (!coord) return false;
-                            const dist = Math.abs(coord.x - tile.x) + Math.abs(coord.y - tile.y);
-                            return dist <= 1;
+                            return Math.abs(coord.x - tile.x) <= 1 && Math.abs(coord.y - tile.y) <= 1;
                         });
 
                         if (isInRadius) {

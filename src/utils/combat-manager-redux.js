@@ -14,6 +14,13 @@ const clone = (val) => {
     return JSON.parse(JSON.stringify(val));
 };
 
+const siegeLog = (...args) => {
+    if (typeof window !== 'undefined' && window.debug === true) {
+        console.log(...args);
+    }
+};
+
+
 const formatCombatText = (value) => String(value || '')
     .replace(/_/g, ' ')
     .trim()
@@ -45,6 +52,7 @@ export function CombatManagerRedux() {
     this.roundDurationMs = 2000;
     this.combatPaused = false;
     this.combatOver = false;
+    this.turnsExecuting = false;
     this.combatLog = [];
     this.combatLogSequence = 0;
     this.selectedFighter = null;
@@ -160,7 +168,7 @@ export function CombatManagerRedux() {
     };
 
     this.pauseCombat = (val) => {
-        console.log(`[CombatManagerRedux] pauseCombat called: val=${val}, combatants=${Object.keys(this.combatants).length}`);
+        siegeLog(`[CombatManagerRedux] pauseCombat called: val=${val}, combatants=${Object.keys(this.combatants).length}`);
         this.combatPaused = val;
         Object.values(this.combatants).forEach(e => e.combatPaused = val);
 
@@ -499,7 +507,7 @@ export function CombatManagerRedux() {
                     ? this.data.monster.stats.int
                     : (typeof this.data.monster.int === 'number' ? this.data.monster.int : null);
 
-                console.log(`[CombatManagerRedux] Lord stats boosted for "${this.data.monster.name}": HP boosted by 50%, INT boosted from ${oldInt} to ${newInt}`);
+                siegeLog(`[CombatManagerRedux] Lord stats boosted for "${this.data.monster.name}": HP boosted by 50%, INT boosted from ${oldInt} to ${newInt}`);
 
                 // Spawn an additional minion of the lowest tier
                 if (this.data.minions && this.data.minions.length > 0) {
@@ -706,8 +714,10 @@ export function CombatManagerRedux() {
         // Set up main monster
         this.data.monster.coordinates = { x: MAX_DEPTH, y: monsterY };
         this.data.monster.isMonster = true;
+        this.data.monster.isMainMonster = true;
         const monster = createFighter(this.data.monster, callbacks, this.FIGHT_INTERVAL);
         monster.isMonster = true;
+        monster.isMainMonster = true;
         monster.isShrineGuardian = this.data.monster.isShrineGuardian;
         monster.isLord = this.data.monster.isLord;
         monster.lordBadge = this.data.monster.lordBadge;
@@ -1097,7 +1107,7 @@ export function CombatManagerRedux() {
             }
         });
 
-        console.log('[SiegeCombat] initializeSiegeCombat finished. Initial combatants:', clone(this.combatants));
+        siegeLog('[SiegeCombat] initializeSiegeCombat finished. Initial combatants:', clone(this.combatants));
 
         // ── Set round duration based on total combatant count ─────────────────────
         // Each unit's turn is staggered by 220ms. The round must be long enough for
@@ -1105,7 +1115,7 @@ export function CombatManagerRedux() {
         // multiple times per round (rounds overlap). Add a 1000ms buffer.
         const totalCombatants = Object.keys(this.combatants).filter(id => !id.endsWith('_VCT') && !id.endsWith('_VCT2')).length;
         this.roundDurationMs = Math.max(totalCombatants * 220 + 1000, 4000);
-        console.log(`[SiegeCombat] roundDurationMs set to ${this.roundDurationMs}ms for ${totalCombatants} combatants`);
+        siegeLog(`[SiegeCombat] roundDurationMs set to ${this.roundDurationMs}ms for ${totalCombatants} combatants`);
 
         // Broadcast the updated combatant positions
         if (typeof this.updateData === 'function') {
@@ -1729,7 +1739,9 @@ export function CombatManagerRedux() {
             : [caller.coordinates];
 
         const tileInRange = (cc, tc) => {
-            if (cc && tc && (caller.isMonster || caller.isMinion) && crossesShieldWall(cc, tc)) {
+            const crosses = cc && tc && (caller.isMonster || caller.isMinion) && crossesShieldWall(cc, tc);
+            if (crosses) {
+                siegeLog(`[targetInRange] cc:`, cc, `tc:`, tc, `crossesShieldWall:`, crosses);
                 return false;
             }
             const dx = Math.abs(cc.x - tc.x);
@@ -1737,17 +1749,20 @@ export function CombatManagerRedux() {
             const dist = dx + dy; // Manhattan distance
 
             if (rangeType === 'close') {
-                // Adjacent orthogonally (Manhattan distance of 1) or Chebyshev distance of 1 (diagonals included)
-                // Let's support both cardinally and diagonally adjacent close range (dx <= 1 && dy <= 1)
                 const limit = RANGE_LIMITS['close'] || 1;
-                return dx <= limit && dy <= limit;
+                const ok = dx <= limit && dy <= limit;
+                siegeLog(`[targetInRange] cc:`, cc, `tc:`, tc, `rangeType: 'close', limit:`, limit, `dx:`, dx, `dy:`, dy, `ok:`, ok);
+                return ok;
             }
 
             const limit = typeof rangeType === 'number' ? rangeType : (RANGE_LIMITS[rangeType] || null);
             if (limit !== null) {
-                return dist <= limit;
+                const ok = dist <= limit;
+                siegeLog(`[targetInRange] cc:`, cc, `tc:`, tc, `rangeType:`, rangeType, `limit:`, limit, `dist:`, dist, `ok:`, ok);
+                return ok;
             }
 
+            siegeLog(`[targetInRange] cc:`, cc, `tc:`, tc, `rangeType:`, rangeType, `ok: true`);
             return true; // far/any/self/unspecified
         };
 
@@ -2222,6 +2237,11 @@ export function CombatManagerRedux() {
         this.rebuildActiveShieldWalls();
 
         const activeUnits = Object.values(this.combatants).filter(c => c && !c.dead && c.hp > 0 && !c.isVCT && !c.skipAI && typeof c.inTrial !== 'number');
+        if (activeUnits.length === 0) {
+            this.turnsExecuting = false;
+        } else {
+            this.turnsExecuting = true;
+        }
         // Sort by speed/dexterity descending (higher dex acts first)
         activeUnits.sort((a, b) => {
             let speedA = a.stats.speed || a.stats.dex || 1;
@@ -2231,12 +2251,12 @@ export function CombatManagerRedux() {
             return speedB - speedA;
         });
 
-        console.log(`[SiegeCombat] processRoundTurns starting. Active units in speed order:`, activeUnits.map(u => ({ id: u.id, name: u.name, speed: u.stats.speed || u.stats.dex || 1, hp: u.hp, stunned: u.stunned, asleep: u.asleep })));
+        siegeLog(`[SiegeCombat] processRoundTurns starting. Active units in speed order:`, activeUnits.map(u => ({ id: u.id, name: u.name, speed: u.stats.speed || u.stats.dex || 1, hp: u.hp, stunned: u.stunned, asleep: u.asleep })));
 
         activeUnits.forEach((unit, index) => {
             setTimeout(() => {
                 try {
-                    console.log(`[SiegeCombat] Starting turn for ${unit.name || unit.id} (stunned: ${unit.stunned}, asleep: ${unit.asleep}, hp: ${unit.hp})`);
+                    siegeLog(`[SiegeCombat] Starting turn for ${unit.name || unit.id} (stunned: ${unit.stunned}, asleep: ${unit.asleep}, hp: ${unit.hp})`);
                     // Clear damage indicators from previous turns to avoid stale accumulation
                     Object.values(this.combatants).forEach(c => {
                         if (c) c.damageIndicators = [];
@@ -2246,7 +2266,7 @@ export function CombatManagerRedux() {
                         this.targetKilled(unit);
                     }
                     if (this.combatPaused || this.combatOver || unit.dead) {
-                        console.log(`[SiegeCombat] Turn aborted for ${unit.name || unit.id} (combatPaused: ${this.combatPaused}, combatOver: ${this.combatOver}, dead: ${unit.dead})`);
+                        siegeLog(`[SiegeCombat] Turn aborted for ${unit.name || unit.id} (combatPaused: ${this.combatPaused}, combatOver: ${this.combatOver}, dead: ${unit.dead})`);
                         return;
                     }
 
@@ -2357,7 +2377,7 @@ export function CombatManagerRedux() {
 
                     // Incapacitation check
                     if (unit.frozen || (unit.stunned && !unit.feared) || unit.petrified || unit.isBones || unit.asleep) {
-                        console.log(`[SiegeCombat] ${unit.name || unit.id} is incapacitated (frozen: ${unit.frozen}, stunned: ${unit.stunned}, petrified: ${unit.petrified}, asleep: ${unit.asleep})`);
+                        siegeLog(`[SiegeCombat] ${unit.name || unit.id} is incapacitated (frozen: ${unit.frozen}, stunned: ${unit.stunned}, petrified: ${unit.petrified}, asleep: ${unit.asleep})`);
                         if (unit.isBones) {
                             this.appendCombatLog(`${this.getCombatantLogName(unit)} is a pile of bones and cannot act.`);
                             return;
@@ -2440,6 +2460,10 @@ export function CombatManagerRedux() {
                 } catch (err) {
                     this.appendCombatLog(`ERROR in unit ${unit.name} AI: ${err.message}`);
                     console.error(err);
+                } finally {
+                    if (index === activeUnits.length - 1) {
+                        this.turnsExecuting = false;
+                    }
                 }
             }, index * 220); // 220ms stagger between unit turns
         });
@@ -3044,7 +3068,7 @@ export function CombatManagerRedux() {
     // Routes each unit through their class-specific decision logic.
     this.executeUnitAI = (unit) => {
         if (!unit || unit.dead) return;
-        console.log(`[SiegeCombat] executeUnitAI for ${unit.name || unit.id} (type: ${unit.type})`);
+        siegeLog(`[SiegeCombat] executeUnitAI for ${unit.name || unit.id} (type: ${unit.type})`);
         this.rebuildActiveShieldWalls();
 
         // ── Intelligent Ranged AI Strategy ──
@@ -3272,26 +3296,42 @@ export function CombatManagerRedux() {
     // ── Utility: resolve ability key from specials array ──────────────────────
     this._initializeInitialCooldowns = (combatant) => {
         if (!combatant) return;
-        const abilities = [
+        const rawAbilities = [
             ...(Array.isArray(combatant.specials) ? combatant.specials : []),
-            ...(Array.isArray(combatant.skills) ? combatant.skills : [])
+            ...(Array.isArray(combatant.skills) ? combatant.skills : []),
+            ...(Array.isArray(combatant.attacks) ? combatant.attacks : [])
         ];
-        if (abilities.length === 0) return;
+        if (rawAbilities.length === 0) return;
+
         combatant.cooldowns = combatant.cooldowns || {};
+
+        const abilities = [];
+        const seenKeys = new Set();
+        rawAbilities.forEach(s => {
+            const key = this._resolveAbilityKey(s);
+            if (key && !seenKeys.has(key)) {
+                seenKeys.add(key);
+                abilities.push(s);
+            }
+        });
+
         abilities.forEach(s => {
             const key = this._resolveAbilityKey(s);
             if (!key) return;
             const resolved = this.resolveSpecial(combatant, key);
-            if (resolved && key !== 'slash' && key !== 'sword_swing' && key !== 'barbarian_slash') {
+            if (resolved && !resolved.isPassive && resolved.type !== 'passive' && key !== 'slash' && key !== 'sword_swing' && key !== 'barbarian_slash') {
                 let initial = 0;
                 if (typeof resolved.initialCooldown === 'number') {
                     initial = resolved.initialCooldown;
+                } else if (typeof resolved.initial === 'number') {
+                    initial = resolved.initial;
                 } else if (typeof resolved.tier === 'number' && resolved.tier >= 1) {
                     initial = (resolved.tier * 2) - 1;
                 }
 
                 if (initial > 0) {
                     combatant.cooldowns[key] = initial;
+                    siegeLog(`[CombatManagerRedux] Cooldown initialized for ${combatant.name} - ${key}: ${initial}`);
                 }
             }
             // Custom Sphinx magic_missile initial cooldown wait period of 4 rounds
@@ -3311,7 +3351,7 @@ export function CombatManagerRedux() {
     // Returns true if the ability is off cooldown and available
     this._abilityReady = (unit, abilityKey) => {
         if (!abilityKey) return false;
-        if (unit.cooldowns[abilityKey]) return false;
+        if (unit.cooldowns && unit.cooldowns[abilityKey]) return false;
 
         const normalize = (s) => String(s || '').replace(/\s+/g, '_').toLowerCase();
         const normKey = normalize(abilityKey);
@@ -3329,6 +3369,23 @@ export function CombatManagerRedux() {
 
         const isReady = hasSpecial || hasAttack;
         if (!isReady) return false;
+
+        // Summoner summon limit (1 of each type at a time)
+        if (normKey.startsWith('summon_') && normKey !== 'summon_spiders' && normKey !== 'summon_skulls') {
+            const minionType = normKey.replace('summon_', '').replace('_army', '');
+            const exists = Object.values(this.combatants).some(c => 
+                c && !c.dead && c.isMinion && c.type === minionType && c.summonedBy === unit.id
+            );
+            if (exists) return false;
+        }
+
+        // Duplicate/triplicate require at least one friendly minion to duplicate
+        if (normKey === 'summoner_duplicate' || normKey === 'summoner_triplicate') {
+            const hasMinions = Object.values(this.combatants).some(c => 
+                c && !c.dead && c.isMinion && !!c.isMonster === !!unit.isMonster
+            );
+            if (!hasMinions) return false;
+        }
 
         // Betrayed units cannot use passive, buff, heal, or non-damage utility/debuff abilities
         if (unit.betrayed) {
@@ -3504,8 +3561,14 @@ export function CombatManagerRedux() {
             }
         }
 
+        const hasEnemyNearby = Object.values(this.combatants).some(c => {
+            if (!c || c.dead || c.isVCT || !!c.isMonster === !!unit.isMonster) return false;
+            const dist = Math.abs(unit.coordinates.x - c.coordinates.x) + Math.abs(unit.coordinates.y - c.coordinates.y);
+            return dist <= 6;
+        });
+
         // Priority 0: Ethereal Speed (speed buff and yellow glow)
-        if (this._abilityReady(unit, 'monk_ethereal_speed') && !unit.etherealSpeedActive) {
+        if (this._abilityReady(unit, 'monk_ethereal_speed') && !unit.etherealSpeedActive && hasEnemyNearby) {
             const pick = this.resolveSpecial(unit, 'monk_ethereal_speed');
             if (pick) {
                 const dur = getDurationRounds(pick.duration || 'short');
@@ -4594,7 +4657,6 @@ export function CombatManagerRedux() {
             const enemies = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && !!c.isMonster !== isUnitMonster);
             const allies = Object.values(this.combatants).filter(c => c && !c.dead && !c.isVCT && c.id !== unit.id && !!c.isMonster === isUnitMonster);
             const backlineX = unit.isMonster ? MAX_DEPTH : 0;
-
             const getTileScore = (x, y) => {
                 let minEnemyDist = 99;
                 enemies.forEach(e => {
@@ -4631,6 +4693,30 @@ export function CombatManagerRedux() {
                 // Current position bias to avoid jitter
                 if (x === unit.coordinates.x && y === unit.coordinates.y) {
                     score += 5;
+                }
+
+                // Penalize coordinates that have fewer than 2 escape routes
+                let freeAdjacentCount = 0;
+                const neighbors = [
+                    { x: x - 1, y },
+                    { x: x + 1, y },
+                    { x, y: y - 1 },
+                    { x, y: y + 1 }
+                ];
+                neighbors.forEach(n => {
+                    const inBounds = n.x >= 0 && n.x <= MAX_DEPTH && n.y >= 0 && n.y < MAX_LANES;
+                    if (inBounds) {
+                        const isOnSummonerHalf = !unit.isMonster ? (n.x <= 3) : (n.x >= 4);
+                        // A neighbor is a valid escape route if it is on the summoner's half and can be fit into
+                        // or is the summoner's current tile.
+                        if (isOnSummonerHalf && (this.canFitAt(unit, n.x, n.y) || (n.x === unit.coordinates.x && n.y === unit.coordinates.y))) {
+                            freeAdjacentCount++;
+                        }
+                    }
+                });
+
+                if (freeAdjacentCount < 2) {
+                    score -= 40; // Heavy penalty for trapped positions (corners / dead-ends)
                 }
                 
                 return score;
@@ -4801,6 +4887,7 @@ export function CombatManagerRedux() {
             name: minionType.replace(/_/g, ' '),
             isMinion: true,
             isMonster: !!unit.isMonster,
+            summonedBy: unit.id,
             dead: false,
             coordinates: { ...freeTile },
             hp: hpBase,
@@ -4882,6 +4969,7 @@ export function CombatManagerRedux() {
 
             const copyId = `minion_${source.type}_copy_${Date.now()}_${spawned}`;
             const copy = { ...clone(source), id: copyId, coordinates: { x: nx, y: ny } };
+            copy.summonedBy = unit.id;
             copy.cooldowns = {};
             copy.movesTakenThisRound = 0;
             copy.actionsTakenThisRound = 0;
@@ -5783,6 +5871,7 @@ export function CombatManagerRedux() {
             }
         }
         const inRange = this.targetInRange(unit, target, rangeType);
+        siegeLog(`[_aiGeneric] unit: ${unit.id} (at ${unit.coordinates.x}, ${unit.coordinates.y}), target: ${target.id} (at ${target.coordinates.x}, ${target.coordinates.y}), rangeType: ${rangeType}, inRange: ${inRange}`);
 
         if (inRange) {
             unit._failedPathfindCount = 0;
@@ -6636,6 +6725,8 @@ export function CombatManagerRedux() {
     };
 
     this._setCooldown = (unit, key, rounds) => {
+        if (!unit) return;
+        if (!unit.cooldowns) unit.cooldowns = {};
         let cooldownRounds = rounds;
         const normalized = key.replace(/\s+/g, '_').toLowerCase();
         
@@ -7177,6 +7268,17 @@ export function CombatManagerRedux() {
             this._setCooldown(unit, abilityId, finalCooldown);
         } else {
             unit.cooldowns[abilityId] = finalCooldown;
+        }
+
+        // Delegate summon/duplicate/triplicate actions for Summoner
+        if (abilityId.startsWith('summon_') && abilityId !== 'summon_spiders' && abilityId !== 'summon_skulls') {
+            this._executeSummon(unit, ability, abilityId);
+            return;
+        }
+
+        if (abilityId === 'summoner_duplicate' || abilityId === 'summoner_triplicate') {
+            this._duplicateMinion(unit, ability, abilityId === 'summoner_triplicate');
+            return;
         }
 
         if (abilityId === 'regenerate') {
@@ -10540,16 +10642,29 @@ export function CombatManagerRedux() {
         };
 
         const key = (x, y) => `${x},${y}`;
-        const queue = [{ x: startX, y: startY }];
-        const visited = new Set([key(startX, startY)]);
+        const queue = [{ x: startX, y: startY, cost: 0 }];
+        const distMap = {};
+        distMap[key(startX, startY)] = 0;
         const parentMap = {};
+        const visited = new Set();
 
         let goalReached = null;
         let bestFallbackNode = { x: startX, y: startY };
         let bestFallbackDist = getDistance(startX, startY);
 
+        const BACKWARD_PENALTY = 5;
+
         while (queue.length > 0) {
+            // Sort queue to get the node with the minimum cost
+            queue.sort((a, b) => a.cost - b.cost);
             const current = queue.shift();
+            const curKey = key(current.x, current.y);
+
+            if (visited.has(curKey)) {
+                continue;
+            }
+            visited.add(curKey);
+
             const dist = getDistance(current.x, current.y);
 
             if ((targetUnit && dist <= 1) || (!targetUnit && dist === 0)) {
@@ -10586,9 +10701,17 @@ export function CombatManagerRedux() {
                     continue;
                 }
 
-                visited.add(nKey);
-                parentMap[nKey] = current;
-                queue.push(n);
+                // Distance penalty heuristic:
+                // Penalize nodes that increase the distance to the target compared to current node.
+                const neighborDist = getDistance(n.x, n.y);
+                const stepCost = 1 + (neighborDist > dist ? BACKWARD_PENALTY : 0);
+                const newCost = distMap[curKey] + stepCost;
+
+                if (distMap[nKey] === undefined || newCost < distMap[nKey]) {
+                    distMap[nKey] = newCost;
+                    parentMap[nKey] = current;
+                    queue.push({ x: n.x, y: n.y, cost: newCost });
+                }
             }
         }
 
@@ -10624,7 +10747,7 @@ export function CombatManagerRedux() {
             return;
         }
         const maxMoves = (unit.etherealSpeedActive || unit.isDemonMode) ? 2 : 1;
-        console.log(`[SiegeCombat] moveCloser called for ${unit.name || unit.id} (at x: ${unit.coordinates.x}, y: ${unit.coordinates.y}) targeting ${target?.name || target?.id} (at x: ${target?.coordinates?.x}, y: ${target?.coordinates?.y}), movesTakenThisRound: ${unit.movesTakenThisRound}/${maxMoves}`);
+        siegeLog(`[SiegeCombat] moveCloser called for ${unit.name || unit.id} (at x: ${unit.coordinates.x}, y: ${unit.coordinates.y}) targeting ${target?.name || target?.id} (at x: ${target?.coordinates?.x}, y: ${target?.coordinates?.y}), movesTakenThisRound: ${unit.movesTakenThisRound}/${maxMoves}`);
         if (unit.movesTakenThisRound >= maxMoves || !target) return;
 
         if (target && target.isVCT && target.parentMonsterId && this.combatants[target.parentMonsterId]) {
@@ -10632,7 +10755,7 @@ export function CombatManagerRedux() {
         }
 
         const moved = this.getPathfindNextStep(unit, target.coordinates.x, target.coordinates.y, target);
-        console.log(`[SiegeCombat] getPathfindNextStep result for ${unit.name || unit.id}:`, moved);
+        siegeLog(`[SiegeCombat] getPathfindNextStep result for ${unit.name || unit.id}:`, moved);
         if (moved) {
             const intelTier = this.getUnitIntelligenceTier(unit);
             if (intelTier === 'dumb' && crossesShieldWall(unit.coordinates, moved)) {
@@ -10889,6 +11012,9 @@ export function CombatManagerRedux() {
             this.roundTimeElapsedMs += deltaMs;
 
             if (this.roundTimeElapsedMs >= roundDurationMs) {
+                if (this.turnsExecuting) {
+                    return;
+                }
                 this.roundTimeElapsedMs = 0;
                 this.incrementRound();
             }
@@ -11151,7 +11277,7 @@ export function CombatManagerRedux() {
                     const lanesAffected = [];
                     for (let dy = -2; dy <= 2; dy++) {
                         const lane = centerY + dy;
-                        if (lane >= 0 && lane < 5) {
+                        if (lane >= 0 && lane < MAX_LANES) {
                             lanesAffected.push(lane);
                         }
                     }

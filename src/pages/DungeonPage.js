@@ -166,7 +166,7 @@ const ModalInner = ({ modalType, updates, crew, tileSize, handleMemberClickRitua
             setShowContent(false);
             const timer = setTimeout(() => {
                 setShowContent(true);
-            }, 650);
+            }, 1300);
             return () => clearTimeout(timer);
         } else {
             setShowContent(true);
@@ -2194,6 +2194,8 @@ class DungeonPage extends React.Component {
             , showCardForge: false
             , forgeHighlightMonsterType: null
             , toastMessage: null
+            , showSaveIndicator: false
+            , saveIndicatorText: ''
             , mapZoomedLevelId: null
             , mapUnzoomingLevelId: null
             , mapRevealAfterUnzoom: false
@@ -3485,8 +3487,27 @@ class DungeonPage extends React.Component {
             if (playerMoved) {
                 let destTileObj = bm.tiles[destIndex];
                 if (destTileObj && destTileObj.contains && destTileObj.contains.type === 'obscured_space') {
-                    if (Math.random() < 0.3) {
+                    // Check if an ambush was triggered within the last 2 minutes (120,000 ms)
+                    let baseAmbushChance = 0.3;
+                    try {
+                        const lastAmbushTime = sessionStorage.getItem('lastObscuredAmbushTime');
+                        if (lastAmbushTime) {
+                            const elapsed = Date.now() - parseInt(lastAmbushTime, 10);
+                            if (elapsed < 120000) {
+                                baseAmbushChance = 0.15;
+                            }
+                        }
+                    } catch (e) {
+                        console.warn("Failed to check lastObscuredAmbushTime from sessionStorage:", e);
+                    }
+
+                    if (Math.random() < baseAmbushChance) {
                         ambushTriggered = true;
+                        try {
+                            sessionStorage.setItem('lastObscuredAmbushTime', String(Date.now()));
+                        } catch (e) {
+                            console.warn("Failed to save lastObscuredAmbushTime to sessionStorage:", e);
+                        }
                         let ambushMonsterTier = 1;
                         const tracker = this.state.levelTracker || [];
                         const activeLevel = tracker.find((entry) => entry && entry.active);
@@ -5719,6 +5740,26 @@ class DungeonPage extends React.Component {
     displayMessage = (message) => {
         if (!message) return;
 
+        const msgStr = typeof message === 'string' ? message.toLowerCase() : '';
+        if (msgStr === 'saving-start' || msgStr === 'saving...') {
+            this.setState({ showSaveIndicator: true, saveIndicatorText: 'Saving...' });
+            return;
+        }
+        if (msgStr === 'progress saved') {
+            this.setState({ showSaveIndicator: true, saveIndicatorText: 'Saved' });
+            this._setTimeout(() => {
+                this.setState({ showSaveIndicator: false });
+            }, 1000);
+            return;
+        }
+        if (msgStr === 'saving-error') {
+            this.setState({ showSaveIndicator: true, saveIndicatorText: 'Save Failed' });
+            this._setTimeout(() => {
+                this.setState({ showSaveIndicator: false });
+            }, 1500);
+            return;
+        }
+
         // Determine if this is a high-priority / pickup message
         const isPickup = typeof message === 'string' && (
             message.toLowerCase().includes('you found') || 
@@ -7486,6 +7527,34 @@ class DungeonPage extends React.Component {
                 if (meta2 && meta2.location && this.props && this.props.boardManager) {
                     try {
                         const bm = this.props.boardManager;
+                        const targetLevelId = Number(meta2.location.levelId);
+                        const targetMiniboardIndex = Number(meta2.location.boardIndex || 0);
+
+                        // Update levelTracker active state
+                        const levelTracker = [...this.state.levelTracker];
+                        levelTracker.forEach(e => { if (e) e.active = false; });
+                        const lvl = levelTracker.find(e => e && Number(e.id) === targetLevelId);
+                        if (lvl) lvl.active = true;
+
+                        // Update minimap active state
+                        const minimap = [...this.state.minimap];
+                        minimap.forEach(e => { if (e) e.active = false; });
+                        if (minimap[targetMiniboardIndex]) {
+                            minimap[targetMiniboardIndex].active = true;
+                        }
+
+                        // Sync minimap indicators
+                        let indicatorsGroup = meta2.minimapIndicators.find(e => Number(e.level) === targetLevelId && e.orientation === meta2.location.orientation);
+                        if (!indicatorsGroup) {
+                            let newIndicators = [];
+                            for (let i = 0; i < 9; i++) {
+                                newIndicators.push({ enemies: [], gates: [], merchant: [], stairs: [], misc: [], custom: [] });
+                            }
+                            indicatorsGroup = { level: targetLevelId, orientation: meta2.location.orientation, indicators: newIndicators };
+                            meta2.minimapIndicators.push(indicatorsGroup);
+                            try { storeMeta(meta2); } catch (e) {}
+                        }
+
                         // Rebuild board context from respawn location so tile index is applied
                         // on the correct level/orientation/miniboard.
                         const respawnLevel = bm.dungeon && Array.isArray(bm.dungeon.levels)
@@ -7507,7 +7576,19 @@ class DungeonPage extends React.Component {
                             // Use the manager's own dungeon/template to respawn monsters.
                             if (typeof bm.respawnMonsters === 'function') bm.respawnMonsters(bm.dungeon || {});
                         } catch (inner) { console.warn('respawnMonsters failed', inner); }
-                        try { if (typeof this.setState === 'function') this.setState({ overlayTiles: bm.overlayTiles, tiles: bm.tiles }); } catch(e){}
+                        
+                        try {
+                            if (typeof this.setState === 'function') {
+                                this.setState({
+                                    levelTracker,
+                                    minimap,
+                                    minimapZoomedTile: null,
+                                    minimapIndicators: indicatorsGroup.indicators,
+                                    overlayTiles: bm.overlayTiles,
+                                    tiles: bm.tiles
+                                });
+                            }
+                        } catch(e){}
                     } catch (inner) {
                         console.warn('group-death: respawn failed', inner);
                     }
@@ -13234,6 +13315,56 @@ class DungeonPage extends React.Component {
                     onSave={() => { try { this.props.saveUserData && this.props.saveUserData(); } catch(e) {} }}
                 />
             )}
+            {/* Save Indicator */}
+            <style>{`
+                @keyframes save-spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+            `}</style>
+            <div 
+                style={{
+                    position: 'fixed',
+                    top: '20px',
+                    right: '20px',
+                    zIndex: 999999,
+                    pointerEvents: 'none',
+                    opacity: this.state.showSaveIndicator ? 1 : 0,
+                    transform: this.state.showSaveIndicator ? 'translateY(0) scale(1)' : 'translateY(-20px) scale(0.95)',
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    backgroundColor: 'rgba(20, 20, 20, 0.9)',
+                    backdropFilter: 'blur(8px)',
+                    WebkitBackdropFilter: 'blur(8px)',
+                    border: '1px solid rgba(255, 255, 255, 0.15)',
+                    borderRadius: '12px',
+                    padding: '10px 18px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '10px',
+                    fontFamily: 'Outfit, Inter, sans-serif'
+                }}
+            >
+                {this.state.saveIndicatorText === 'Saving...' && (
+                    <svg className="save-spinner" viewBox="0 0 24 24" style={{ width: '18px', height: '18px', animation: 'save-spin 1s linear infinite' }}>
+                        <circle cx="12" cy="12" r="10" stroke="rgba(255, 255, 255, 0.2)" strokeWidth="3" fill="none" />
+                        <path d="M12 2 C 6.48 2 2 6.48 2 12" stroke="#4dabf7" strokeWidth="3" strokeLinecap="round" fill="none" />
+                    </svg>
+                )}
+                {this.state.saveIndicatorText === 'Saved' && (
+                    <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px' }}>
+                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" fill="#40c057" />
+                    </svg>
+                )}
+                {this.state.saveIndicatorText === 'Save Failed' && (
+                    <svg viewBox="0 0 24 24" style={{ width: '18px', height: '18px' }}>
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" fill="#fa5252" />
+                    </svg>
+                )}
+                <span style={{ fontSize: '14px', fontWeight: '500', color: '#f8f9fa', letterSpacing: '0.2px' }}>
+                    {this.state.saveIndicatorText}
+                </span>
+            </div>
         </div>
         )
     }

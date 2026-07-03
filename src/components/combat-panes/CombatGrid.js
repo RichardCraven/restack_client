@@ -13,7 +13,8 @@ import Overlay from '../Overlay';
 
 
 const TILE_SIZE = 100;
-const SHOW_TILE_BORDERS = true;
+const SHOW_TILE_BORDERS = false;
+
 
 function CurvedProjectile({ srcPx, tgtPx, spherePx, duration = 400, onComplete, color = '#d946ef', shadowColor = '#701a75', isNetherBolt = false }) {
     const [pos, setPos] = React.useState(srcPx);
@@ -641,6 +642,37 @@ export default function CombatGrid(props) {
         // Sandbox-style CSS animation events from AnimationManagerRedux
         activeAnimations = [],
     } = props;
+    const crewIds = new Set(crew.map(f => f.id));
+
+    const checkHuge = (unit) => {
+        if (!unit || unit.isShrineGuardian) return false;
+        const hugeByTemplate = (
+            (typeof unit.huge === 'boolean' && unit.huge === true) ||
+            (unit.type === 'dragon') ||
+            (unit.tier === 4) ||
+            (typeof unit.size === 'number' && unit.size === 3) ||
+            (typeof unit.scale === 'number' && unit.scale === 3)
+        );
+        if (hugeByTemplate) return true;
+        if ((unit.isMainMonster || (!unit.isMinion && !unit.isSiegeUnit && !unit.isSiegeArmy && unit.tier === 4 && !crewIds.has(unit.id))) && unit.tier === 4) return true;
+        return false;
+    };
+
+    const checkLarge = (unit) => {
+        if (!unit || unit.isShrineGuardian) return false;
+        if (checkHuge(unit)) return false;
+        const largeByTemplate = (
+            (typeof unit.large === 'boolean' && unit.large === true) ||
+            (unit.type === 'beholder' || unit.type === 'sphinx' || unit.type === 'abomination') ||
+            (unit.tier === 3) ||
+            (typeof unit.size === 'number' && unit.size === 2) ||
+            (typeof unit.scale === 'number' && unit.scale === 2)
+        );
+        if (largeByTemplate) return true;
+        const isClassicMainMonster = (unit.isMonster === true || unit.isMainMonster === true) && unit.isMinion !== true && !unit.isSiegeUnit && !unit.isSiegeArmy && !crewIds.has(unit.id);
+        if (isClassicMainMonster) return true;
+        return false;
+    };
 
     const getLiveCombatant = (id) => (combatManager && typeof combatManager.getCombatant === 'function') ? combatManager.getCombatant(id) : null;
 
@@ -921,8 +953,7 @@ export default function CombatGrid(props) {
 
     const isTeleporting = (id) => teleportingFighterId === id;
 
-    // ── Build unit collections ───────────────────────────────────────────────
-    const crewIds = new Set(crew.map(f => f.id));
+
 
     // ── Shared: effect icon row ───────────────────────────────────────────────
     const renderEffectIcons = (unit) => (
@@ -1814,8 +1845,8 @@ export default function CombatGrid(props) {
         const yPos = tilePos(unit.coordinates.y);
         const isTelep = isTeleporting(unit.id);
 
-        const isHuge = !unit.isShrineGuardian && (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
-        const isLarge = !unit.isShrineGuardian && (isMonster || isMinion) && (!isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
+        const isHuge = checkHuge(unit);
+        const isLarge = checkLarge(unit);
         const width = isHuge 
             ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
             : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);
@@ -2002,6 +2033,8 @@ export default function CombatGrid(props) {
                             boxShadow: unit.isSinisterReflection ? '0 0 15px rgba(220, 20, 60, 0.8), inset 0 0 10px rgba(220, 20, 60, 0.5)' : undefined,
                             borderRadius: '0',
                             transition: 'filter 0.25s ease-in-out',
+                            maskImage: unit.type === 'darkness_sphere' ? 'radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 72%)' : undefined,
+                            WebkitMaskImage: unit.type === 'darkness_sphere' ? 'radial-gradient(circle, rgba(0,0,0,1) 40%, rgba(0,0,0,0) 72%)' : undefined,
                             animation: unit.isSinisterReflection
                                 ? 'sinisterPulse 1.5s ease-in-out infinite alternate'
                                 : (unit.type === 'darkness_sphere'
@@ -6545,8 +6578,8 @@ export default function CombatGrid(props) {
         // Find in monsters
         const unit = Object.values(battleData).find(u => u && u.id === unitId);
         if (unit && unit.coordinates) {
-            const isHuge = !unit.isShrineGuardian && (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && (unit.tier === 4 || unit.type === 'dragon' || unit.key === 'dragon' || unit.huge === true || unit.size === 3);
-            const isLarge = !unit.isShrineGuardian && (unit.isMonster || unit.isMinion) && (!unit.isMinion || unit.tier === 3 || unit.tier === 4) && !isHuge;
+            const isHuge = checkHuge(unit);
+            const isLarge = checkLarge(unit);
             const width = isHuge 
                 ? TILE_SIZE * 3 + (SHOW_TILE_BORDERS ? 4 : 0) 
                 : (isLarge ? TILE_SIZE * 2 + (SHOW_TILE_BORDERS ? 2 : 0) : TILE_SIZE);

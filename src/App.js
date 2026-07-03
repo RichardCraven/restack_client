@@ -151,9 +151,27 @@ const saveUserData = async () => {
   }
   meta.crew = props.crewManager.crew;
   meta.dungeonId = props.boardManager.dungeon.id;
-  await updateUserRequest(userId, meta)
-  sessionStorage.setItem('metadata', JSON.stringify(meta));
-  if (dungeonMessagingRef.current) dungeonMessagingRef.current('Progress saved')
+  if (dungeonMessagingRef.current) {
+    try {
+      dungeonMessagingRef.current('saving-start');
+    } catch (e) {}
+  }
+  try {
+    await updateUserRequest(userId, meta);
+    sessionStorage.setItem('metadata', JSON.stringify(meta));
+    if (dungeonMessagingRef.current) {
+      try {
+        dungeonMessagingRef.current('Progress saved');
+      } catch (e) {}
+    }
+  } catch (err) {
+    console.error("Failed to save user data:", err);
+    if (dungeonMessagingRef.current) {
+      try {
+        dungeonMessagingRef.current('saving-error');
+      } catch (e) {}
+    }
+  }
 }
 saveUserDataRef.current = saveUserData;
 const goHome = () => {

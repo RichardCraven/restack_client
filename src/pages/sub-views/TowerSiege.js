@@ -4,6 +4,9 @@ import '../../styles/monster-battle.scss';
 import SiegeCombatGrid from '../../components/combat-panes/SiegeCombatGrid';
 import { MonsterManager } from '../../utils/monster-manager';
 import { AnimationManagerRedux } from '../../utils/animation-manager-redux';
+import * as images from '../../utils/images';
+import { storeMeta, getMeta } from '../../utils/session-handler';
+import { INTERVALS } from '../../utils/shared-constants';
 
 // ── Board constants ──────────────────────────────────────────────────────────
 const SIEGE_ROWS = 15;
@@ -67,6 +70,17 @@ class TowerSiege extends React.Component {
             animationOverlays: {},
             localPaused: false,
         };
+    }
+
+    setGameSpeed = (newInterval) => {
+        if (this.props.combatManager) {
+            this.props.combatManager.updateAllFightIntervals(newInterval);
+            // Persist to meta
+            const meta = getMeta();
+            meta.combatSpeed = newInterval;
+            storeMeta(meta);
+            if (typeof this.forceUpdate === 'function') this.forceUpdate();
+        }
     }
 
     // ── Animation connection helpers ─────────────────────────────────────────
@@ -393,6 +407,94 @@ class TowerSiege extends React.Component {
                 <div className="ts-hud">
                     <div className="ts-hud__title">TOWER SIEGE {this.state.localPaused ? '(PAUSED)' : ''}</div>
                     <div className="ts-hud__phase">{siegePhase === 'combat' ? (this.state.localPaused ? '⏸ PAUSED — press P to resume' : 'Combat in progress') : siegePhase.toUpperCase()}</div>
+
+                    {/* Game Speed and Round Clock */}
+                    {this.props.combatManager && this.props.combatManager.round !== undefined && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', color: 'white', marginRight: '20px' }}>
+                            <div style={{ display: 'flex', gap: '5px' }}>
+                                <button
+                                    onClick={() => this.setGameSpeed('slowest')}
+                                    style={{
+                                        backgroundColor: this.props.combatManager.gameSpeed === 'slowest' ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                                        color: this.props.combatManager.gameSpeed === 'slowest' ? '#000000' : '#ffffff',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        borderRadius: '4px',
+                                        padding: '2px 6px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Slowest
+                                </button>
+                                <button
+                                    onClick={() => this.setGameSpeed('slow')}
+                                    style={{
+                                        backgroundColor: this.props.combatManager.gameSpeed === 'slow' ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                                        color: this.props.combatManager.gameSpeed === 'slow' ? '#000000' : '#ffffff',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        borderRadius: '4px',
+                                        padding: '2px 6px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Slow
+                                </button>
+                                <button
+                                    onClick={() => this.setGameSpeed('fast')}
+                                    style={{
+                                        backgroundColor: this.props.combatManager.gameSpeed === 'fast' ? '#ffffff' : 'rgba(255,255,255,0.1)',
+                                        color: this.props.combatManager.gameSpeed === 'fast' ? '#000000' : '#ffffff',
+                                        border: '1px solid rgba(255,255,255,0.3)',
+                                        borderRadius: '4px',
+                                        padding: '2px 6px',
+                                        cursor: 'pointer',
+                                        fontSize: '11px',
+                                        fontWeight: 'bold',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Fast
+                                </button>
+                            </div>
+
+                            <div
+                                style={{
+                                    position: 'relative',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    background: `conic-gradient(rgba(255,255,255,0.8) 0deg, rgba(255,255,255,0.8) ${this.props.combatManager.roundTimeRemainingRatio * 360}deg, rgba(255,255,255,0.1) ${this.props.combatManager.roundTimeRemainingRatio * 360}deg, rgba(255,255,255,0.1) 360deg)`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    boxShadow: '0 0 6px rgba(0,0,0,0.5)',
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        width: '26px',
+                                        height: '26px',
+                                        borderRadius: '50%',
+                                        backgroundColor: '#111111',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        color: '#ffffff',
+                                        fontSize: '12px',
+                                        fontWeight: 'bold',
+                                    }}
+                                >
+                                    {this.props.combatManager.round}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <button className="ts-hud__exit" onClick={this.handleExit}><span role="img" aria-label="retreat">✕</span> Retreat</button>
                 </div>
 
@@ -402,7 +504,25 @@ class TowerSiege extends React.Component {
                         <div className={`ts-summary__result ts-summary__result--${summaryResult}`}>
                             {summaryResult === 'victory'
                                 ? <><span role="img" aria-label="victory">⚔</span> Victory!</>
-                                : <><span role="img" aria-label="defeated">💀</span> Defeated</>}
+                                : (
+                                    <>
+                                        <span 
+                                            style={{
+                                                display: 'inline-block',
+                                                width: '0.85em',
+                                                height: '0.85em',
+                                                backgroundImage: `url(${images.whiteskull})`,
+                                                backgroundSize: 'contain',
+                                                backgroundRepeat: 'no-repeat',
+                                                backgroundPosition: 'center',
+                                                marginRight: '0.2em',
+                                                verticalAlign: 'middle',
+                                                filter: 'drop-shadow(0 0 15px #cc3322)'
+                                            }}
+                                        />
+                                        Defeated
+                                    </>
+                                )}
                         </div>
                         <p className="ts-summary__text">
                             {summaryResult === 'victory'
