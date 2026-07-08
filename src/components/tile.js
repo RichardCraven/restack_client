@@ -69,8 +69,8 @@ function Tile(props) {
         return null;
     }
     // derive hp and maxHp from props or nested data so callers can pass either shape
-    const hpVal = (typeof props.hp === 'number') ? props.hp : (props.data && typeof props.data.hp === 'number' ? props.data.hp : undefined);
     let maxHpVal = (typeof props.maxHp === 'number') ? props.maxHp : (props.data && props.data.stats && typeof props.data.stats.hp === 'number' ? props.data.stats.hp : (props.data && typeof props.data.max_hp === 'number' ? props.data.max_hp : (props.data && typeof props.data.starting_hp === 'number' ? props.data.starting_hp : undefined)));
+    const hpVal = (typeof props.hp === 'number') ? props.hp : (props.data && typeof props.data.hp === 'number' ? props.data.hp : (typeof maxHpVal === 'number' ? maxHpVal : undefined));
     // If caller only provides current HP (no max), treat max as current so the bar renders full.
     if (typeof hpVal === 'number' && typeof maxHpVal !== 'number') {
         maxHpVal = hpVal;
@@ -228,7 +228,7 @@ function Tile(props) {
             style={{
             pointerEvents: props.passThrough ? 'none' : 'inherit',
             boxSizing: 'border-box',
-            transition: 'background-color 0.25s',
+            transition: 'background-color 0.35s, border-color 0.35s',
             cursor: props.cursor ? props.cursor : 'pointer',
             height: props.tileSize+'px',
             width: props.tileSize+'px',
@@ -301,27 +301,54 @@ function Tile(props) {
                 </>
            )}
 
-           {/* HP fill: rendered as a vertical fill using the tile's color when hp & maxHp are provided */}
-         { (typeof hpVal === 'number' && typeof maxHpVal === 'number') && (() => {
-             // Render a visible left-side vertical HP bar so it shows even when the portrait
-             // image is fully opaque. This acts as the "background" HP meter while keeping
-             // the portrait visible. Width is small so it reads as a meter but you can
-             // change it by passing props.hpBarWidth (percent number).
-             const pct = Math.max(0, Math.min(1, maxHpVal <= 0 ? 0 : hpVal / maxHpVal));
-             const heightPct = Math.round(pct * 100);
-             const barWidthPct = (typeof props.hpBarWidth === 'number') ? props.hpBarWidth : 10;
-                         return <div className="hp-fill" style={{position: 'absolute', left: 0, bottom: 0, width: `${barWidthPct}%`, height: `${heightPct}%`, backgroundColor: color || '#888', opacity: 0.95, zIndex: 2, transition: 'height 250ms linear', boxShadow: 'inset 2px 0 6px rgba(0,0,0,0.25)'}}></div>
-         })()}
+            {/* HP fill: rendered as a vertical fill using a vibrant green gradient with a dark track */}
+            { (typeof hpVal === 'number' && typeof maxHpVal === 'number') && (() => {
+                const pct = Math.max(0, Math.min(1, maxHpVal <= 0 ? 0 : hpVal / maxHpVal));
+                const heightPct = Math.round(pct * 100);
+                const barWidthPct = (typeof props.hpBarWidth === 'number') ? props.hpBarWidth : 10;
+                return (
+                    <div 
+                        className="hp-track" 
+                        style={{
+                            position: 'absolute', 
+                            left: 0, 
+                            bottom: 0, 
+                            top: 0,
+                            width: `${barWidthPct}%`, 
+                            backgroundColor: 'rgba(0, 0, 0, 0.65)', 
+                            borderRight: '1px solid rgba(255, 255, 255, 0.08)',
+                            zIndex: 15,
+                            boxShadow: 'inset 1px 0 3px rgba(0,0,0,0.8)',
+                            pointerEvents: 'none'
+                        }}
+                    >
+                        <div 
+                            className="hp-fill" 
+                            style={{
+                                position: 'absolute', 
+                                left: 0, 
+                                bottom: 0, 
+                                right: 0,
+                                height: `${heightPct}%`, 
+                                backgroundColor: '#2ecc71', 
+                                backgroundImage: 'linear-gradient(to top, #27ae60, #2ecc71)',
+                                transition: 'height 250ms cubic-bezier(0.1, 0.8, 0.1, 1)', 
+                                boxShadow: 'inset -1px 0 2px rgba(255,255,255,0.2), 0 0 4px rgba(46, 204, 113, 0.6)'
+                            }}
+                        />
+                    </div>
+                );
+            })()}
 
                      {/* Terrain background: chosen per-tile (terrain_1..terrain_16) and rendered beneath portrait/items */}
-                     { props.terrain && color !== 'black' && (() => {
+                     { props.terrain && (() => {
                          let terrainUrl = (props.terrain && props.terrain.includes('/')) ? props.terrain : (images[props.terrain] || null);
-                         return <div className="terrain-bg" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: terrainUrl ? toCssUrl(terrainUrl) : 'none', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center', zIndex: 0, opacity: 0.5}} />
+                         return <div className="terrain-bg" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: terrainUrl ? toCssUrl(terrainUrl) : 'none', backgroundSize: 'cover', backgroundRepeat: 'no-repeat', backgroundPosition: 'center center', zIndex: 0, opacity: color === 'black' ? 0 : 0.5, transition: 'opacity 0.35s ease-in-out'}} />
                      })()}
 
                      {/* Portrait sits above the hp-fill and terrain so the image remains visible */}
                       {(props.imageOverride || images[props.image]) && !(props.contains && (props.contains === 'shrine' || props.contains.type === 'shrine')) && !(props.data && props.data.type === 'soul_shard') && (
-                          <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: toCssUrl(props.imageOverride || images[props.image]), backgroundSize: isVendorCell ? '200% 200%' : '100% 100%', backgroundPosition: isVendorCell ? vendorBackgroundPosition : 'inherit', backgroundRepeat: 'no-repeat', zIndex: isVendorCell ? 30 : portraitZIndex}} />
+                          <div className="portrait" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundImage: toCssUrl(props.imageOverride || images[props.image]), backgroundSize: isVendorCell ? '200% 200%' : '100% 100%', backgroundPosition: isVendorCell ? vendorBackgroundPosition : 'inherit', backgroundRepeat: 'no-repeat', zIndex: isVendorCell ? 30 : portraitZIndex, opacity: color === 'black' ? 0 : 1, transition: 'opacity 0.35s ease-in-out'}} />
                       )}
 
             {/* Soul Shard custom overlay */}
@@ -330,7 +357,11 @@ function Tile(props) {
                 const mTypeLower = monsterType.toLowerCase();
                 const portraitUrl = images[monsterType] || images[mTypeLower] || images[`${mTypeLower}_portrait`] || images[`${mTypeLower}_portrait2`] || null;
                 return (
-                    <>
+                    <div style={{
+                        position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                        opacity: color === 'black' ? 0 : 1,
+                        transition: 'opacity 0.35s ease-in-out'
+                    }}>
                         {/* 50% opacity monster portrait underlay */}
                         {portraitUrl && (
                             <div style={{
@@ -367,40 +398,59 @@ function Tile(props) {
                         }}>
                             {props.data.count}/3
                         </div>
-                    </>
+                    </div>
                 );
             })()}
 
            {/* Dead overlay: visible when data.dead === true */}
            { props.data && props.data.dead && (
-                <div className="dead-overlay" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: Math.max(12, (props.tileSize / 3)) + 'px', zIndex: 3}}>
-                    {/* simple skull mark — keeps UI minimal */}
-                    ☠
+                <div className="dead-overlay" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', zIndex: 3}}>
+                    <div 
+                        className="death-skull" 
+                        style={{
+                            width: Math.max(24, Math.round(props.tileSize * 0.45)) + 'px',
+                            height: Math.max(24, Math.round(props.tileSize * 0.45)) + 'px',
+                            backgroundImage: `url(${images['whiteskull'] || images.whiteskull})`,
+                            backgroundSize: 'contain',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'center'
+                        }}
+                    />
                 </div>
            )}
 
            {/* Obscured space texture overlay */}
-           { color !== 'black' && ((props.contains && props.contains.type === 'obscured_space') || props.optionType === 'obscured space') && (
+           { ((props.contains && props.contains.type === 'obscured_space') || props.optionType === 'obscured space') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     backgroundImage: 'repeating-linear-gradient(45deg, #777 0, #777 2px, transparent 2px, transparent 8px)',
                     zIndex: 1,
-                    opacity: 0.5,
-                    pointerEvents: 'none'
+                    opacity: color === 'black' ? 0 : 0.5,
+                    pointerEvents: 'none',
+                    transition: 'opacity 0.35s ease-in-out'
                 }} />
            )}
 
            {/* Trap indicator (Keen Eye reveal) */}
-           { color !== 'black' && props.trapRevealed && (
-                <div className="trap-indicator-overlay" />
+           { props.trapRevealed && (
+                <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                    zIndex: 9, pointerEvents: 'none',
+                    opacity: color === 'black' ? 0 : 1,
+                    transition: 'opacity 0.35s ease-in-out'
+                }}>
+                    <div className="trap-indicator-overlay" style={{position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 1}} />
+                </div>
            )}
 
            {/* Inscription marker: 3 diagonal lines drawn on wall tiles */}
-           { color !== 'black' && ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (
+           { ((props.contains && props.contains.type === 'inscription') || props.optionType === 'inscription') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    opacity: color === 'black' ? 0 : 1,
+                    transition: 'opacity 0.35s ease-in-out'
                 }}>
                     <svg width='70%' height='70%' viewBox='0 0 30 30' xmlns='http://www.w3.org/2000/svg'>
                         <line x1='4' y1='28' x2='12' y2='2' stroke='#d4a844' strokeWidth='3' strokeLinecap='round'/>
@@ -412,11 +462,13 @@ function Tile(props) {
            )}
 
            {/* Shrine marker */}
-           { color !== 'black' && (props.contains && props.contains.type === 'shrine') && (
+           { (props.contains && props.contains.type === 'shrine') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    opacity: color === 'black' ? 0 : 1,
+                    transition: 'opacity 0.35s ease-in-out'
                 }}>
                     <div style={{
                         width: '70%',
@@ -436,12 +488,14 @@ function Tile(props) {
            )}
 
            {/* Lore Tablet marker */}
-           { color !== 'black' && (props.contains && props.contains.type === 'lore_tablet') && (
+           { (props.contains && props.contains.type === 'lore_tablet') && (
                 <div style={{
                     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
                     zIndex: 10, pointerEvents: 'none',
                     display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                    fontSize: Math.max(8, (props.tileSize || 30) * 0.45) + 'px'
+                    fontSize: Math.max(8, (props.tileSize || 30) * 0.45) + 'px',
+                    opacity: color === 'black' ? 0 : 1,
+                    transition: 'opacity 0.35s ease-in-out'
                 }}>
                     <div style={{
                         width: '70%',
@@ -460,32 +514,35 @@ function Tile(props) {
            )}
 
            {/* Inscription edge markers — golden bars on inscribed walls */}
-           { color !== 'black' && props.inscriptions && (
-               <>
-                   { props.inscriptions.top && (
-                       <div style={{position:'absolute', top:0, left:'10%', right:'10%', height:'4px',
-                           background:'linear-gradient(90deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
-                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.top}/>
-                   )}
-                   { props.inscriptions.bottom && (
-                       <div style={{position:'absolute', bottom:0, left:'10%', right:'10%', height:'4px',
-                           background:'linear-gradient(90deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
-                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.bottom}/>
-                   )}
-                   { props.inscriptions.left && (
-                       <div style={{position:'absolute', left:0, top:'10%', bottom:'10%', width:'4px',
-                           background:'linear-gradient(180deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
-                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.left}/>
-                   )}
-                   { props.inscriptions.right && (
-                       <div style={{position:'absolute', right:0, top:'10%', bottom:'10%', width:'4px',
-                           background:'linear-gradient(180deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
-                           zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.right}/>
-                   )}
-               </>
+           { props.inscriptions && (
+                <div style={{
+                    opacity: color === 'black' ? 0 : 1,
+                    transition: 'opacity 0.35s ease-in-out'
+                }}>
+                    { props.inscriptions.top && (
+                        <div style={{position:'absolute', top:0, left:'10%', right:'10%', height:'4px',
+                            background:'linear-gradient(90deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                            zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.top}/>
+                    )}
+                    { props.inscriptions.bottom && (
+                        <div style={{position:'absolute', bottom:0, left:'10%', right:'10%', height:'4px',
+                            background:'linear-gradient(90deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                            zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.bottom}/>
+                    )}
+                    { props.inscriptions.left && (
+                        <div style={{position:'absolute', left:0, top:'10%', bottom:'10%', width:'4px',
+                            background:'linear-gradient(180deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                            zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.left}/>
+                    )}
+                    { props.inscriptions.right && (
+                        <div style={{position:'absolute', right:0, top:'10%', bottom:'10%', width:'4px',
+                            background:'linear-gradient(180deg,transparent,#d4a844 30%,#d4a844 70%,transparent)',
+                            zIndex:50, pointerEvents:'none'}} title={'✍ ' + props.inscriptions.right}/>
+                    )}
+                </div>
            )}
 
-           {props.partialObscured && color !== 'black' && (
+           {props.partialObscured && (
                 <div style={{
                     position: 'absolute',
                     top: 0,
@@ -494,7 +551,9 @@ function Tile(props) {
                     bottom: 0,
                     backgroundColor: 'rgba(0, 0, 0, 0.5)',
                     zIndex: 25,
-                    pointerEvents: 'none'
+                    pointerEvents: 'none',
+                    opacity: color === 'black' ? 0 : 1,
+                    transition: 'opacity 0.35s ease-in-out'
                 }} />
            )}
 

@@ -66,8 +66,8 @@ describe('Summoner Summon Count Limits and Player Queues', () => {
   });
 
   test('should prevent summoning when a minion of the same type already exists', () => {
-    // Manually place a skeleton minion summoned by this summoner on the board
-    const existingSkeleton = {
+    // Manually place 2 skeleton minions summoned by this summoner on the board
+    cm.combatants['skeleton_1'] = {
       id: 'skeleton_1',
       type: 'skeleton',
       isMinion: true,
@@ -76,9 +76,17 @@ describe('Summoner Summon Count Limits and Player Queues', () => {
       summonedBy: 'summoner_1',
       coordinates: { x: 0, y: 2 }
     };
-    cm.combatants['skeleton_1'] = existingSkeleton;
+    cm.combatants['skeleton_2'] = {
+      id: 'skeleton_2',
+      type: 'skeleton',
+      isMinion: true,
+      isMonster: false,
+      dead: false,
+      summonedBy: 'summoner_1',
+      coordinates: { x: 0, y: 3 }
+    };
 
-    // summon_skeleton should NOT be ready because a skeleton already exists
+    // summon_skeleton should NOT be ready because skeletons are at the limit of 2 (level 1)
     expect(cm._abilityReady(summoner, 'summon_skeleton')).toBe(false);
 
     // summon_imp should still be ready because no imps exist
@@ -114,5 +122,84 @@ describe('Summoner Summon Count Limits and Player Queues', () => {
     const skeletons = Object.values(cm.combatants).filter(c => c.type === 'skeleton');
     expect(skeletons.length).toBe(2);
     expect(skeletons[1].summonedBy).toBe('summoner_1');
+  });
+
+  test('should kill all summoned minions when summoner is killed', () => {
+    // Instantiate a clean CombatManagerRedux without mocking targetKilled
+    const testCm = new CombatManagerRedux();
+    testCm.updateData = jest.fn();
+    testCm.appendCombatLog = jest.fn();
+
+    const testSummoner = {
+      id: 'summoner_1',
+      name: 'Vaelis',
+      dead: false,
+    };
+    const testMinion = {
+      id: 'skeleton_1',
+      type: 'skeleton',
+      isMinion: true,
+      dead: false,
+      summonedBy: 'summoner_1',
+    };
+
+    testCm.combatants = {
+      summoner_1: testSummoner,
+      skeleton_1: testMinion,
+    };
+
+    // Kill summoner
+    testCm.targetKilled(testSummoner);
+
+    // Verify summoner is dead and minion is also dead
+    expect(testSummoner.dead).toBe(true);
+    expect(testMinion.dead).toBe(true);
+  });
+
+  test('should scale max skeleton and imp limits based on skill level', () => {
+    // Level 1: Limit of 2
+    summoner.globalSkills = [{ key: 'summon_skeleton', level: 1 }];
+    cm.combatants = { summoner_1: summoner };
+
+    // Set up 1 existing skeleton
+    cm.combatants['sk1'] = { id: 'sk1', type: 'skeleton', isMinion: true, summonedBy: 'summoner_1', dead: false };
+    expect(cm._abilityReady(summoner, 'summon_skeleton')).toBe(true); // under limit (1 < 2)
+
+    // Set up 2 existing skeletons
+    cm.combatants['sk2'] = { id: 'sk2', type: 'skeleton', isMinion: true, summonedBy: 'summoner_1', dead: false };
+    expect(cm._abilityReady(summoner, 'summon_skeleton')).toBe(false); // at limit (2 = 2)
+
+    // Upgrade to Level 2: Limit of 3
+    summoner.globalSkills = [{ key: 'summon_skeleton', level: 2 }];
+    expect(cm._abilityReady(summoner, 'summon_skeleton')).toBe(true); // under limit (2 < 3)
+
+    cm.combatants['sk3'] = { id: 'sk3', type: 'skeleton', isMinion: true, summonedBy: 'summoner_1', dead: false };
+    expect(cm._abilityReady(summoner, 'summon_skeleton')).toBe(false); // at limit (3 = 3)
+  });
+
+  test('should scale summon stats at level 3', () => {
+    // Summon skeleton at Level 1 (should have normal stats)
+    summoner.globalSkills = [{ key: 'summon_skeleton', level: 1 }];
+    cm.combatants = { summoner_1: summoner };
+    cm._executeSummon(summoner, { cooldown: 7 }, 'summon_skeleton');
+    const normalSk = Object.values(cm.combatants).find(c => c.type === 'skeleton');
+    expect(normalSk).toBeDefined();
+    const normalHp = normalSk.hp;
+    const normalAtk = normalSk.stats.atk;
+
+    // Summon skeleton at Level 3 (should have 2x HP and 2x ATK)
+    summoner.globalSkills = [{ key: 'summon_skeleton', level: 3 }];
+    cm.combatants = { summoner_1: summoner };
+    cm._executeSummon(summoner, { cooldown: 7 }, 'summon_skeleton');
+    const superSk = Object.values(cm.combatants).find(c => c.type === 'skeleton');
+    expect(superSk.hp).toBe(normalHp * 2);
+    expect(superSk.stats.atk).toBe(normalAtk * 2);
+
+    // Summon imp at Level 3 (should have 2x Speed)
+    summoner.globalSkills = [{ key: 'summon_imp', level: 3 }];
+    cm.combatants = { summoner_1: summoner };
+    cm._executeSummon(summoner, { cooldown: 8 }, 'summon_imp');
+    const superImp = Object.values(cm.combatants).find(c => c.type === 'imp');
+    expect(superImp.stats.speed).toBe(6); // base speed 3 * 2
   });
 });

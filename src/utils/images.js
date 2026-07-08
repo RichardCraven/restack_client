@@ -444,7 +444,8 @@ import cyan_gate from '../assets/gates/cyan.png'
 import violet_gate from '../assets/gates/violet.png'
 import rubicund_gate from '../assets/gates/rubicund.png'
 
-import gold from '../assets/icons/staples/gold.png'
+import gold1 from '../assets/icons/loot/gold1.png'
+import gold2 from '../assets/icons/loot/gold2.png'
 import ornate_key from '../assets/icons/staples/key.png'
 import minor_key from '../assets/icons/misc/keys/minor key.png'
 import major_key from '../assets/icons/misc/keys/major key.png'
@@ -1143,6 +1144,13 @@ const getTerrainSetForLevel = (level) => {
 };
 
 
+const getRandomGoldIcon = () => {
+    return Math.random() < 0.5 ? gold1 : gold2;
+};
+
+const gold = Math.random() < 0.5 ? gold1 : gold2;
+
+
 export {
     hand_1,
     hand_2,
@@ -1567,6 +1575,9 @@ export {
     rubicund_gate,
     moon_castle,
     gold,
+    gold1,
+    gold2,
+    getRandomGoldIcon,
     treasure,
     oracle,
 

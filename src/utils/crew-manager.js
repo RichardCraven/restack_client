@@ -43,7 +43,7 @@ export function CrewManager(){
     this.initializeCrew = (crew) => {
         //called everytime game loads, not just first time
         this.crew = [];
-        const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
+        const colors = ['#7b5e8c', '#506e86', '#5f7055', '#b88d4c'];
 
         const normalizeSpecialName = (value) => String(value || '').replace(/_/g, ' ').trim().toLowerCase();
         const hasSpecial = (specials, specialName) => {
@@ -106,6 +106,11 @@ export function CrewManager(){
             })
             // assign a display color to the crew member (fall back to a repeating palette)
             try{
+                if (member.color === '#b710d5') member.color = '#7b5e8c';
+                else if (member.color === '#6495ed') member.color = '#506e86';
+                else if (member.color === '#73b746') member.color = '#5f7055';
+                else if (member.color === '#f4d013') member.color = '#b88d4c';
+
                 member.color = member.color || colors[index % colors.length];
             } catch(e){}
             if(this.memberTypes.includes(member.image) || this.memberTypes.includes(member.type)){

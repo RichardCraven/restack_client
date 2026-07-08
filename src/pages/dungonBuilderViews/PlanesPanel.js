@@ -167,7 +167,10 @@ class PlanesPanel extends React.Component {
                 }}
                 onClick={() => {
                     this.setState({hoveredPlane : null})
-                    return this.props.loadPlane(plane)
+                    this.props.loadPlane(plane)
+                    if (this.props.selectedView === 'dungeon' && typeof this.props.setViewState === 'function') {
+                        this.props.setViewState('plane');
+                    }
                 }}
                 onMouseEnter={() => {
                     if(this.props.loadedPlane?.id !== plane.id){

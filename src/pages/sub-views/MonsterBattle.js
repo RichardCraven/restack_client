@@ -212,6 +212,8 @@ class MonsterBattle extends React.Component {
         // mount flag to avoid setState on unmounted component warnings
         this._isMounted = false;
         this.state = {
+            goldIcon: images.getRandomGoldIcon(),
+            activeSkillsTab: 'skills',
             activeEffectPopup: null,
             activeSkillPopup: null,
             popupOpenedWhilePaused: false,
@@ -994,8 +996,7 @@ class MonsterBattle extends React.Component {
                     this.setState({
                         selectedFighter: first,
                         selectedMonster: null,
-                        glyphTrayExpanded: first.type === 'wizard',
-                        greetingInProcess: false // show interaction pane by default
+                        glyphTrayExpanded: first.type === 'wizard'
                     });
                 }
             }
@@ -2720,7 +2721,7 @@ class MonsterBattle extends React.Component {
                                         <div className="spoils-grid">
                                             {this.state.goldGained > 0 && (
                                                 <div className="spoil-card gold">
-                                                    <img className="spoil-icon" src={images.gold} alt="Gold" />
+                                                    <img className="spoil-icon" src={this.state.goldIcon} alt="Gold" />
                                                     <div className="spoil-info">
                                                         <span className="spoil-label">Gold Gained</span>
                                                         <span className="spoil-value">+{this.state.goldGained}</span>
@@ -2971,7 +2972,7 @@ class MonsterBattle extends React.Component {
                                         fontWeight: '600',
                                         textAlign: 'center',
                                         boxShadow: '0 8px 24px rgba(0,0,0,0.8), 0 0 15px rgba(255, 84, 0, 0.4)',
-                                        zIndex: 450,
+                                        zIndex: 2000,
                                         pointerEvents: 'none',
                                         display: 'flex',
                                         alignItems: 'center',
@@ -3792,20 +3793,142 @@ class MonsterBattle extends React.Component {
                                         return renderConsumableTile(rep, idx);
                                     });
 
+                                    // ── Build inventory consumables list ──────────────────────────
+                                    const invConsumables = (this.props.inventoryManager && Array.isArray(this.props.inventoryManager.inventory))
+                                        ? this.props.inventoryManager.inventory.filter(e => e && e.type === 'consumable')
+                                        : [];
+                                    const invGrouped = {};
+                                    invConsumables.forEach(item => {
+                                        const key = item.name;
+                                        if (!invGrouped[key]) invGrouped[key] = [];
+                                        invGrouped[key].push(item);
+                                    });
+
+                                    const renderInventoryConsumableTile = (itemGroup, idx) => {
+                                        const rep = itemGroup[0];
+                                        const count = itemGroup.length;
+                                        const rawIcon = rep.icon;
+                                        let resolvedIconUrl = '';
+                                        if (rawIcon) {
+                                            if (typeof rawIcon === 'string') {
+                                                const mapped = images[rawIcon.trim()];
+                                                resolvedIconUrl = mapped ? (mapped.default || mapped) : rawIcon;
+                                            } else if (typeof rawIcon === 'object') {
+                                                resolvedIconUrl = rawIcon.default || String(rawIcon);
+                                            }
+                                        }
+                                        if (!resolvedIconUrl && typeof rawIcon === 'string' && rawIcon.startsWith('data:')) {
+                                            resolvedIconUrl = rawIcon;
+                                        }
+
+                                        const name = rep.name;
+                                        const consumableKey = `inv-consumable-${name}-${idx}`;
+                                        const isHovered = hoveredKey === consumableKey;
+
+                                        return (
+                                            <div
+                                                key={consumableKey}
+                                                className="skill-tile-outer"
+                                                onMouseEnter={() => this.setState({ hoveredAbilityKey: consumableKey })}
+                                                onMouseLeave={() => this.setState({ hoveredAbilityKey: null })}
+                                            >
+                                                {/* Label — click = popup */}
+                                                <div
+                                                    className={`skill-hover-label${isHovered ? ' visible' : ''}`}
+                                                    onClick={(e) => { e.stopPropagation(); this.openSkillPopup({ name, desc: rep.description || rep.desc || '', icon: resolvedIconUrl, type: 'consumable', cooldown: 0 }); }}
+                                                >
+                                                    {name}
+                                                </div>
+                                                {/* Icon wrapper — click = fire */}
+                                                <div className="interaction-tile-wrapper" style={{ position: 'relative' }}>
+                                                    <div
+                                                        className="interaction-tile special consumable"
+                                                        style={{
+                                                            backgroundImage: resolvedIconUrl ? `url("${encodeURI(String(resolvedIconUrl).replace(/^['"]|['"]$/g, ''))}"), radial-gradient(white 0%, black 60%)` : 'radial-gradient(lime 0%, black 60%)',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => this.combatInventoryTileClicked(rep)}
+                                                    />
+                                                    {/* Stack count badge */}
+                                                    {count > 1 && (
+                                                        <div className="stack-badge small">{count > 5 ? '5+' : ['', 'I', 'II', 'III', 'IV', 'V'][count]}</div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        );
+                                    };
+
+                                    const inventoryConsumableTiles = Object.values(invGrouped).map((group, idx) => {
+                                        return renderInventoryConsumableTile(group, idx);
+                                    });
+
+                                    const allConsumableTiles = [...consumableTiles, ...inventoryConsumableTiles];
+                                    const activeTab = this.state.activeSkillsTab || 'skills';
+
                                     return (
                                         <>
-                                            {/* Regular skills — wrapping row */}
-                                            <div className="redux-regular-skills-wrap">
-                                                {regularEntries.map(renderRegularTile)}
+                                            <div className="redux-abilities-tabs" style={{ display: 'flex', borderBottom: '1px solid rgba(255, 255, 255, 0.15)', background: 'rgba(0, 0, 0, 0.15)', flexShrink: 0 }}>
+                                                <button
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px 12px',
+                                                        background: activeTab === 'skills' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                                                        border: 'none',
+                                                        color: activeTab === 'skills' ? '#fff' : '#888',
+                                                        fontSize: '10px',
+                                                        fontWeight: 'bold',
+                                                        letterSpacing: '0.5px',
+                                                        textTransform: 'uppercase',
+                                                        cursor: 'pointer',
+                                                        borderBottom: activeTab === 'skills' ? '2px solid #a370f7' : '2px solid transparent',
+                                                        outline: 'none',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                    onClick={() => this.setState({ activeSkillsTab: 'skills' })}
+                                                >
+                                                    Skills
+                                                </button>
+                                                <button
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px 12px',
+                                                        background: activeTab === 'consumables' ? 'rgba(255, 255, 255, 0.1)' : 'transparent',
+                                                        border: 'none',
+                                                        color: activeTab === 'consumables' ? '#fff' : '#888',
+                                                        fontSize: '10px',
+                                                        fontWeight: 'bold',
+                                                        letterSpacing: '0.5px',
+                                                        textTransform: 'uppercase',
+                                                        cursor: 'pointer',
+                                                        borderBottom: activeTab === 'consumables' ? '2px solid #a370f7' : '2px solid transparent',
+                                                        outline: 'none',
+                                                        transition: 'all 0.2s ease'
+                                                    }}
+                                                    onClick={() => this.setState({ activeSkillsTab: 'consumables' })}
+                                                >
+                                                    Consumables {(consumableActions.length + invConsumables.length) > 0 && `(${consumableActions.length + invConsumables.length})`}
+                                                </button>
                                             </div>
-                                            {/* Consumable strip — bottom, only if any consumables */}
-                                            {consumableTiles.length > 0 && (
-                                                <>
-                                                    <div className="redux-consumable-divider" />
-                                                    <div className="redux-consumable-strip">
-                                                        {consumableTiles}
-                                                    </div>
-                                                </>
+                                            {activeTab === 'consumables' ? (
+                                                <div className="redux-regular-skills-wrap">
+                                                    {allConsumableTiles.length > 0 ? (
+                                                        allConsumableTiles
+                                                    ) : (
+                                                        <div style={{ padding: '20px', color: '#888', fontSize: '11px', textAlign: 'center', fontStyle: 'italic', width: '100%' }}>
+                                                            No consumables available
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <div className="redux-regular-skills-wrap">
+                                                    {regularEntries.length > 0 ? (
+                                                        regularEntries.map(renderRegularTile)
+                                                    ) : (
+                                                        <div style={{ padding: '20px', color: '#888', fontSize: '11px', textAlign: 'center', fontStyle: 'italic', width: '100%' }}>
+                                                            No skills available
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
                                         </>
                                     );
@@ -3814,8 +3937,8 @@ class MonsterBattle extends React.Component {
 
                             {/* RIGHT COLUMN: event log */}
                             <div className={`queue-col redux-log-col ${this.state.eventLogPoppedOut ? 'popped-out' : ''}`}>
-                                <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                    <span>Event Log</span>
+                                <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 'auto', minHeight: '25px', padding: '4px 4px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Event Log</span>
                                     <div className="log-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <button
                                             onClick={() => this.setState(prev => ({ eventLogPoppedOut: !prev.eventLogPoppedOut }))}
@@ -4328,8 +4451,8 @@ class MonsterBattle extends React.Component {
 
                             </div>
                             <div className="queue-col">
-                                <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                                    <span>Event Log</span>
+                                <div className="interaction-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: 'auto', minHeight: '25px', padding: '4px 4px', flexWrap: 'wrap' }}>
+                                    <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Event Log</span>
                                     <div className="log-controls" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', color: '#aaa', cursor: 'pointer', userSelect: 'none' }}>
                                             <input

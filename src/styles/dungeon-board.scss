@@ -230,6 +230,24 @@
                         &.active{
                             background-color: #f9b115 !important;
                         }
+
+                        &.unselected {
+                            .portrait {
+                                filter: brightness(0.35) grayscale(0.25);
+                                transition: filter 0.2s ease;
+                            }
+                            &:hover {
+                                .portrait {
+                                    filter: brightness(0.6) grayscale(0.1);
+                                }
+                            }
+                        }
+                        &.selected {
+                            .portrait {
+                                filter: brightness(1) grayscale(0);
+                                transition: filter 0.2s ease;
+                            }
+                        }
                     }
                 }
             }
@@ -2087,6 +2105,65 @@
     }
 }
 
+/* ─── Prep Complete Modal ─────────────────────────────────────────── */
+.prep-complete-modal .modal-content {
+    border: 2px solid #eba636;
+    box-shadow: 0 0 22px rgba(235, 166, 54, 0.45);
+    background: radial-gradient(circle at center, #1b150c 0%, #0c0803 100%);
+}
+.prep-complete-zone {
+    text-align: center;
+    padding: 16px 12px;
+    color: #f3f4f6;
+    animation: prepCompleteFadeIn 0.3s ease-out;
+}
+@keyframes prepCompleteFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.prep-complete-icon {
+    font-size: 42px;
+    margin-bottom: 12px;
+    display: inline-block;
+    animation: prepIconFloat 2.5s ease-in-out infinite;
+}
+@keyframes prepIconFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-6px); }
+}
+.prep-complete-title {
+    font-size: 19px;
+    font-weight: 700;
+    color: #eba636;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0 0 14px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+}
+.prep-complete-card {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(235, 166, 54, 0.15);
+    border-radius: 6px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    text-align: left;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+.prep-complete-text {
+    font-size: 13.5px;
+    color: #e5e7eb;
+    line-height: 1.6;
+    margin: 0;
+    font-weight: 500;
+}
+.prep-complete-note {
+    font-size: 11px;
+    color: #eba636;
+    font-style: italic;
+    margin-top: 10px;
+    opacity: 0.8;
+}
+
 /* ─── Ritual Complete Modal ───────────────────────────────────────── */
 .ritual-complete-modal .modal-content {
     border: 2px solid #c8a8ff;
@@ -3204,6 +3281,35 @@
         object-fit: contain;
         background: radial-gradient(circle at 50% 50%, rgba(40, 130, 255, 0.12) 0%, rgba(0,0,0,0) 70%);
     }
+}
+
+/* Temporary loot card — gold theme with pulse glow and fadeout support */
+.poi-loot-card {
+    border-color: rgba(249, 177, 21, 0.6) !important;
+    box-shadow: 0 0 10px rgba(249, 177, 21, 0.3) !important;
+    animation: lootPulse 1.5s infinite alternate;
+
+    .poi-portrait-name {
+        background: rgba(249, 177, 21, 0.1);
+        border-top-color: rgba(249, 177, 21, 0.3);
+        color: rgba(255, 230, 120, 0.95);
+    }
+
+    .poi-portrait-img {
+        object-fit: contain;
+        background: radial-gradient(circle at 50% 50%, rgba(249, 177, 21, 0.15) 0%, rgba(0,0,0,0) 70%);
+    }
+}
+
+.poi-portrait-card.fade-out {
+    opacity: 0 !important;
+    transform: scale(0.9) !important;
+    transition: opacity 0.3s ease-out, transform 0.3s ease-out !important;
+}
+
+@keyframes lootPulse {
+    from { box-shadow: 0 0 8px rgba(249, 177, 21, 0.2); }
+    to { box-shadow: 0 0 16px rgba(249, 177, 21, 0.5); }
 }
 
 /* Ensure compound brew button styling is applied globally/unnested */

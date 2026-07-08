@@ -72,7 +72,11 @@ function sanitizeMeta(metadata){
             trainingActive: c && c.trainingActive,
             specialActions: c && c.specialActions,
             passives: c && c.passives,
-            pendingLevelUpPicks: c && c.pendingLevelUpPicks
+            pendingLevelUpPicks: c && c.pendingLevelUpPicks,
+            knownRituals: c && c.knownRituals,
+            knownTattoos: c && c.knownTattoos,
+            tattoos: c && c.tattoos,
+            knownRecipes: c && c.knownRecipes
         }));
     }
     // If inventory present, keep only counts/names

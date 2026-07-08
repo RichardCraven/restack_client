@@ -1775,6 +1775,13 @@ class MapMakerPage extends React.Component {
     const matrix = { ...this.state.planesFoldersExpanded };
     matrix[folderTitle] = !matrix[folderTitle];
     this.setState(() => { return { planesFoldersExpanded: matrix } })
+
+    // Persist only folder UI expansion state.
+    setEditorPreference('planesFoldersExpanded', matrix);
+    const userId = sessionStorage.getItem('userId');
+    const meta = getMeta();
+    if (userId) updateUserRequest(userId, meta)
+    storeMeta(meta);
   }
 
   // Board CRUD methods
@@ -3291,6 +3298,16 @@ class MapMakerPage extends React.Component {
         })
       })
     })
+
+    const meta = getMeta();
+    const persistedExpanded = meta?.preferences?.editor?.planesFoldersExpanded;
+    if (persistedExpanded && typeof persistedExpanded === 'object') {
+      Object.keys(planesFoldersExpanded).forEach((folderKey) => {
+        if (typeof persistedExpanded[folderKey] === 'boolean') {
+          planesFoldersExpanded[folderKey] = persistedExpanded[folderKey];
+        }
+      })
+    }
     return new Promise((resolve) => {
       this.setState(() => {
         return {

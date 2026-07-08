@@ -3,10 +3,47 @@ import skillsMatrix from '../utils/skills-matrix';
 import * as images from '../utils/images';
 import '../styles/skill-tree.scss';
 
+const getDamageDescription = (skill, level) => {
+    if (!skill) return null;
+    let atkPct = skill.atkPercentage;
+    let flatDmg = skill.flatDamage;
+    let baseDmg = skill.damage;
+    const lvl = level || 1;
+
+    // Special case: Shield Slam
+    if (skill.id === 'shield_slam') {
+        if (lvl === 3) {
+            return "Deals 300% Attack damage if wielding a shield (100% otherwise).";
+        } else {
+            return "Deals 200% Attack damage if wielding a shield (100% otherwise).";
+        }
+    }
+
+    if (atkPct !== undefined || flatDmg !== undefined || baseDmg !== undefined) {
+        let parts = [];
+        if (atkPct !== undefined && atkPct > 0) {
+            parts.push(`${atkPct}% Attack damage`);
+        }
+        if (flatDmg !== undefined && flatDmg > 0) {
+            parts.push(`${flatDmg} Flat damage`);
+        }
+        if (baseDmg !== undefined && baseDmg > 0) {
+            parts.push(`${baseDmg} Base damage`);
+        }
+        if (parts.length > 0) {
+            return "Deals " + parts.join(" + ") + ".";
+        }
+    }
+    return null;
+};
+
 const SkillTree = ({ crewMember, onClose }) => {
     const containerRef = useRef(null);
     const [lines, setLines] = useState([]);
     const [selectedSkill, setSelectedSkill] = useState(null);
+    const [showFortifyTooltip, setShowFortifyTooltip] = useState(false);
+    const [showShieldSlamTooltip, setShowShieldSlamTooltip] = useState(false);
+    const [showBerserkerTooltip, setShowBerserkerTooltip] = useState(false);
     
     // We need to keep references to the DOM nodes of each skill to draw lines between them
     const nodeRefs = useRef({});
@@ -193,6 +230,26 @@ const SkillTree = ({ crewMember, onClose }) => {
                                                     finalSkill.desc = 'Restore 45 HP to an ally.';
                                                 }
                                             }
+                                            if (skill.id === 'summon_skeleton') {
+                                                const effectiveLevel = Math.max(1, level);
+                                                if (effectiveLevel === 1) {
+                                                    finalSkill.desc = 'Summon a skeleton warrior to the field (L1: Max 2 skeletons).';
+                                                } else if (effectiveLevel === 2) {
+                                                    finalSkill.desc = 'Summon a skeleton warrior to the field (L2: Max 3 skeletons).';
+                                                } else if (effectiveLevel === 3) {
+                                                    finalSkill.desc = 'Summon a skeleton warrior to the field (L3: Max 3 skeletons, 2x HP & 2x attack damage).';
+                                                }
+                                            }
+                                            if (skill.id === 'summon_imp') {
+                                                const effectiveLevel = Math.max(1, level);
+                                                if (effectiveLevel === 1) {
+                                                    finalSkill.desc = 'Summon a fiery imp minion (L1: Max 2 imps).';
+                                                } else if (effectiveLevel === 2) {
+                                                    finalSkill.desc = 'Summon a fiery imp minion (L2: Max 3 imps).';
+                                                } else if (effectiveLevel === 3) {
+                                                    finalSkill.desc = 'Summon a fiery imp minion (L3: Max 3 imps, 2x Speed & +20% physical miss chance).';
+                                                }
+                                            }
 
                                             return (
                                                 <div 
@@ -236,7 +293,214 @@ const SkillTree = ({ crewMember, onClose }) => {
                             </div>
                         </div>
                         <div className="skill-details-body">
-                            <p className="skill-details-description">{selectedSkill.desc}</p>
+                            <p className="skill-details-description" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '8px', textAlign: 'center' }}>
+                                <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    {selectedSkill.desc}
+                                    {(selectedSkill.id === 'fortify' || selectedSkill.key === 'fortify') && (
+                                        <span 
+                                            className="fortify-help-icon"
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: '15px',
+                                                height: '15px',
+                                                borderRadius: '50%',
+                                                background: '#ffb830',
+                                                color: '#121215',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                position: 'relative',
+                                                marginLeft: '6px'
+                                            }}
+                                            onMouseEnter={() => setShowFortifyTooltip(true)}
+                                            onMouseLeave={() => setShowFortifyTooltip(false)}
+                                        >
+                                            ?
+                                            {showFortifyTooltip && (
+                                                <span 
+                                                    className="fortify-explanation-tooltip"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        bottom: '24px',
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        width: '280px',
+                                                        background: '#1a1a1f',
+                                                        border: '1px solid #ffb830',
+                                                        borderRadius: '8px',
+                                                        padding: '12px',
+                                                        boxShadow: '0 4px 16px rgba(0,0,0,0.9)',
+                                                        color: '#ddd',
+                                                        fontSize: '12px',
+                                                        fontWeight: 'normal',
+                                                        lineHeight: '1.4',
+                                                        textAlign: 'left',
+                                                        zIndex: 10000,
+                                                        pointerEvents: 'none'
+                                                    }}
+                                                >
+                                                    <strong style={{ color: '#ffb830', display: 'block', marginBottom: '6px', fontSize: '13px' }}>Fortify Mechanics & Progression:</strong>
+                                                    <span style={{ display: 'block', marginBottom: '6px', color: '#aaa', fontStyle: 'italic', fontSize: '11px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
+                                                        Normally, camping without enough food reduces party Resolve by 2 and blocks camping.
+                                                    </span>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        <strong>Lvl 1:</strong> Bypasses camping food resolve penalty (once per 2 hours cooldown).
+                                                    </span>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        <strong>Lvl 2:</strong> Cooldown reduced to 30 mins. Camping has a 35% chance to generate 10 Resolve.
+                                                    </span>
+                                                    <span style={{ display: 'block' }}>
+                                                        <strong>Lvl 3:</strong> Cooldown reduced to 10 mins. Camping has a 50% chance to generate 20 Resolve.
+                                                    </span>
+                                                </span>
+                                            )}
+                                        </span>
+                                    )}
+                                    {(selectedSkill.id === 'shield_slam' || selectedSkill.key === 'shield_slam') && (
+                                        <span 
+                                            className="shield-slam-help-icon"
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: '15px',
+                                                height: '15px',
+                                                borderRadius: '50%',
+                                                background: '#ffb830',
+                                                color: '#121215',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                position: 'relative',
+                                                marginLeft: '6px'
+                                            }}
+                                            onMouseEnter={() => setShowShieldSlamTooltip(true)}
+                                            onMouseLeave={() => setShowShieldSlamTooltip(false)}
+                                        >
+                                            ?
+                                            {showShieldSlamTooltip && (
+                                                <span 
+                                                    className="shield-slam-explanation-tooltip"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        bottom: '24px',
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        width: '280px',
+                                                        background: '#1a1a1f',
+                                                        border: '1px solid #ffb830',
+                                                        borderRadius: '8px',
+                                                        padding: '12px',
+                                                        boxShadow: '0 4px 16px rgba(0,0,0,0.9)',
+                                                        color: '#ddd',
+                                                        fontSize: '12px',
+                                                        fontWeight: 'normal',
+                                                        lineHeight: '1.4',
+                                                        textAlign: 'left',
+                                                        zIndex: 10000,
+                                                        pointerEvents: 'none'
+                                                    }}
+                                                >
+                                                    <strong style={{ color: '#ffb830', display: 'block', marginBottom: '6px', fontSize: '13px' }}>Shield Slam Mechanics & Progression:</strong>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        <strong>Lvl 1:</strong> Stun for 1 round. Wielding a shield does double damage (200% atk).
+                                                    </span>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        <strong>Lvl 2:</strong> Stun duration extended to 3 rounds.
+                                                    </span>
+                                                    <span style={{ display: 'block' }}>
+                                                        <strong>Lvl 3:</strong> Stun duration extended to 4 rounds, and shield damage bonus increased to 300% atk.
+                                                    </span>
+                                                </span>
+                                            )}
+                                        </span>
+                                    )}
+                                    {(selectedSkill.id === 'barbarian_berserker' || selectedSkill.key === 'barbarian_berserker') && (
+                                        <span 
+                                            className="berserker-help-icon"
+                                            style={{
+                                                display: 'inline-flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                width: '15px',
+                                                height: '15px',
+                                                borderRadius: '50%',
+                                                background: '#ffb830',
+                                                color: '#121215',
+                                                fontSize: '10px',
+                                                fontWeight: 'bold',
+                                                cursor: 'pointer',
+                                                userSelect: 'none',
+                                                position: 'relative',
+                                                marginLeft: '6px'
+                                            }}
+                                            onMouseEnter={() => setShowBerserkerTooltip(true)}
+                                            onMouseLeave={() => setShowBerserkerTooltip(false)}
+                                        >
+                                            ?
+                                            {showBerserkerTooltip && (
+                                                <span 
+                                                    className="berserker-explanation-tooltip"
+                                                    style={{
+                                                        position: 'absolute',
+                                                        bottom: '24px',
+                                                        left: '50%',
+                                                        transform: 'translateX(-50%)',
+                                                        width: '280px',
+                                                        background: '#1a1a1f',
+                                                        border: '1px solid #ffb830',
+                                                        borderRadius: '8px',
+                                                        padding: '12px',
+                                                        boxShadow: '0 4px 16px rgba(0,0,0,0.9)',
+                                                        color: '#ddd',
+                                                        fontSize: '12px',
+                                                        fontWeight: 'normal',
+                                                        lineHeight: '1.4',
+                                                        textAlign: 'left',
+                                                        zIndex: 10000,
+                                                        pointerEvents: 'none'
+                                                    }}
+                                                >
+                                                    <strong style={{ color: '#ffb830', display: 'block', marginBottom: '6px', fontSize: '13px' }}>Berserker Mechanics & Details:</strong>
+                                                    <span style={{ display: 'block', marginBottom: '6px', color: '#aaa', fontStyle: 'italic', fontSize: '11px', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '4px' }}>
+                                                        Temporarily enters a state of absolute rage in combat.
+                                                    </span>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        ⦿ <strong>Attack Buff:</strong> Increases Attack by 12 (+12 ATK).
+                                                    </span>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        ⦿ <strong>Movement Speed:</strong> Doubles movement speed (halves movement cooldowns).
+                                                    </span>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        ⦿ <strong>Attack Speed:</strong> Doubles skill/attack speed (halves attack cooldowns).
+                                                    </span>
+                                                    <span style={{ display: 'block', marginBottom: '4px' }}>
+                                                        ⦿ <strong>Fear Counter:</strong> Immediately cleanses active Fear on cast.
+                                                    </span>
+                                                    <span style={{ display: 'block' }}>
+                                                        ⦿ <strong>Fear Immunity:</strong> Immune to Fear effects for the duration.
+                                                    </span>
+                                                </span>
+                                            )}
+                                        </span>
+                                    )}
+                                </span>
+                                {(() => {
+                                    const dmgDesc = getDamageDescription(selectedSkill, selectedSkill.level);
+                                    if (dmgDesc) {
+                                        return (
+                                            <span style={{ color: '#ffb830', fontSize: '12px', fontWeight: 'bold', display: 'block', marginTop: '2px' }}>
+                                                {dmgDesc}
+                                            </span>
+                                        );
+                                    }
+                                    return null;
+                                })()}
+                            </p>
                             <div className="skill-details-stats">
                                 {selectedSkill.cooldown !== undefined && (
                                     <div className="skill-stat-row">

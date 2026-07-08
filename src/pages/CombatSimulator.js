@@ -758,12 +758,15 @@ class CrewManagerPage extends React.Component {
     useConsumableFromInventory = (item) => {
         let foundItem = this.props.inventoryManager.inventory.find(e => e.name === item.name),
             foundIndex = this.props.inventoryManager.inventory.findIndex(e => e.name === item.name);
-        foundItem.animation = 'consumed';
-        this.forceUpdate();
-        setTimeout(() => {
-            foundItem.animation = '';
-            this.props.inventoryManager.removeItemByIndex(foundIndex)
-        }, 500)
+        if (foundItem) {
+            foundItem.animation = 'consumed';
+            this.forceUpdate();
+            setTimeout(() => {
+                foundItem.animation = '';
+                this.props.inventoryManager.removeItemByIndex(foundIndex);
+                this.forceUpdate();
+            }, 500);
+        }
     }
     combatKeyDownHandler = (event) => {
         let key = event.key, code = event.code;

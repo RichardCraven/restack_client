@@ -102,7 +102,8 @@ class ShrineScreen extends React.Component {
             // ── Selection states for CombatGrid (dummy/view-only)
             selectedFighter: null,
             selectedMonster: null,
-            shrinerDying: false
+            shrinerDying: false,
+            victorySequenceActive: false
         };
 
         this.combatManager = null;
@@ -434,7 +435,7 @@ class ShrineScreen extends React.Component {
     }
 
     _checkCommunionOutcome() {
-        if (this.state.phase !== 'communion' || this.state.outcome) return;
+        if (this.state.phase !== 'communion' || this.state.outcome || this.state.victorySequenceActive) return;
 
         const { battleData } = this.state;
         if (!battleData || Object.keys(battleData).length === 0) return;
@@ -462,29 +463,50 @@ class ShrineScreen extends React.Component {
         }
 
         // 2. Check if concentration is fully charged (6 rounds of progress)
-        if (this.combatManager && this.combatManager.concentrationProgress >= TOTAL_ROUNDS) {
-            if (this.combatManager) this.combatManager.shutdown();
-            this.setState({
-                phase: 'done',
-                outcome: 'success',
-                showSkillSelect: true,
-                message: ''
-            });
-            return;
-        }
+        const isConcentrationComplete = this.combatManager && this.combatManager.concentrationProgress >= TOTAL_ROUNDS;
 
         // 3. Check if all monsters/guardians are defeated
         const aliveMonsters = Object.values(battleData).filter(
             c => c && c.isMonster && !c.dead && c.hp > 0
         );
-        if (aliveMonsters.length === 0) {
+        const areMonstersDefeated = aliveMonsters.length === 0;
+
+        if (isConcentrationComplete || areMonstersDefeated) {
+            // Trigger victory sequence instead of immediately showing screen
             if (this.combatManager) this.combatManager.shutdown();
-            this.setState({
-                phase: 'done',
-                outcome: 'success',
-                showSkillSelect: true,
-                message: ''
+
+            const updatedBattleData = JSON.parse(JSON.stringify(battleData));
+            // Mark all monsters as dead to play death animations
+            Object.keys(updatedBattleData).forEach(id => {
+                const combatant = updatedBattleData[id];
+                if (combatant && combatant.isMonster) {
+                    combatant.hp = 0;
+                    combatant.dead = true;
+                }
             });
+
+            // Set celebrating flag on the Shriner unit
+            if (this.shrineUnitId && updatedBattleData[this.shrineUnitId]) {
+                updatedBattleData[this.shrineUnitId].isCelebrating = true;
+            }
+
+            this.setState({
+                victorySequenceActive: true,
+                battleData: updatedBattleData
+            });
+
+            // Play animations for 3.5 seconds, then transition to done victory screen
+            setTimeout(() => {
+                if (this._isMounted) {
+                    this.setState({
+                        phase: 'done',
+                        outcome: 'success',
+                        showSkillSelect: true,
+                        message: '',
+                        victorySequenceActive: false
+                    });
+                }
+            }, 3500);
         }
     }
 
@@ -934,29 +956,88 @@ class ShrineScreen extends React.Component {
     _renderShrineTile() {
         const left = SHRINE_COL * (TILE_SIZE + 2);
         const top = SHRINE_ROW * (TILE_SIZE + 2);
-        const { phase, cinematicActive } = this.state;
+        const { phase, cinematicActive, victorySequenceActive } = this.state;
         const isConcentrating = (phase === 'communion' && !cinematicActive) || (phase === 'done' && this.state.outcome === 'success');
+        
+        let shrineAnimation = 'shrine-float 3s ease-in-out infinite alternate';
+        if (victorySequenceActive) {
+            shrineAnimation = 'shrine-victory-spin 3s cubic-bezier(0.25, 1, 0.5, 1) infinite';
+        } else if (isConcentrating) {
+            shrineAnimation = 'shrine-glow-pulse 1.2s ease-in-out infinite alternate';
+        }
+
         return (
-            <div key="shrine-tile" style={{
-                position: 'absolute',
-                left: `${left}px`,
-                top: `${top}px`,
-                width: `${TILE_SIZE}px`,
-                height: `${TILE_SIZE}px`,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 20,
-                filter: isConcentrating ? 'drop-shadow(0 0 16px rgba(201,162,39,0.9))' : 'drop-shadow(0 0 8px rgba(201,162,39,0.5))',
-                animation: isConcentrating ? 'shrine-glow-pulse 1.2s ease-in-out infinite alternate' : 'shrine-float 3s ease-in-out infinite alternate',
-            }}>
-                <img
-                    src={images.shrine}
-                    alt="shrine"
-                    style={{ width: '72px', height: '72px', objectFit: 'contain' }}
-                />
-            </div>
+            <React.Fragment key="shrine-tile-frag">
+                <style>{`
+                    @keyframes shrine-victory-spin {
+                        0% { transform: scale(1) rotate(0deg); filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.8)); }
+                        50% { transform: scale(1.3) rotate(180deg); filter: drop-shadow(0 0 35px rgba(255, 215, 0, 1)) brightness(1.35); }
+                        100% { transform: scale(1) rotate(360deg); filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.8)); }
+                    }
+                    @keyframes shriner-victory-glow {
+                        0% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 10px rgba(249, 177, 21, 0.5)); }
+                        50% { transform: scale(1.15) translateY(-5px); filter: brightness(1.4) drop-shadow(0 0 25px rgba(249, 177, 21, 1)); }
+                        100% { transform: scale(1); filter: brightness(1) drop-shadow(0 0 10px rgba(249, 177, 21, 0.5)); }
+                    }
+                    @keyframes particle-rise {
+                        0% { opacity: 0; transform: translateY(0) scale(0.5) rotate(0deg); }
+                        20% { opacity: 0.9; }
+                        100% { opacity: 0; transform: translateY(-120px) scale(1.6) rotate(180deg); }
+                    }
+                    .victory-celebrating {
+                        animation: shriner-victory-glow 1.5s ease-in-out infinite alternate !important;
+                    }
+                `}</style>
+
+                <div style={{
+                    position: 'absolute',
+                    left: `${left}px`,
+                    top: `${top}px`,
+                    width: `${TILE_SIZE}px`,
+                    height: `${TILE_SIZE}px`,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 20,
+                    filter: victorySequenceActive 
+                        ? 'drop-shadow(0 0 24px rgba(255,215,0,1))' 
+                        : (isConcentrating ? 'drop-shadow(0 0 16px rgba(201,162,39,0.9))' : 'drop-shadow(0 0 8px rgba(201,162,39,0.5))'),
+                    animation: shrineAnimation,
+                }}>
+                    <img
+                        src={images.shrine}
+                        alt="shrine"
+                        style={{ width: '72px', height: '72px', objectFit: 'contain' }}
+                    />
+
+                    {/* Victory celebration particles */}
+                    {victorySequenceActive && [...Array(14)].map((_, i) => {
+                        const delay = (i * 0.2).toFixed(1);
+                        const leftOffset = (Math.random() * 60 - 30 + TILE_SIZE / 2).toFixed(0);
+                        const topOffset = (Math.random() * 20 + TILE_SIZE / 3).toFixed(0);
+                        return (
+                            <div 
+                                key={i} 
+                                style={{
+                                    position: 'absolute',
+                                    width: '8px',
+                                    height: '8px',
+                                    borderRadius: '50%',
+                                    background: i % 2 === 0 ? '#ffd700' : '#fff',
+                                    boxShadow: '0 0 6px #fff, 0 0 12px #ffd700',
+                                    left: `${leftOffset}px`,
+                                    top: `${topOffset}px`,
+                                    animation: `particle-rise 2s cubic-bezier(0.25, 1, 0.5, 1) infinite`,
+                                    animationDelay: `${delay}s`,
+                                    pointerEvents: 'none',
+                                    zIndex: 25
+                                }} 
+                            />
+                        );
+                    })}
+                </div>
+            </React.Fragment>
         );
     }
 }

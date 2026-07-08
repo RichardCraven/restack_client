@@ -1182,6 +1182,7 @@ export default function CombatGrid(props) {
             (details?.stunned && !isAsleepFighter) ? 'stunned' : '',
             isDisintegrating ? 'disintegrate-shaking' : '',
             activeReturnTrialAnim ? 'respawn-fade-in' : '',
+            details?.isCelebrating ? 'victory-celebrating' : '',
         ].filter(Boolean).join(' ');
 
         const portraitClasses = [
@@ -1586,13 +1587,33 @@ export default function CombatGrid(props) {
                         }} />
                     )}
                     {!details?.dead && fighter.type !== 'darkness_sphere' && (
-                        <div className="indicators-wrapper" style={{ zIndex: 310, position: 'absolute', bottom: 0, top: 'auto', left: 0, width: '100%', display: 'flex', flexDirection: 'column-reverse', pointerEvents: 'none' }}>
+                        <div className="indicators-wrapper" style={{
+                            zIndex: 310,
+                            position: 'absolute',
+                            bottom: 0,
+                            top: 'auto',
+                            left: 0,
+                            width: '100%',
+                            display: 'flex',
+                            flexDirection: 'column-reverse',
+                            pointerEvents: 'none',
+                            opacity: greetingInProcess ? 0 : 1,
+                            transition: 'opacity 0.5s ease-in-out'
+                        }}>
                             <div className="hp-bar" style={{ position: 'relative', bottom: 'auto', top: 'auto', height: '4px' }}>
-                                <div className="red-fill" style={{ width: `${(getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%` }} />
+                                <div className="red-fill" style={{
+                                    width: greetingInProcess ? '0%' : `${(getFighterDetails(fighter)?.hp / fighter.stats.hp) * 100}%`,
+                                    transition: 'width 1.2s cubic-bezier(0.15, 0.85, 0.35, 1)'
+                                }} />
                             </div>
                             {combatManager && combatManager.round !== undefined ? (
                                 <div className="endurance-bar" style={{ height: '2px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', position: 'relative', bottom: 'auto', top: 'auto' }}>
-                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(getFighterDetails(fighter)?.endurance / getFighterDetails(fighter)?.maxEndurance) * 100}%` }} />
+                                    <div className="white-fill" style={{
+                                        height: '100%',
+                                        backgroundColor: '#ffffff',
+                                        width: greetingInProcess ? '0%' : `${(getFighterDetails(fighter)?.endurance / getFighterDetails(fighter)?.maxEndurance) * 100}%`,
+                                        transition: 'width 1.2s cubic-bezier(0.15, 0.85, 0.35, 1)'
+                                    }} />
                                 </div>
                             ) : null}
                         </div>
@@ -2530,22 +2551,48 @@ export default function CombatGrid(props) {
                 })()}
 
                 {!isDead && unit.type !== 'darkness_sphere' && (
-                    <div className="indicators-wrapper" style={{ zIndex: 10, display: 'flex', flexDirection: 'column-reverse', position: 'absolute', bottom: 0, top: 'auto', left: 0, width: '100%', pointerEvents: 'none' }}>
+                    <div className="indicators-wrapper" style={{
+                        zIndex: 10,
+                        display: 'flex',
+                        flexDirection: 'column-reverse',
+                        position: 'absolute',
+                        bottom: 0,
+                        top: 'auto',
+                        left: 0,
+                        width: '100%',
+                        pointerEvents: 'none',
+                        opacity: greetingInProcess ? 0 : 1,
+                        transition: 'opacity 0.5s ease-in-out'
+                    }}>
                         <div className="monster-hp-bar hp-bar" style={{ position: 'relative', bottom: 'auto', top: 'auto', height: '4px' }}>
-                            <div className="red-fill" style={{ width: `${(unit.hp / (unit.stats?.hp || unit.starting_hp || 1)) * 100}%` }} />
+                            <div className="red-fill" style={{
+                                width: greetingInProcess ? '0%' : `${(unit.hp / (unit.stats?.hp || unit.starting_hp || 1)) * 100}%`,
+                                transition: 'width 1.2s cubic-bezier(0.15, 0.85, 0.35, 1)'
+                            }} />
                         </div>
                         {!(unit.type && String(unit.type).includes('spider')) && (
                             combatManager && combatManager.round !== undefined ? (
                                 <div className="endurance-bar" style={{ height: '2px', backgroundColor: 'rgba(255,255,255,0.2)', width: '100%', position: 'relative', bottom: 'auto', top: 'auto' }}>
-                                    <div className="white-fill" style={{ height: '100%', backgroundColor: '#ffffff', width: `${(unit.endurance / unit.maxEndurance) * 100}%` }} />
+                                    <div className="white-fill" style={{
+                                        height: '100%',
+                                        backgroundColor: '#ffffff',
+                                        width: greetingInProcess ? '0%' : `${(unit.endurance / unit.maxEndurance) * 100}%`,
+                                        transition: 'width 1.2s cubic-bezier(0.15, 0.85, 0.35, 1)'
+                                    }} />
                                 </div>
                             ) : (
                                 <>
                                     <div className="monster-energy-bar energy-bar" style={{ position: 'relative', bottom: 'auto', top: 'auto', height: '4px' }}>
-                                        <div className="yellow-fill" style={{ width: `calc(${unit.energy}%)` }} />
+                                        <div className="yellow-fill" style={{
+                                            width: greetingInProcess ? '0%' : `calc(${unit.energy}%)`,
+                                            transition: 'width 1.2s cubic-bezier(0.15, 0.85, 0.35, 1)'
+                                        }} />
                                     </div>
-                                    <div className="tempo-bar" style={{ position: 'relative', bottom: 'auto', top: 'auto', height: '4px' }}>
-                                        <div className="tempo-indicator" style={{ left: `calc(${unit.tempo}% - 4px)` }} />
+                                    <div className="tempo-bar" style={{ position: 'relative', bottom: 'auto', top: 'auto', height: '4px', opacity: greetingInProcess ? 0 : 1, transition: 'opacity 0.5s ease-in-out' }}>
+                                        <div className="tempo-indicator" style={{
+                                            left: greetingInProcess ? '0%' : `calc(${unit.tempo}% - 4px)`,
+                                            transition: 'left 1.2s cubic-bezier(0.15, 0.85, 0.35, 1)'
+                                        }} />
                                     </div>
                                 </>
                             )

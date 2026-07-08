@@ -428,6 +428,9 @@ export function CombatManagerRedux() {
                 this.greetingComplete();
             }
 
+            // Pause combat briefly (1200ms) to allow health and stamina bars to animate filling up
+            await delay(1200);
+
             this.appendCombatLog('Combat started. Round 1 begins.');
             this.startRoundTimer();
             this.processRoundTurns();
@@ -597,7 +600,7 @@ export function CombatManagerRedux() {
         // Store callbacks so siege and other extended modes can register additional combatants
         this._combatCallbacks = callbacks;
 
-        const colors = ['#b710d5', '#6495ed', '#73b746', '#f4d013'];
+        const colors = ['#7b5e8c', '#506e86', '#5f7055', '#b88d4c'];
 
         (this.data?.crew || []).forEach((e, index) => {
             if (e && (e.dead === true || e.hp === 0)) return;
@@ -1505,6 +1508,13 @@ export function CombatManagerRedux() {
                 missChance = Math.min(missChance, 70); // capped at 70% miss chance
             }
 
+            if (target.type === 'imp' && target.summonedBy) {
+                const summoner = this.combatants[target.summonedBy];
+                if (summoner && this.getSkillLevel(summoner, 'summon_imp') === 3) {
+                    missChance += 20;
+                }
+            }
+
             // Monk's Third Eye: doubles the chance that enemy attack will miss
             if (target.thirdEyeActive && caller.isMonster) {
                 missChance = Math.min(missChance * 2.0, 75);
@@ -1530,6 +1540,7 @@ export function CombatManagerRedux() {
                 }
             }
 
+            missChance = Math.max(0, Math.min(missChance, 95));
             isHit = roll >= missChance;
         }
 
@@ -1946,6 +1957,13 @@ export function CombatManagerRedux() {
             return;
         }
         target.dead = true;
+
+        // Kill all summoned minions summoned by this unit
+        Object.values(this.combatants).forEach(c => {
+            if (c && !c.dead && c.summonedBy === target.id) {
+                this.targetKilled(c);
+            }
+        });
         if (target.paradoxEngineActive) {
             target.paradoxEngineActive = false;
             target.paradoxEngineRounds = 0;
@@ -1958,28 +1976,28 @@ export function CombatManagerRedux() {
 
         const isSphinx = target && (target.type === 'sphinx' || target.key === 'sphinx' || (target.id && target.id.toString().includes('sphinx')));
         if (isSphinx) {
+            // Unconditionally return all crew members in trial immediately so their state is saved correctly on game over.
+            Object.values(this.combatants).forEach(c => {
+                if (c && typeof c.inTrial === 'number') {
+                    this._returnFromTrial(c);
+                }
+            });
+
             const trialsIcon = this.combatants['trials_icon'];
-            if (trialsIcon && !trialsIcon.dead) {
+            if (trialsIcon) {
                 // Mark trial icon dying/dead immediately so it plays the death/fade animation
                 // and gets excluded from combatOverCheck monsters count.
                 trialsIcon.dying = true;
                 trialsIcon.dead = true;
-
-                // Return all crew members in trial immediately so their state is saved correctly on game over.
-                Object.values(this.combatants).forEach(c => {
-                    if (c && typeof c.inTrial === 'number') {
-                        this._returnFromTrial(c);
-                    }
-                });
-
-                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
-
-                setTimeout(() => {
-                    if (this.combatOver && Object.keys(this.combatants).length === 0) return; // already reset
-                    this._endTrials(target, 'Sphinx was defeated');
-                    this.combatOverCheck();
-                }, 2500);
             }
+
+            if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+
+            setTimeout(() => {
+                if (this.combatOver && Object.keys(this.combatants).length === 0) return; // already reset
+                this._endTrials(target, 'Sphinx was defeated');
+                this.combatOverCheck();
+            }, 2500);
         }
 
         target.locked = true;
@@ -2026,6 +2044,14 @@ export function CombatManagerRedux() {
         if (!combatant) return false;
         if ((combatant.type || '').toLowerCase() !== 'skeleton') return false;
         if (combatant.reassembleUsed) return false;
+
+        if (combatant.summonedBy) {
+            const summoner = this.combatants[combatant.summonedBy];
+            if (!summoner || summoner.dead) {
+                return false;
+            }
+        }
+
         combatant.reassembleUsed = true;
 
         if (Math.random() > 0.50) {
@@ -2450,6 +2476,29 @@ export function CombatManagerRedux() {
                             this.appendCombatLog(`${this.getCombatantLogName(unit)}'s resolve is broken! They refuse to act this turn.`);
                             if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
                             return;
+                        }
+                    }
+
+                    // ── PC Auto-Potion Logic (Manual & AI) ──
+                    if (unit && !unit.isMonster && !unit.isMinion) {
+                        const hpRatio = unit.hp / (unit.starting_hp || 1);
+                        if (hpRatio < 0.6) {
+                            const inventory = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : [];
+                            const potion = inventory.find(item => {
+                                if (!item) return false;
+                                const key = (item.id || item._im_key || item.name || '').toLowerCase();
+                                return key.includes('health_potion') || key.includes('health potion') || key === 'healing_salve' || key === 'greater_salve';
+                            });
+                            if (potion) {
+                                this.itemUsed(potion, unit);
+                                if (typeof this.useConsumable === 'function') {
+                                    this.useConsumable(potion);
+                                }
+                                unit.actionsTakenThisRound = (unit.actionsTakenThisRound || 0) + 1;
+                                this.appendCombatLog(`${this.getCombatantLogName(unit)} is at low health and auto-uses a ${potion.name} to survive.`);
+                                if (typeof this.updateData === 'function') this.updateData(clone(this.combatants));
+                                return; // Consumes their turn action
+                            }
                         }
                     }
 
@@ -3071,6 +3120,28 @@ export function CombatManagerRedux() {
         siegeLog(`[SiegeCombat] executeUnitAI for ${unit.name || unit.id} (type: ${unit.type})`);
         this.rebuildActiveShieldWalls();
 
+        // ── PC Auto-Potion Logic ──
+        if (unit && !unit.isMonster && !unit.isMinion) {
+            const hpRatio = unit.hp / (unit.starting_hp || 1);
+            if (hpRatio < 0.6) {
+                const inventory = (typeof this.getCurrentInventory === 'function') ? this.getCurrentInventory() : [];
+                const potion = inventory.find(item => {
+                    if (!item) return false;
+                    const key = (item.id || item._im_key || item.name || '').toLowerCase();
+                    return key.includes('health_potion') || key.includes('health potion') || key === 'healing_salve' || key === 'greater_salve';
+                });
+                if (potion) {
+                    this.itemUsed(potion, unit);
+                    if (typeof this.useConsumable === 'function') {
+                        this.useConsumable(potion);
+                    }
+                    unit.actionsTakenThisRound = (unit.actionsTakenThisRound || 0) + 1;
+                    this.appendCombatLog(`${this.getCombatantLogName(unit)} is at low health and uses a ${potion.name} to heal.`);
+                    return;
+                }
+            }
+        }
+
         // ── Intelligent Ranged AI Strategy ──
         if ((unit.isMonster || unit.isMinion) && this.getUnitIntelligenceTier(unit) === 'intelligent') {
             const hasRanged = (() => {
@@ -3370,13 +3441,21 @@ export function CombatManagerRedux() {
         const isReady = hasSpecial || hasAttack;
         if (!isReady) return false;
 
-        // Summoner summon limit (1 of each type at a time)
+        // Summoner summon limit
         if (normKey.startsWith('summon_') && normKey !== 'summon_spiders' && normKey !== 'summon_skulls') {
             const minionType = normKey.replace('summon_', '').replace('_army', '');
-            const exists = Object.values(this.combatants).some(c => 
+            let maxCount = 1;
+            if (normKey === 'summon_skeleton') {
+                const lvl = this.getSkillLevel(unit, 'summon_skeleton');
+                maxCount = (lvl === 2 || lvl === 3) ? 3 : 2;
+            } else if (normKey === 'summon_imp') {
+                const lvl = this.getSkillLevel(unit, 'summon_imp');
+                maxCount = (lvl === 2 || lvl === 3) ? 3 : 2;
+            }
+            const activeCount = Object.values(this.combatants).filter(c => 
                 c && !c.dead && c.isMinion && c.type === minionType && c.summonedBy === unit.id
-            );
-            if (exists) return false;
+            ).length;
+            if (activeCount >= maxCount) return false;
         }
 
         // Duplicate/triplicate require at least one friendly minion to duplicate
@@ -4534,11 +4613,16 @@ export function CombatManagerRedux() {
         const target = this.combatants[unit.targetId];
         if (!target) return;
 
-        // Retreat if enemy gets too close
-        const dist = Math.abs(unit.coordinates.x - target.coordinates.x)
-            + Math.abs(unit.coordinates.y - target.coordinates.y);
-        if (dist <= 1) {
-            this.repositionUnit(unit, target, 'retreat');
+        // Retreat if any enemy gets too close (adjacent)
+        const adjacentEnemies = Object.values(this.combatants).filter(enemy => {
+            if (!enemy || enemy.dead || enemy.hp <= 0) return false;
+            if (!!enemy.isMonster === !!unit.isMonster) return false;
+            const manhattan = Math.abs(unit.coordinates.x - enemy.coordinates.x) + Math.abs(unit.coordinates.y - enemy.coordinates.y);
+            return manhattan <= 1;
+        });
+
+        if (adjacentEnemies.length > 0) {
+            this.repositionUnit(unit, adjacentEnemies[0], 'retreat');
         }
 
         // Fire Phase (arrow is notched)
@@ -4856,14 +4940,30 @@ export function CombatManagerRedux() {
 
     this._executeSummon = (unit, ability, abilityKey) => {
         // Find a free adjacent tile to place the summoned minion
-        const adjacentTiles = [
-            { x: unit.coordinates.x - 1, y: unit.coordinates.y },
-            { x: unit.coordinates.x, y: unit.coordinates.y - 1 },
-            { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
-            { x: unit.coordinates.x + 1, y: unit.coordinates.y },
-        ].filter(t => t.x >= 0 && t.x <= MAX_DEPTH && t.y >= 0 && t.y < MAX_LANES);
+        const isMonster = !!unit.isMonster;
+        const forwardDX = isMonster ? -1 : 1;
+        const backwardDX = isMonster ? 1 : -1;
 
-        const freeTile = adjacentTiles.find(t => !this.isTileOccupied(t.x, t.y));
+        let adjacentTiles = [];
+        if (['summon_skeleton', 'summon_imp', 'summon_skeleton_army', 'summon_imp_army'].includes(abilityKey)) {
+            adjacentTiles = [
+                { x: unit.coordinates.x + forwardDX, y: unit.coordinates.y },
+                { x: unit.coordinates.x, y: unit.coordinates.y - 1 },
+                { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                { x: unit.coordinates.x + backwardDX, y: unit.coordinates.y },
+            ];
+        } else {
+            adjacentTiles = [
+                { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                { x: unit.coordinates.x, y: unit.coordinates.y - 1 },
+                { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+            ];
+        }
+
+        const filteredTiles = adjacentTiles.filter(t => t.x >= 0 && t.x <= MAX_DEPTH && t.y >= 0 && t.y < MAX_LANES);
+
+        const freeTile = filteredTiles.find(t => !this.isTileOccupied(t.x, t.y));
 
         if (!freeTile) {
             this.appendCombatLog(`${this.getCombatantLogName(unit)} tried to summon but no free tile available.`);
@@ -4872,7 +4972,24 @@ export function CombatManagerRedux() {
 
         const minionType = abilityKey.replace('summon_', '').replace('_army', '');
         const minionId = `minion_${minionType}_${Date.now()}`;
-        const hpBase = 20 + Math.round((unit.stats.int || 5) * 2);
+        const hpBase = 5 + Math.round((unit.stats.int || 5) * 2);
+
+        let finalHp = hpBase;
+        let stats = { str: 3, dex: 3, atk: 4, def: 2, speed: 3 };
+
+        if (minionType === 'skeleton') {
+            const lvl = this.getSkillLevel(unit, 'summon_skeleton');
+            if (lvl === 3) {
+                finalHp = hpBase * 2;
+                stats.atk = stats.atk * 2;
+                stats.hp = finalHp;
+            }
+        } else if (minionType === 'imp') {
+            const lvl = this.getSkillLevel(unit, 'summon_imp');
+            if (lvl === 3) {
+                stats.speed = stats.speed * 2;
+            }
+        }
 
         let portraitKey = `summon_${minionType}_icon`;
         if (minionType === 'skeleton_army') {
@@ -4890,9 +5007,9 @@ export function CombatManagerRedux() {
             summonedBy: unit.id,
             dead: false,
             coordinates: { ...freeTile },
-            hp: hpBase,
-            starting_hp: hpBase,
-            stats: { str: 3, dex: 3, atk: 4, def: 2, speed: 3 },
+            hp: finalHp,
+            starting_hp: finalHp,
+            stats: stats,
             attacks: [minionType.includes('skeleton') ? 'sword_swing' : 'claw_strike'],
             specials: ['reassembly'],
             portrait: images[portraitKey] || images['summon_skeleton_icon'],
@@ -4943,7 +5060,7 @@ export function CombatManagerRedux() {
     this._duplicateMinion = (unit, ability, isTriplicate) => {
         // Find the most recent living minion to duplicate
         const minionsToDupe = Object.values(this.combatants).filter(
-            c => c && !c.dead && c.isMinion
+            c => c && !c.dead && c.isMinion && (!!c.isMonster === !!unit.isMonster)
         );
         if (minionsToDupe.length === 0) return;
 
@@ -5336,6 +5453,10 @@ export function CombatManagerRedux() {
 
         // After 1s (beam travel), resolve willpower check
         setTimeout(() => {
+            if (!this.combatants['trials_icon'] || this.combatants['trials_icon'].dead) {
+                // Trial ended/destroyed in the meantime, abort sending target
+                return;
+            }
             if (!targetFighter || targetFighter.dead) return;
             const fails = this._willpowerCheck(targetFighter, sphinx);
             if (fails) {
@@ -7114,6 +7235,20 @@ export function CombatManagerRedux() {
     // ── Ability Use ───────────────────────────────────────────────────────────
     this.useAbility = (unit, ability, target) => {
         if (!ability || !target) return;
+
+        const _aid = ability.id || ability.key || (ability.name && ability.name.replace(/\s+/g, '_').toLowerCase()) || 'ability';
+        if (_aid === 'shield_slam') {
+            const hasShield = (unit.inventory || []).some(i => i && i.subtype === 'shield' && (i.equippedSlot === 'left' || i.equippedSlot === 'right' || i.equippedBy === unit.id));
+            const lvl = this.getSkillLevel(unit, 'shield_slam');
+            ability = {
+                ...ability,
+                atkPercentage: hasShield ? (lvl === 3 ? 300 : 200) : 100,
+                effect: {
+                    ...ability.effect,
+                    duration: lvl === 3 ? 4 : lvl === 2 ? 3 : 1
+                }
+            };
+        }
 
         const targetCoordsAtCast = target && target.coordinates ? { x: target.coordinates.x, y: target.coordinates.y } : null;
         const targetOccupiedCoordsAtCast = target && Array.isArray(target.occupiedCoords) 
@@ -10844,7 +10979,117 @@ export function CombatManagerRedux() {
         const maxMoves = (unit.etherealSpeedActive || unit.isDemonMode) ? 2 : 1;
         if (unit.movesTakenThisRound >= maxMoves || !enemyTarget) return;
         if (mode === 'retreat') {
-            // Move away from the enemy
+            if (unit.type === 'ranger') {
+                // 1. Identify all adjacent enemies
+                const adjacentEnemies = Object.values(this.combatants).filter(enemy => {
+                    if (!enemy || enemy.dead || enemy.hp <= 0) return false;
+                    if (!!enemy.isMonster === !!unit.isMonster) return false;
+                    const manhattan = Math.abs(unit.coordinates.x - enemy.coordinates.x) + Math.abs(unit.coordinates.y - enemy.coordinates.y);
+                    return manhattan <= 1;
+                });
+
+                if (adjacentEnemies.length > 0) {
+                    // 2. Identify the corners of the board
+                    const corners = [
+                        { x: 0, y: 0 },
+                        { x: 0, y: MAX_LANES - 1 },
+                        { x: MAX_DEPTH, y: 0 },
+                        { x: MAX_DEPTH, y: MAX_LANES - 1 }
+                    ];
+
+                    // 3. Find other active friendly ranged units
+                    const friendlyRanged = Object.values(this.combatants).filter(c =>
+                        c && !c.dead && c.hp > 0 && !c.isMonster && ['sage', 'wizard', 'ranger'].includes(c.type) && c.id !== unit.id
+                    );
+
+                    // 4. Score each corner (maximize min distance to other friendly ranged units, maximize distance to adjacent enemies, prefer player side)
+                    const cornerScores = corners.map(corner => {
+                        let minRangedDist = Number.MAX_VALUE;
+                        if (friendlyRanged.length > 0) {
+                            friendlyRanged.forEach(fr => {
+                                const d = Math.abs(corner.x - fr.coordinates.x) + Math.abs(corner.y - fr.coordinates.y);
+                                if (d < minRangedDist) minRangedDist = d;
+                            });
+                        } else {
+                            minRangedDist = 0;
+                        }
+
+                        let adjacentEnemyDistSum = 0;
+                        adjacentEnemies.forEach(ae => {
+                            adjacentEnemyDistSum += Math.abs(corner.x - ae.coordinates.x) + Math.abs(corner.y - ae.coordinates.y);
+                        });
+
+                        const playerSideBonus = corner.x === 0 ? 100 : 0;
+
+                        return {
+                            corner,
+                            minRangedDist,
+                            adjacentEnemyDistSum,
+                            playerSideBonus
+                        };
+                    });
+
+                    // Sort corners: primary is max-min distance to friendly ranged (descending), secondary is distance to adjacent enemies (descending), tertiary is player side bonus
+                    cornerScores.sort((a, b) => {
+                        if (b.minRangedDist !== a.minRangedDist) {
+                            return b.minRangedDist - a.minRangedDist;
+                        }
+                        if (b.adjacentEnemyDistSum !== a.adjacentEnemyDistSum) {
+                            return b.adjacentEnemyDistSum - a.adjacentEnemyDistSum;
+                        }
+                        return b.playerSideBonus - a.playerSideBonus;
+                    });
+
+                    // Try each corner in order of score to see if we can find a step that moves us closer to it
+                    for (const scoreEntry of cornerScores) {
+                        const targetCorner = scoreEntry.corner;
+
+                        const neighbors = [
+                            { x: unit.coordinates.x + 1, y: unit.coordinates.y },
+                            { x: unit.coordinates.x - 1, y: unit.coordinates.y },
+                            { x: unit.coordinates.x, y: unit.coordinates.y + 1 },
+                            { x: unit.coordinates.x, y: unit.coordinates.y - 1 }
+                        ].filter(n => this.canFitAt(unit, n.x, n.y));
+
+                        if (neighbors.length === 0) continue;
+
+                        const currentDistToCorner = Math.abs(unit.coordinates.x - targetCorner.x) + Math.abs(unit.coordinates.y - targetCorner.y);
+
+                        const candidates = neighbors.filter(n => {
+                            const distToCorner = Math.abs(n.x - targetCorner.x) + Math.abs(n.y - targetCorner.y);
+                            // Must get closer to the target corner
+                            if (distToCorner >= currentDistToCorner && currentDistToCorner > 0) return false;
+
+                            // Must not get closer to any of the adjacent enemies
+                            const currentMinEnemyDist = Math.min(...adjacentEnemies.map(ae => 
+                                Math.abs(unit.coordinates.x - ae.coordinates.x) + Math.abs(unit.coordinates.y - ae.coordinates.y)
+                            ));
+                            const newMinEnemyDist = Math.min(...adjacentEnemies.map(ae => 
+                                Math.abs(n.x - ae.coordinates.x) + Math.abs(n.y - ae.coordinates.y)
+                            ));
+
+                            return newMinEnemyDist >= currentMinEnemyDist;
+                        });
+
+                        if (candidates.length > 0) {
+                            candidates.sort((a, b) => {
+                                const da = Math.abs(a.x - targetCorner.x) + Math.abs(a.y - targetCorner.y);
+                                const db = Math.abs(b.x - targetCorner.x) + Math.abs(b.y - targetCorner.y);
+                                return da - db;
+                            });
+
+                            const bestMove = candidates[0];
+                            this.updateUnitCoordinates(unit, bestMove.x, bestMove.y);
+                            unit.movesTakenThisRound += 1;
+                            this.applyEnduranceCost(unit, this.MOVE_ENDURANCE_COST, 'retreat');
+                            this.appendCombatLog(`${this.getCombatantLogName(unit)} retreats toward the corner (${targetCorner.x}, ${targetCorner.y}) away from enemies and friendly ranged units.`);
+                            return;
+                        }
+                    }
+                }
+            }
+
+            // Fallback for non-rangers or if ranger has no corner-retreat path
             const dx = unit.coordinates.x - enemyTarget.coordinates.x;
             const dy = unit.coordinates.y - enemyTarget.coordinates.y;
             const newX = unit.coordinates.x + Math.sign(dx);
@@ -11483,6 +11728,11 @@ export function CombatManagerRedux() {
         const user = this.combatants[userInput.id];
         if (!user) return;
 
+        user.consumableFlash = {
+            timestamp: Date.now(),
+            iconKey: item.icon || item.iconUrl || 'minor_health_potion'
+        };
+
         const effect = item.effect;
 
         if (effect && typeof effect === 'object') {
@@ -11497,6 +11747,8 @@ export function CombatManagerRedux() {
                     }
                     if (debuff === 'stunned' || debuff === 'stun' || debuff === 'sleep') {
                         user.stunned = false;
+                        user.stunnedRounds = 0;
+                        user.stunnedTotalRounds = 0;
                         user.stunned_eras = 0;
                         user.asleep = false;
                         user.sleepRounds = 0;
@@ -11533,10 +11785,14 @@ export function CombatManagerRedux() {
                     }
                     if (debuff === 'frozen' || debuff === 'freeze') {
                         user.frozen = false;
+                        user.frozenRounds = 0;
+                        user.frozenTotalRounds = 0;
                         user.frozen_eras = 0;
                     }
                     if (debuff === 'ensnared' || debuff === 'bind') {
                         user.ensnared = false;
+                        user.ensnaredRounds = 0;
+                        user.ensnaredTotalRounds = 0;
                         user.ensnared_eras = 0;
                         user.ensnaredSourceAbility = null;
                     }
@@ -11648,6 +11904,18 @@ export function CombatManagerRedux() {
                     const healthGain = Math.ceil(user.starting_hp * 0.01 * item.amount);
                     user.hp += healthGain;
                     if (user.hp > user.starting_hp) user.hp = user.starting_hp;
+                    const indicatorId = Date.now() + Math.random();
+                    const vctId = `${user.id}_VCT`;
+                    const indicatorRecipient = this.combatants[vctId] || user;
+                    if (indicatorRecipient.damageIndicators) {
+                        indicatorRecipient.damageIndicators.push({
+                            id: indicatorId,
+                            value: `+${healthGain}`,
+                            source: 'Item',
+                            type: 'heal',
+                            timestamp: Date.now()
+                        });
+                    }
                     break;
                 default:
                     break;

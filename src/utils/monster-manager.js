@@ -313,7 +313,7 @@ export function MonsterManager() {
             monster_names: ['Kufu', 'Razeset'],
             lordName: 'Akmen-Ra the Undying',
             stats: {
-                hp: 210,
+                hp: 190,
                 atk: 10,
                 def: 13,
                 speed: 4, // slow ancient undead — easy to hit but very tanky

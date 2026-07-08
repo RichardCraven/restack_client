@@ -349,39 +349,43 @@ export function InventoryManager() {
     this.consumables = {
         minor_health_potion: {
             effect: 'health gain',
-            amount: 20,
+            amount: 15,
             icon: 'minor_health_potion',
             type: 'consumable',
             name: 'minor health potion',
             equippedBy: null,
-            description: 'Minor health potions replenish 10% total hp'
+            description: 'Minor health potions replenish 15% total HP'
         },
         major_health_potion: {
             effect: 'health gain',
-            amount: 40,
+            amount: 35,
             icon: 'major_health_potion',
             type: 'consumable',
             name: 'major health potion',
             equippedBy: null,
-            description: 'Major health potions replenish 35% total hp'
+            description: 'Major health potions replenish 35% total HP'
         },
         grand_health_potion: {
             effect: 'health gain',
-            amount: 100,
+            amount: 80,
             icon: 'grand_health_potion',
             type: 'consumable',
             name: 'grand health potion',
             equippedBy: null,
-            description: 'Grand health potions replenish 70% total hp'
+            description: 'Grand health potions replenish 80% total HP'
         },
         supreme_health_potion: {
-            effect: 'health gain',
-            amount: 250,
+            effect: {
+                type: 'heal_and_endurance',
+                healPct: 100,
+                endurance: 100,
+                cleanse: ['poison', 'poisoned', 'bleed', 'bleeding', 'frozen', 'stunned', 'stun', 'ensnared', 'bind', 'silenced', 'silence', 'slowed', 'slow']
+            },
             icon: 'supreme_health_potion',
             type: 'consumable',
             name: 'supreme health potion',
             equippedBy: null,
-            description: 'Supreme health potions replenish 100% total hp'
+            description: 'Supreme health potions replenish 100% total HP, restore 100% Endurance, and cleanse all debuffs'
         },
         minor_key: {
             effect: 'key',
@@ -2877,7 +2881,7 @@ export function InventoryManager() {
             item &&
             item.equippedBy == null &&
             (item._im_key === key ||
-                (item.name || '').replaceAll(' ', '_') === key ||
+                (item.name || '').replace(/ /g, '_') === key ||
                 item.name === key)
         );
         if (idx !== -1) this.inventory.splice(idx, 1);
@@ -2904,7 +2908,7 @@ export function InventoryManager() {
         return [
             {
                 effect: 'health gain',
-                amount: 55,
+                amount: 15,
                 icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',
@@ -2912,7 +2916,7 @@ export function InventoryManager() {
             },
             {
                 effect: 'health gain',
-                amount: 55,
+                amount: 15,
                 icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',
@@ -2920,7 +2924,7 @@ export function InventoryManager() {
             },
             {
                 effect: 'health gain',
-                amount: 55,
+                amount: 15,
                 icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',
@@ -2928,7 +2932,7 @@ export function InventoryManager() {
             },
             {
                 effect: 'health gain',
-                amount: 55,
+                amount: 15,
                 icon: 'minor_health_potion',
                 type: 'consumable',
                 name: 'minor health potion',

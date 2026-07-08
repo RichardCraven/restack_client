@@ -433,7 +433,7 @@ class LevelUpScreen extends Component {
                 <div className="lus-sub-picker">
                     <div className="lus-sub-label">Choose your bonus stat:</div>
                     <div className="lus-sub-options">
-                        {['str', 'fort'].map(stat => (
+                        {['str', 'fort'].map((stat, idx) => (
                             <button
                                 key={stat}
                                 className={`lus-sub-btn lus-tooltip-trigger ${dustSubChoice === stat ? 'selected' : ''}`}
@@ -441,7 +441,7 @@ class LevelUpScreen extends Component {
                             >
                                 <span className="lus-sub-glyph" style={{ color: STAT_META[stat].color }}>{STAT_META[stat].glyph}</span>
                                 +2 {STAT_META[stat].label}
-                                {renderStatTooltip(stat)}
+                                {renderStatTooltip(stat, idx === 0 ? 'lus-tooltip-left' : 'lus-tooltip-right')}
                             </button>
                         ))}
                     </div>
@@ -454,7 +454,7 @@ class LevelUpScreen extends Component {
                 <div className="lus-sub-picker">
                     <div className="lus-sub-label">Choose your bonus stat:</div>
                     <div className="lus-sub-options">
-                        {['int', 'dex'].map(stat => (
+                        {['int', 'dex'].map((stat, idx) => (
                             <button
                                 key={stat}
                                 className={`lus-sub-btn lus-tooltip-trigger ${dustSubChoice === stat ? 'selected' : ''}`}
@@ -462,7 +462,7 @@ class LevelUpScreen extends Component {
                             >
                                 <span className="lus-sub-glyph" style={{ color: STAT_META[stat].color }}>{STAT_META[stat].glyph}</span>
                                 +2 {STAT_META[stat].label}
-                                {renderStatTooltip(stat)}
+                                {renderStatTooltip(stat, idx === 0 ? 'lus-tooltip-left' : 'lus-tooltip-right')}
                             </button>
                         ))}
                     </div>
@@ -622,7 +622,7 @@ class LevelUpScreen extends Component {
                                             {opt.stats.map(s => STAT_META[s.stat]?.full).join(' & ')}
                                         </div>
                                         {isSelected && <div className="lus-attr-check">✓</div>}
-                                        {renderTooltipForStats(opt.stats)}
+                                        {renderTooltipForStats(opt.stats, idx === 0 ? 'lus-tooltip-left' : (idx === 2 ? 'lus-tooltip-right' : ''))}
                                     </button>
                                 );
                             })}

@@ -25,14 +25,44 @@ export async function setUpCamp(component, maybeDuration) {
             return sum + baseCost + reviveCost;
         }, 0);
         const currentFood = typeof meta.food === 'number' ? meta.food : 55;
-        const hasFortify = crew.some(member => 
-            member && !member.dead && member.globalSkills && 
-            member.globalSkills.some(s => (typeof s === 'string' ? s : s.key) === 'fortify')
-        );
+        let fortifyLevel = 0;
+        crew.forEach(member => {
+            if (member && !member.dead && member.globalSkills) {
+                const s = member.globalSkills.find(sk => (typeof sk === 'string' ? sk : sk.key) === 'fortify');
+                if (s) {
+                    const lvl = (typeof s === 'object' && typeof s.level === 'number') ? s.level : 1;
+                    if (lvl > fortifyLevel) {
+                        fortifyLevel = lvl;
+                    }
+                }
+            }
+        });
 
         if (currentFood < foodCost) {
-            if (hasFortify) {
-                console.log('[CampManager] Fortify active: allowing camp with insufficient food. Resolve penalty bypassed.');
+            let fortifySuccess = false;
+            let cooldownRemainingMin = 0;
+
+            if (fortifyLevel > 0) {
+                const getFortifyCooldownMs = (level) => {
+                    if (level === 2) return 30 * 60 * 1000;
+                    if (level === 3) return 10 * 60 * 1000;
+                    return 2 * 60 * 60 * 1000; // level 1: 2 hours
+                };
+                const cooldownMs = getFortifyCooldownMs(fortifyLevel);
+                const lastUse = typeof meta.lastFortifyUseTimestamp === 'number' ? meta.lastFortifyUseTimestamp : 0;
+                const timeSinceUse = Date.now() - lastUse;
+
+                if (timeSinceUse >= cooldownMs) {
+                    fortifySuccess = true;
+                    meta.lastFortifyUseTimestamp = Date.now();
+                    storeMeta(meta);
+                } else {
+                    cooldownRemainingMin = Math.ceil((cooldownMs - timeSinceUse) / 60000);
+                }
+            }
+
+            if (fortifySuccess) {
+                console.log(`[CampManager] Fortify (Lvl ${fortifyLevel}) active: allowing camp with insufficient food. Resolve penalty bypassed.`);
                 try {
                     component.setState({ campWarningMessage: `Insufficient food! Fortify prevented the Resolve penalty.` });
                     const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
@@ -44,7 +74,11 @@ export async function setUpCamp(component, maybeDuration) {
                 meta.resolve = Math.max(0, currentResolve - penalty);
                 storeMeta(meta);
                 try {
-                    component.setState({ campWarningMessage: `Not enough food to camp (need ${foodCost}, have ${currentFood}). Resolve decreased by ${penalty}!` });
+                    let msg = `Not enough food to camp (need ${foodCost}, have ${currentFood}). Resolve decreased by ${penalty}!`;
+                    if (fortifyLevel > 0) {
+                        msg = `Not enough food to camp. Fortify on cooldown for another ${cooldownRemainingMin}m. Resolve decreased by ${penalty}!`;
+                    }
+                    component.setState({ campWarningMessage: msg });
                     // auto-clear after 4s
                     const setTimeoutFn = (component._setTimeout && typeof component._setTimeout === 'function') ? component._setTimeout : setTimeout;
                     setTimeoutFn(() => { try { component.setState({ campWarningMessage: null }); } catch(e){} }, 4000);
@@ -62,6 +96,8 @@ export async function setUpCamp(component, maybeDuration) {
         meta.camping = true;
         meta.campingStart = now.toISOString();
         meta.campingEnd = new Date(now.getTime() + durationSeconds * 1000).toISOString();
+        meta.campElapsedSeconds = 0;
+        meta.campTotalSeconds = durationSeconds;
         storeMeta(meta);
         try { await updateUserRequest(getUserId(), meta); } catch (e) {}
         // Persist meta via the higher-level save helper so location and session
@@ -109,26 +145,84 @@ export async function setUpCamp(component, maybeDuration) {
             }, durationSeconds*1000 + 200);
         } catch(e){}
 
-        // start an interval that logs camp progress every 10 seconds
+        // start the camp tick interval
         try {
-            const startIso = meta.campingStart;
-            const endIso = meta.campingEnd;
-            const startTs = new Date(startIso).getTime();
-            const endTs = new Date(endIso).getTime();
-            const logOnce = () => {
-                const now = Date.now();
-                const elapsed = Math.max(0, Math.floor((now - startTs) / 1000));
-                const remaining = Math.max(0, Math.ceil((endTs - now) / 1000));
-                console.log(`[CampManager] camp start=${startIso} end=${endIso} elapsed_s=${elapsed} remaining_s=${remaining}`);
-            };
-            // log immediately once
-            try { logOnce(); } catch(e){}
-            const setIntervalFn = (component._setInterval && typeof component._setInterval === 'function') ? component._setInterval : setInterval;
-            component.campInterval = setIntervalFn(() => {
-                try { logOnce(); } catch(e){}
-            }, 10000);
+            startCampInterval(component);
         } catch (e) { console.warn('camp interval setup failed', e); }
     } catch (err) { console.warn('setUpCamp error', err); }
+}
+
+export function startCampInterval(component) {
+    try {
+        if (component.campInterval) {
+            clearInterval(component.campInterval);
+            component.campInterval = null;
+        }
+    } catch(e){}
+
+    const runTick = async () => {
+        let meta = getMeta() || {};
+        if (!meta.camping || !meta.campingStart || !meta.campingEnd) {
+            try { clearInterval(component.campInterval); } catch(e){}
+            component.campInterval = null;
+            return;
+        }
+
+        const now = Date.now();
+        const start = new Date(meta.campingStart).getTime();
+        const end = new Date(meta.campingEnd).getTime();
+        const totalDuration = Math.round((end - start) / 1000);
+        const elapsed = Math.max(0, Math.floor((now - start) / 1000));
+
+        if (elapsed > totalDuration) {
+            try { clearInterval(component.campInterval); } catch(e){}
+            component.campInterval = null;
+            return;
+        }
+
+        // Only tick up HP if this is a new second tick
+        if (elapsed > (meta.campElapsedSeconds || 0)) {
+            const secondsToTick = elapsed - (meta.campElapsedSeconds || 0);
+            
+            const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
+            const updatedCrew = crew.map(member => {
+                if (!member) return member;
+                if (member.dead) {
+                    // Dead units stay dead until the end of camp
+                    return member;
+                } else {
+                    const fort = (member.stats && (typeof member.stats.fort === 'number' ? member.stats.fort : member.stats.fortitude)) || 3;
+                    const maxHp = (member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : member.hp || 0;
+                    const amountGained = fort * 0.3 * secondsToTick;
+                    const newHp = Math.min(maxHp, (member.hp || 0) + amountGained);
+                    return { ...member, hp: newHp };
+                }
+            });
+
+            meta.crew = updatedCrew;
+            if (component.props.crewManager) component.props.crewManager.crew = updatedCrew;
+            meta.campElapsedSeconds = elapsed;
+            meta.campTotalSeconds = totalDuration;
+
+            storeMeta(meta);
+            try { await updateUserRequest(getUserId(), meta); } catch(e){}
+
+            // Update UI State
+            try {
+                const updatedSelected = updatedCrew.find(c => c.id === component.state.selectedCrewMember?.id) || component.state.selectedCrewMember;
+                component.setState({ selectedCrewMember: updatedSelected }, () => {
+                    try { component.forceUpdate(); } catch(e){}
+                });
+            } catch(e) {
+                try { component.forceUpdate(); } catch(e){}
+            }
+        }
+    };
+
+    // Run tick immediately and set interval every 1 second
+    runTick();
+    const setIntervalFn = (component._setInterval && typeof component._setInterval === 'function') ? component._setInterval : setInterval;
+    component.campInterval = setIntervalFn(runTick, 1000);
 }
 
 export async function endCamp(component) {
@@ -140,21 +234,45 @@ export async function endCamp(component) {
         m.camping = false;
         delete m.campingStart;
         delete m.campingEnd;
+        delete m.campElapsedSeconds;
+        delete m.campTotalSeconds;
         const currentResolve = typeof m.resolve === 'number' ? m.resolve : 100;
         let awakeRefreshedBonus = 0;
+        let fortifyLevel = 0;
         const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
         crew.forEach(member => {
             if (!member || !member.globalSkills) return;
-            const skill = member.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'awake_refreshed');
-            if (skill) {
-                const lvl = typeof skill === 'string' ? 1 : (skill.level || 1);
+            const arSkill = member.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'awake_refreshed');
+            if (arSkill) {
+                const lvl = typeof arSkill === 'string' ? 1 : (arSkill.level || 1);
                 if (lvl === 1) awakeRefreshedBonus += 10;
                 else if (lvl === 2) awakeRefreshedBonus += 20;
                 else if (lvl === 3) awakeRefreshedBonus += 40;
             }
+            if (!member.dead) {
+                const fSkill = member.globalSkills.find(s => (typeof s === 'string' ? s : s.key) === 'fortify');
+                if (fSkill) {
+                    const lvl = typeof fSkill === 'string' ? 1 : (fSkill.level || 1);
+                    if (lvl > fortifyLevel) {
+                        fortifyLevel = lvl;
+                    }
+                }
+            }
         });
-        m.resolve = Math.min(100, currentResolve + 15 + awakeRefreshedBonus);
-        console.log(`[CampManager] endCamp: recovered resolve base 15 + bonus ${awakeRefreshedBonus} (total: ${m.resolve})`);
+
+        let fortifyBonus = 0;
+        if (fortifyLevel === 2) {
+            if (Math.random() < 0.35) {
+                fortifyBonus = 10;
+            }
+        } else if (fortifyLevel === 3) {
+            if (Math.random() < 0.50) {
+                fortifyBonus = 20;
+            }
+        }
+
+        m.resolve = Math.min(100, currentResolve + 15 + awakeRefreshedBonus + fortifyBonus);
+        console.log(`[CampManager] endCamp: recovered resolve base 15 + awakeRefreshedBonus ${awakeRefreshedBonus} + fortifyBonus ${fortifyBonus} (total: ${m.resolve})`);
         try {
             const crew = (component.props.crewManager && component.props.crewManager.crew) || [];
             // Build a new array of spread objects so React sees new prop references on Tile
@@ -163,9 +281,8 @@ export async function endCamp(component) {
                 if (member.dead) {
                     return { ...member, dead: false, hp: 1 };
                 } else {
-                    const maxHp = (member.stats && typeof member.stats.hp === 'number') ? member.stats.hp : member.hp || 0;
-                    console.log(`[endCamp] ${member.type || member.id}: hp ${member.hp} -> ${maxHp} (stats.hp=${member.stats && member.stats.hp})`);
-                    return { ...member, hp: maxHp };
+                    // Non-dead units keep their accumulated HP from ticks, no full restore
+                    return member;
                 }
             });
             m.crew = restoredCrew;

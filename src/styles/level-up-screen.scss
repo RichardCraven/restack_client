@@ -98,7 +98,7 @@
 .lus-content {
     position: relative;
     z-index: 1;
-    width: Min(680px, 96vw);
+    width: Min(840px, 96vw);
     max-height: 94vh;
     overflow-y: auto;
     overflow-x: hidden;
@@ -800,6 +800,36 @@
 
 .lus-tooltip-trigger:hover .lus-tooltip-down {
     transform: translateX(-50%) translateY(0) scale(1);
+}
+
+/* Tooltip Left-aligned / Shifted Right Placement */
+.lus-stat-tooltip.lus-tooltip-left {
+    left: 0;
+    transform: translateX(0) translateY(10px) scale(0.96);
+    
+    &::after {
+        left: 127px;
+        transform: translateX(-50%);
+    }
+}
+.lus-tooltip-trigger:hover .lus-stat-tooltip.lus-tooltip-left {
+    transform: translateX(0) translateY(0) scale(1);
+}
+
+/* Tooltip Right-aligned / Shifted Left Placement */
+.lus-stat-tooltip.lus-tooltip-right {
+    left: auto;
+    right: 0;
+    transform: translateX(0) translateY(10px) scale(0.96);
+    
+    &::after {
+        left: auto;
+        right: 127px;
+        transform: translateX(50%);
+    }
+}
+.lus-tooltip-trigger:hover .lus-stat-tooltip.lus-tooltip-right {
+    transform: translateX(0) translateY(0) scale(1);
 }
 
 /* Multi-Stat Tooltip */

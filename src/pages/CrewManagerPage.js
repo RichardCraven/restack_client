@@ -9,6 +9,67 @@ import {
 //   addDungeonRequest
 } from '../utils/api-handler';
 import { InventoryManager } from '../utils/inventory-manager';
+import '../styles/codex.scss';
+
+const renderPowerRatingsPanel = (crewMember) => {
+    if (!crewMember) return null;
+    const s = crewMember.stats || {};
+    
+    const strVal = typeof s.str === 'number' ? s.str : 0;
+    const dexVal = typeof s.dex === 'number' ? s.dex : 0;
+    const intVal = typeof s.int === 'number' ? s.int : 0;
+    const fortVal = typeof s.fort === 'number' ? s.fort : 0;
+    
+    // Derived stats
+    const spdVal = typeof s.speed === 'number' ? s.speed : Math.round(dexVal * 1.5);
+    const defVal = typeof s.def === 'number' ? s.def : Math.round((strVal + dexVal) / 2);
+    
+    const items = [
+        { label: 'STRENGTH', val: strVal, max: 15 },
+        { label: 'SPEED', val: spdVal, max: 20 },
+        { label: 'AGILITY', val: dexVal, max: 15 },
+        { label: 'STAMINA', val: fortVal, max: 15 },
+        { label: 'DURABILITY', val: defVal, max: 20 },
+        { label: 'INTELLIGENCE', val: intVal, max: 15 }
+    ];
+
+    return (
+        <div className="codex-power-ratings" style={{ width: '100%', maxWidth: '280px', marginTop: '10px' }}>
+            <div className="pe-power-header-top" style={{ paddingLeft: '80px', paddingRight: '20px' }}>
+                <div className="pe-power-ticks-labels">
+                    <span>0</span>
+                    <span>1</span>
+                    <span>2</span>
+                    <span>3</span>
+                    <span>4</span>
+                    <span>5</span>
+                    <span>6</span>
+                    <span>7</span>
+                </div>
+            </div>
+            <div className="pe-power-grid">
+                {items.map((item, idx) => {
+                    const rating = Math.min(7, Math.max(0, Math.round((item.val / item.max) * 7)));
+                    const fillPct = (rating / 7) * 100;
+                    return (
+                        <div key={idx} className="pe-power-row" style={{ display: 'flex', alignItems: 'center', marginBottom: '4px' }}>
+                            <span className="pe-power-label" style={{ width: '80px', fontSize: '9px', fontWeight: 'bold', color: '#aaa', textTransform: 'uppercase', textAlign: 'left' }}>{item.label}</span>
+                            <div className="pe-power-bar-container" style={{ flex: 1, height: '10px', background: '#222', border: '1px solid #444', borderRadius: '2px', position: 'relative', overflow: 'hidden', margin: '0 8px' }}>
+                                <div className="pe-power-bar-fill" style={{ width: `${fillPct}%`, height: '100%', background: 'linear-gradient(90deg, #d4a844, #f9b115)' }} />
+                                <div className="pe-power-ticks-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', justifyContent: 'space-between', pointerEvents: 'none' }}>
+                                    {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+                                        <div key={i} className="pe-power-tick-line" style={{ width: '1px', height: '100%', background: 'rgba(255, 255, 255, 0.15)' }} />
+                                    ))}
+                                </div>
+                            </div>
+                            <span className="pe-power-val" style={{ width: '20px', fontSize: '11px', fontWeight: 'bold', color: '#f9b115', textAlign: 'right' }}>{item.val}</span>
+                        </div>
+                    );
+                })}
+            </div>
+        </div>
+    );
+};
 
 const WEAKNESS_SYMBOLS = {
     holy: '☀️',
@@ -211,20 +272,22 @@ class CrewManagerPage extends React.Component{
   }
   selectCrewMember = (event, crewMember) => {
     clearTimeout(this.timer);
+    const savedMember = this.state.selectedCrew.find(c => c && (c.id === crewMember.id || c.name === crewMember.name));
+    const memberToUse = savedMember || crewMember;
+
     if (event.detail === 1) {
-        this.timer = setTimeout(this.singleClick(crewMember), 200)
+        this.timer = setTimeout(() => this.singleClick(memberToUse), 200)
     } else if (event.detail === 2) {
         let crew = this.state.selectedCrew;
         if(crew.length === 3 && !this.state.advancedUser) return
-        if(!crew.includes(crewMember)) crew.push(crewMember)
+        if(!crew.includes(memberToUse)) crew.push(memberToUse)
         this.setState({
             selectedCrew: crew
         })
     }
     this.setState({
-        selectedCrewMember: crewMember
+        selectedCrewMember: memberToUse
     })
-
   }
   addMember = (index) => {
     let member = this.state.selectedCrewMember
@@ -349,12 +412,33 @@ goBack = () => {
                         const isSelected = this.state.selectedCrewMember && (
                             this.state.selectedCrewMember.id === e.id || this.state.selectedCrewMember.name === e.name
                         );
-                        return <div className={`portrait${isSelected ? ' selected' : ''}`} key={i}
-                        style={{backgroundImage: "url(" + e.portrait + ")"}}
-                        onClick={(event) => this.selectCrewMember(event, e)}
-                        ></div>
-                        }
-                    )}
+                        const savedMember = this.state.selectedCrew.find(c => c && (c.id === e.id || c.name === e.name));
+                        const displayLevel = savedMember ? (savedMember.level || 1) : (e.level || 1);
+                        return (
+                            <div 
+                                className={`portrait${isSelected ? ' selected' : ''}`} 
+                                key={i}
+                                style={{backgroundImage: "url(" + e.portrait + ")", position: 'relative'}}
+                                onClick={(event) => this.selectCrewMember(event, e)}
+                            >
+                                <span style={{
+                                    position: 'absolute',
+                                    bottom: '2px',
+                                    right: '4px',
+                                    background: 'rgba(0,0,0,0.85)',
+                                    color: '#f9b115',
+                                    padding: '1px 5px',
+                                    borderRadius: '3px',
+                                    fontSize: '9px',
+                                    fontWeight: 'bold',
+                                    fontFamily: 'Outfit, sans-serif',
+                                    border: '1px solid rgba(249,177,21,0.2)'
+                                }}>
+                                    Lvl {displayLevel}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
                 <div className="member-panel">
                                         {this.state.selectedCrewMember &&
@@ -377,18 +461,21 @@ goBack = () => {
                                                 </div>
                                             </div>
                                         }
-                    {this.state.selectedCrewMember && <div className="details-pane">
-                        <div className="member-name">{this.state.selectedCrewMember.name}</div>
-                        <div className="description">
+                    {this.state.selectedCrewMember && <div className="details-pane" style={{ marginRight: '15px' }}>
+                        <div className="member-name" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                            <span style={{ color: '#fff', fontSize: '2em', fontWeight: 'bold', textShadow: '0 2px 8px #000, 0 0px 2px #000', letterSpacing: '0.04em', lineHeight: '1.1' }}>
+                                {this.state.selectedCrewMember.name}
+                            </span>
+                            <span style={{ fontSize: '11px', color: '#f9b115', fontWeight: 'bold', background: 'rgba(249,177,21,0.1)', padding: '2px 8px', borderRadius: '4px', border: '1px solid rgba(249,177,21,0.2)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                Level {this.state.selectedCrewMember.level || 1} {this.state.selectedCrewMember.type ? this.state.selectedCrewMember.type : ''}
+                            </span>
+                        </div>
+                        <div className="description" style={{ marginTop: '8px', fontSize: '13px', color: '#ccc', lineHeight: '1.4', maxWidth: '200px' }}>
                             {this.state.selectedCrewMember.description}
                         </div>
                     </div>}
-                    {this.state.selectedCrewMember && <div className="stats-pane">
-                        <div className="stat">Strength: {this.state.selectedCrewMember.stats?.str}</div>
-                        <div className="stat">Dexterity: {this.state.selectedCrewMember.stats?.dex}</div>
-                        <div className="stat">Intelligence: {this.state.selectedCrewMember.stats?.int}</div>
-                        {/* Vitality removed */}
-                        <div className="stat">Fortitude: {this.state.selectedCrewMember.stats?.fort}</div>
+                    {this.state.selectedCrewMember && <div className="stats-pane" style={{ minWidth: '260px', marginRight: '15px' }}>
+                        {renderPowerRatingsPanel(this.state.selectedCrewMember)}
                     </div>}
                     {this.state.selectedCrewMember && <div className="abilities-pane">
                         {this.state.selectedCrewMember.skills ? (
@@ -430,35 +517,34 @@ goBack = () => {
                 </div>
                 <div className="crew-tray">
                     {this.state.crewSlots.map((slot, i)=>{
-                return  <div key={i} className={`selected-crew-portrait-container ${i === 3 && !this.state.advancedUser ? 'closed' : ''}`}>
-
-                            {(i === 3 && !this.state.advancedUser) === false && <div className={`add-button ${!this.state.selectedCrewMember ? 'disabled' : ''}`} onClick={()=>this.addMember(i)}>&oplus;</div>}
-
-                            {this.state.selectedCrew[i] && <div className="portrait" style={{backgroundImage: "url(" + this.state.selectedCrew[i].portrait + ")"}}></div>}
-                        </div>
+                        const member = this.state.selectedCrew[i];
+                        return (
+                            <div key={i} className={`selected-crew-portrait-container ${i === 3 && !this.state.advancedUser ? 'closed' : ''}`}>
+                                {(i === 3 && !this.state.advancedUser) === false && (
+                                    <div className={`add-button ${!this.state.selectedCrewMember ? 'disabled' : ''}`} onClick={()=>this.addMember(i)}>&oplus;</div>
+                                )}
+                                {member && (
+                                    <div className="portrait" style={{backgroundImage: "url(" + member.portrait + ")", position: 'relative'}}>
+                                        <span style={{
+                                            position: 'absolute',
+                                            bottom: '2px',
+                                            right: '4px',
+                                            background: 'rgba(0,0,0,0.85)',
+                                            color: '#f9b115',
+                                            padding: '1px 5px',
+                                            borderRadius: '3px',
+                                            fontSize: '9px',
+                                            fontWeight: 'bold',
+                                            fontFamily: 'Outfit, sans-serif',
+                                            border: '1px solid rgba(249,177,21,0.2)'
+                                        }}>
+                                            Lvl {member.level || 1}
+                                        </span>
+                                    </div>
+                                )}
+                            </div>
+                        );
                     })}
-                    {/* <div className="selected-crew-portrait-container">
-                        <div className="add-button" onClick={()=>this.addMember()}>+</div>
-                    </div>
-                    <div className="selected-crew-portrait-container">
-                        
-                    </div>
-                    <div className="selected-crew-portrait-container">
-                        
-                    </div>
-                    <div className="selected-crew-portrait-container closed">
-                        
-                    </div> */}
-
-                    {/* {this.state.selectedCrew.map((e, i)=> {
-                        return <div key={i} 
-                        className={`selected-crew-portrait-wrapper ${i > 2 ? ' locked ' : ''}`}
-                        >
-                            {e !== null && <div className="portrait" style={{backgroundImage: "url(" + e.portrait + ")"}}></div>}
-                        </div>
-                        }
-                    )} */}
-
                 </div>
             </div>
             <div className="button-row-bottom-left">
